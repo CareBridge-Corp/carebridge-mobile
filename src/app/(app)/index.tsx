@@ -1,4 +1,4 @@
-import { Button, StyleSheet, Text, View } from "react-native";
+import { Button, StatusBar, StyleSheet, Text, View } from "react-native";
 import { useLogout } from "../(auth)/hooks/useLogout";
 import { useAuthStore } from "../(auth)/store/authStore";
 
@@ -8,6 +8,7 @@ export default function AppHomeScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F7FAFC" />
       <Text style={styles.title}>Welcome to CareBridge!</Text>
       {user && <Text style={styles.subtitle}>Hello, {user.name}</Text>}
 

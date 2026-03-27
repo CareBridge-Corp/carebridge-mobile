@@ -12,14 +12,14 @@ export default function Index() {
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      router.replace("/(auth)/login" as Href);
+      // Redirect to welcome screen if not authenticated
+      router.replace("/(auth)/welcome" as Href);
     } else if (isAuthenticated && inAuthGroup) {
       // Redirect to app if authenticated
       router.replace("/(app)" as Href);
     } else if (!isAuthenticated && !inAuthGroup) {
-      // Initial load - redirect to login
-      router.replace("/(auth)/login" as Href);
+      // Initial load - redirect to welcome
+      router.replace("/(auth)/welcome" as Href);
     }
   }, [isAuthenticated, segments]);
 

@@ -1,12 +1,19 @@
+import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
-    Button,
     StyleSheet,
     Text,
     TextInput,
+    TouchableOpacity,
     View,
 } from "react-native";
+import {
+    borderRadius,
+    colors,
+    spacing,
+    typography,
+} from "../../../shared/theme";
 import { useLogin } from "../hooks/useLogin";
 
 export function LoginForm() {
@@ -21,60 +28,143 @@ export function LoginForm() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
+      <Text style={styles.subtitle}>
+        Autism is not a disease, it is a{"\n"}developmental disorder.
+      </Text>
 
       {loginMutation.error && (
-        <Text style={styles.error}>{loginMutation.error.message}</Text>
+        <View style={styles.errorContainer}>
+          <Text style={styles.error}>{loginMutation.error.message}</Text>
+        </View>
       )}
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
+      <View style={styles.form}>
+        {/* Email Input */}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor={colors.textSecondary}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <View style={styles.iconContainer}>
+            <Ionicons name="mail-outline" size={20} color={colors.icon} />
+          </View>
+        </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+        {/* Password Input */}
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={colors.textSecondary}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <View style={styles.iconContainer}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={20}
+              color={colors.icon}
+            />
+          </View>
+        </View>
+      </View>
 
-      <Button
-        title={loginMutation.isPending ? "Logging in..." : "Login"}
+      {/* Sign Up Button */}
+      <TouchableOpacity
+        style={[
+          styles.button,
+          loginMutation.isPending && styles.buttonDisabled,
+        ]}
         onPress={handleLogin}
         disabled={loginMutation.isPending}
-      />
-
-      {loginMutation.isPending && <ActivityIndicator style={styles.loader} />}
+        activeOpacity={0.8}
+      >
+        {loginMutation.isPending ? (
+          <ActivityIndicator color={colors.white} />
+        ) : (
+          <Text style={styles.buttonText}>Login</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    flex: 1,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: 180,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
+    fontSize: typography.fontSize.xxxl,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text,
+    marginBottom: spacing.lg,
+  },
+  subtitle: {
+    fontSize: typography.fontSize.md,
+    color: colors.textLight,
+    marginBottom: spacing.xxxl,
+    lineHeight: typography.lineHeight.relaxed * typography.fontSize.md,
+  },
+  form: {
+    gap: spacing.lg,
+    marginBottom: spacing.massive,
+  },
+  inputWrapper: {
+    position: "relative",
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
+    backgroundColor: colors.inputBackground,
+    borderRadius: borderRadius.xxl,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingRight: 56,
+    fontSize: typography.fontSize.md,
+    color: colors.text,
+  },
+  iconContainer: {
+    position: "absolute",
+    right: spacing.lg,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 40,
+    height: "100%",
+  },
+  button: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.xxl,
+    alignItems: "center",
+    position: "absolute",
+    bottom: spacing.huge,
+    left: spacing.xxl,
+    right: spacing.xxl,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: colors.white,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
+  },
+  errorContainer: {
+    backgroundColor: "#FEE",
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.lg,
   },
   error: {
-    color: "red",
-    marginBottom: 10,
-  },
-  loader: {
-    marginTop: 10,
+    color: colors.error,
+    fontSize: typography.fontSize.sm,
   },
 });
