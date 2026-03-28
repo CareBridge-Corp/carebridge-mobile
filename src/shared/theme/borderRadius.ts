@@ -5,5 +5,6 @@ export const borderRadius = {
   lg: 12,
   xl: 16,
   xxl: 20,
+  xxxl: 30,
   full: 9999,
 };

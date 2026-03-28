@@ -11,16 +11,23 @@ export default function Index() {
   useEffect(() => {
     const inAuthGroup = segments[0] === "(auth)";
 
+    // For UI design purposes, always go to app home after signup/login
+    // Comment this out when you want to test auth flow
+    setTimeout(() => {
+      router.replace("/(app)" as Href);
+    }, 100);
+    return;
+
+    // Original auth logic (commented for UI design)
+    /*
     if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to welcome screen if not authenticated
       router.replace("/(auth)/welcome" as Href);
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to app if authenticated
       router.replace("/(app)" as Href);
     } else if (!isAuthenticated && !inAuthGroup) {
-      // Initial load - redirect to welcome
       router.replace("/(auth)/welcome" as Href);
     }
+    */
   }, [isAuthenticated, segments]);
 
   return (
