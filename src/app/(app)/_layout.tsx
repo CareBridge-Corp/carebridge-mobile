@@ -10,7 +10,7 @@ export default function AppLayout() {
           headerShown: false,
         }}
       />
-      <BottomNavigation activeTab="home" />
+      <BottomNavigation />
     </View>
   );
 }

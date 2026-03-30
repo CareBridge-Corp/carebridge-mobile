@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { usePathname, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
     borderRadius,
@@ -7,19 +8,31 @@ import {
     typography,
 } from "../../../shared/theme";
 
-type NavItem = "home" | "wallet" | "chat" | "profile";
+type NavItem = "home" | "schedule" | "chat" | "profile";
 
-interface BottomNavigationProps {
-  activeTab?: NavItem;
-  onTabPress?: (tab: NavItem) => void;
-}
+export default function BottomNavigation() {
+  const router = useRouter();
+  const pathname = usePathname();
 
-export default function BottomNavigation({
-  activeTab = "home",
-  onTabPress,
-}: BottomNavigationProps) {
+  const getActiveTab = (): NavItem => {
+    if (pathname.includes("/schedule")) return "schedule";
+    if (pathname.includes("/chat")) return "chat";
+    if (pathname.includes("/profile")) return "profile";
+    return "home";
+  };
+
+  const activeTab = getActiveTab();
+
   const handlePress = (tab: NavItem) => {
-    onTabPress?.(tab);
+    if (tab === "home") {
+      router.push("/");
+    } else if (tab === "schedule") {
+      router.push("/schedule");
+    } else if (tab === "chat") {
+      router.push("/chat");
+    } else if (tab === "profile") {
+      router.push("/profile");
+    }
   };
 
   return (
@@ -37,28 +50,49 @@ export default function BottomNavigation({
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.navItem}
-        onPress={() => handlePress("wallet")}
+        style={[
+          styles.navItem,
+          activeTab === "schedule" && styles.navItemActive,
+        ]}
+        onPress={() => handlePress("schedule")}
       >
-        <Ionicons name="wallet-outline" size={24} color={colors.iconLight} />
+        <Ionicons
+          name={activeTab === "schedule" ? "calendar" : "calendar-outline"}
+          size={24}
+          color={activeTab === "schedule" ? colors.primary : colors.iconLight}
+        />
+        {activeTab === "schedule" && (
+          <Text style={styles.navTextActive}>Schedule</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.navItem}
+        style={[styles.navItem, activeTab === "chat" && styles.navItemActive]}
         onPress={() => handlePress("chat")}
       >
         <Ionicons
-          name="chatbubble-outline"
+          name={activeTab === "chat" ? "chatbubble" : "chatbubble-outline"}
           size={24}
-          color={colors.iconLight}
+          color={activeTab === "chat" ? colors.primary : colors.iconLight}
         />
+        {activeTab === "chat" && <Text style={styles.navTextActive}>Chat</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.navItem}
+        style={[
+          styles.navItem,
+          activeTab === "profile" && styles.navItemActive,
+        ]}
         onPress={() => handlePress("profile")}
       >
-        <Ionicons name="person-outline" size={24} color={colors.iconLight} />
+        <Ionicons
+          name={activeTab === "profile" ? "person" : "person-outline"}
+          size={24}
+          color={activeTab === "profile" ? colors.primary : colors.iconLight}
+        />
+        {activeTab === "profile" && (
+          <Text style={styles.navTextActive}>Profile</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
