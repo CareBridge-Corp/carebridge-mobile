@@ -22,7 +22,7 @@ export default function AppHomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Good Morning</Text>
-          <Text style={styles.userName}>Abenezer</Text>
+          <Text style={styles.userName}>Amanuel</Text>
         </View>
         <View style={styles.avatar}>
           <Ionicons name="person" size={28} color={colors.text} />
