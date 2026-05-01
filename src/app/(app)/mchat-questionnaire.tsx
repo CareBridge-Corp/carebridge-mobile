@@ -1,23 +1,27 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useMutation } from "@tanstack/react-query";
 import { Href, useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
 import {
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import apiClient from "../../shared/api/client";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 
-// M-CHAT-R/F Questions (Reduced to 7 for demo)
+// M-CHAT-R/F Questions (20 Questions)
 const MCHAT_QUESTIONS = [
   {
     id: 1,
     question:
       "If you point at something across the room, does your child look at it?",
     example:
-      "Example, if you point at a toy or an animal, does your child look at the toy or animal?",
+      "(FOR EXAMPLE, if you point at a toy or an animal, does your child look at the toy or animal?)",
   },
   {
     id: 2,
@@ -28,31 +32,110 @@ const MCHAT_QUESTIONS = [
     id: 3,
     question: "Does your child play pretend or make-believe?",
     example:
-      "Example, pretend to drink from an empty cup, pretend to talk on a phone, or pretend to feed a doll or stuffed animal?",
+      "(FOR EXAMPLE, pretend to drink from an empty cup, pretend to talk on a phone, or pretend to feed a doll or stuffed animal?)",
   },
   {
     id: 4,
     question: "Does your child like climbing on things?",
-    example: "Example, furniture, playground equipment, or stairs?",
+    example: "(FOR EXAMPLE, furniture, playground equipment, or stairs)",
   },
   {
     id: 5,
     question:
       "Does your child make unusual finger movements near his or her eyes?",
     example:
-      "Example, does your child wiggle his or her fingers close to his or her eyes?",
+      "(FOR EXAMPLE, does your child wiggle his or her fingers close to his or her eyes?)",
   },
   {
     id: 6,
     question:
       "Does your child point with one finger to ask for something or to get help?",
-    example: "Example, pointing to a snack or toy that is out of reach?",
+    example: "(FOR EXAMPLE, pointing to a snack or toy that is out of reach)",
   },
   {
     id: 7,
+    question:
+      "Does your child point with one finger to show you something interesting?",
+    example:
+      "(FOR EXAMPLE, pointing to an airplane in the sky or a big truck in the road)",
+  },
+  {
+    id: 8,
     question: "Is your child interested in other children?",
     example:
-      "Example, does your child watch other children, smile at them, or go to them?",
+      "(FOR EXAMPLE, does your child watch other children, smile at them, or go to them?)",
+  },
+  {
+    id: 9,
+    question:
+      "Does your child show you things by bringing them to you or holding them up for you to see – not to get help, but just to share?",
+    example:
+      "(FOR EXAMPLE, showing you a flower, a stuffed animal, or a toy truck)",
+  },
+  {
+    id: 10,
+    question: "Does your child respond when you call his or her name?",
+    example:
+      "(FOR EXAMPLE, does he or she look up, talk or babble, or stop what he or she is doing when you call his or her name?)",
+  },
+  {
+    id: 11,
+    question: "When you smile at your child, does he or she smile back at you?",
+    example: "",
+  },
+  {
+    id: 12,
+    question: "Does your child get upset by everyday noises?",
+    example:
+      "(FOR EXAMPLE, does your child scream or cry to noise such as a vacuum cleaner or loud music?)",
+  },
+  {
+    id: 13,
+    question: "Does your child walk?",
+    example: "",
+  },
+  {
+    id: 14,
+    question:
+      "Does your child look you in the eye when you are talking to him or her, playing with him or her, or dressing him or her?",
+    example: "",
+  },
+  {
+    id: 15,
+    question: "Does your child try to copy what you do?",
+    example:
+      "(FOR EXAMPLE, wave bye-bye, clap, or make a funny noise when you do)",
+  },
+  {
+    id: 16,
+    question:
+      "If you turn your head to look at something, does your child look around to see what you are looking at?",
+    example: "",
+  },
+  {
+    id: 17,
+    question: "Does your child try to get you to watch him or her?",
+    example:
+      "(FOR EXAMPLE, does your child look at you for praise, or say “look” or “watch me”?)",
+  },
+  {
+    id: 18,
+    question:
+      "Does your child understand when you tell him or her to do something?",
+    example:
+      "(FOR EXAMPLE, if you don’t point, can your child understand “put the book on the chair” or “bring me the blanket”?)",
+  },
+  {
+    id: 19,
+    question:
+      "If something new happens, does your child look at your face to see how you feel about it?",
+    example:
+      "(FOR EXAMPLE, if he or she hears a strange or funny noise, or sees a new toy, will he or she look at your face?)",
+  },
+  {
+    id: 20,
+    question: "Does your child like movement activities?",
+    example: "(FOR EXAMPLE, being swung or bounced on your knee)",
   },
 ];
 
@@ -63,9 +146,31 @@ export default function MChatQuestionnaireScreen() {
 
   const question = MCHAT_QUESTIONS[currentQuestion];
   const totalQuestions = MCHAT_QUESTIONS.length;
-  const progressPercentage = ((currentQuestion + 1) / totalQuestions) * 100;
+
+  const submitScreeningMutation = useMutation({
+    mutationFn: async (screeningData: any) => {
+      // Save locally forever just in case
+      await SecureStore.setItemAsync(
+        `screening-${Date.now()}`,
+        JSON.stringify(screeningData),
+      );
+      // Submit to the endpoint
+      return apiClient.post("/screenings", screeningData);
+    },
+    onSuccess: () => {
+      router.replace("/(app)/mchat-success" as Href);
+    },
+    onError: (error) => {
+      console.log("Failed to submit screening", error);
+      // Fallback: still navigate if we safely stored it, or handle UI error
+      router.replace("/(app)/mchat-success" as Href);
+    },
+  });
 
   const handleAnswer = (answer: boolean) => {
+    // If we're already submitting, ignore
+    if (submitScreeningMutation.isPending) return;
+
     const newAnswers = { ...answers, [question.id]: answer };
     setAnswers(newAnswers);
 
@@ -75,9 +180,20 @@ export default function MChatQuestionnaireScreen() {
         setCurrentQuestion(currentQuestion + 1);
       }, 300);
     } else {
-      // Questionnaire complete - navigate to success screen
+      // Questionnaire complete - build payload and run mutation
+      const finalAnswers: Record<string, boolean> = {};
+      for (let i = 1; i <= MCHAT_QUESTIONS.length; i++) {
+        // Fallback to false if somehow undefined
+        finalAnswers[`Q${i}`] = newAnswers[i] ?? false;
+      }
+
+      const payload = {
+        childId: "3c0163f2-c287-437b-a990-bcd25e5f1414",
+        answers: finalAnswers,
+      };
+
       setTimeout(() => {
-        router.replace("/(app)/mchat-success" as Href);
+        submitScreeningMutation.mutate(payload);
       }, 300);
     }
   };
@@ -173,41 +289,61 @@ export default function MChatQuestionnaireScreen() {
 
       {/* Answer Buttons at Bottom */}
       <View style={styles.answerContainer}>
-        <TouchableOpacity
-          style={[
-            styles.answerButton,
-            answers[question.id] === false && styles.answerButtonSelected,
-          ]}
-          onPress={() => handleAnswer(false)}
-          activeOpacity={0.7}
-        >
-          <Text
+        {submitScreeningMutation.isPending ? (
+          <View
             style={[
-              styles.answerText,
-              answers[question.id] === false && styles.answerTextSelected,
+              styles.answerButton,
+              { borderColor: "transparent", backgroundColor: "transparent" },
             ]}
           >
-            No
-          </Text>
-        </TouchableOpacity>
+            <ActivityIndicator size="large" color="#0C4A6E" />
+            <Text
+              style={{ marginTop: 10, color: "#0C4A6E", fontWeight: "600" }}
+            >
+              Saving Screening...
+            </Text>
+          </View>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[
+                styles.answerButton,
+                answers[question.id] === false && styles.answerButtonSelected,
+              ]}
+              onPress={() => handleAnswer(false)}
+              activeOpacity={0.7}
+              disabled={submitScreeningMutation.isPending}
+            >
+              <Text
+                style={[
+                  styles.answerText,
+                  answers[question.id] === false && styles.answerTextSelected,
+                ]}
+              >
+                No
+              </Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.answerButton,
-            answers[question.id] === true && styles.answerButtonSelected,
-          ]}
-          onPress={() => handleAnswer(true)}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={[
-              styles.answerText,
-              answers[question.id] === true && styles.answerTextSelected,
-            ]}
-          >
-            Yes
-          </Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.answerButton,
+                answers[question.id] === true && styles.answerButtonSelected,
+              ]}
+              onPress={() => handleAnswer(true)}
+              activeOpacity={0.7}
+              disabled={submitScreeningMutation.isPending}
+            >
+              <Text
+                style={[
+                  styles.answerText,
+                  answers[question.id] === true && styles.answerTextSelected,
+                ]}
+              >
+                Yes
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );

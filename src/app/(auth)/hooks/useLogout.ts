@@ -12,11 +12,13 @@ export function useLogout(
     mutationFn: authService.logout,
     onSuccess: async () => {
       await SecureStore.deleteItemAsync("authToken");
+      await SecureStore.deleteItemAsync("authUser");
       logout();
     },
     onError: async (error) => {
       // Still logout locally even if API call fails
       await SecureStore.deleteItemAsync("authToken");
+      await SecureStore.deleteItemAsync("authUser");
       logout();
       console.error("Logout API call failed:", error);
     },

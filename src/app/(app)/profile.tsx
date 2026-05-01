@@ -9,11 +9,13 @@ import {
   View,
 } from "react-native";
 import { useLogout } from "../(auth)/hooks/useLogout";
+import { useAuthStore } from "../(auth)/store/authStore";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const logoutMutation = useLogout();
+  const user = useAuthStore((state) => state.user);
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
@@ -44,11 +46,32 @@ export default function ProfileScreen() {
       >
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatarLarge}>
-            <Ionicons name="person" size={48} color={colors.text} />
+          <View style={styles.avatarWrapper}>
+            <View style={styles.avatarLarge}>
+              <Ionicons name="person" size={48} color={colors.white} />
+            </View>
+            <View style={styles.editAvatarBadge}>
+              <Ionicons name="camera" size={14} color={colors.white} />
+            </View>
           </View>
-          <Text style={styles.userName}>Abenezer</Text>
-          <Text style={styles.userEmail}>abenezer@example.com</Text>
+
+          <Text style={styles.userName}>
+            {user?.firstName} {user?.lastName}
+          </Text>
+
+          <View style={styles.roleBadge}>
+            <Ionicons
+              name="shield-checkmark"
+              size={14}
+              color={colors.primary}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.userRole}>
+              {user?.role?.toUpperCase() || "PATIENT"}
+            </Text>
+          </View>
+
+          <Text style={styles.userEmail}>{user?.email}</Text>
 
           <TouchableOpacity style={styles.editProfileButton}>
             <Text style={styles.editProfileText}>Edit Profile</Text>
@@ -57,6 +80,8 @@ export default function ProfileScreen() {
 
         {/* Menu Items */}
         <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>Account settings</Text>
+
           <TouchableOpacity style={styles.menuItem}>
             <View style={styles.menuIconContainer}>
               <Ionicons
@@ -66,18 +91,6 @@ export default function ProfileScreen() {
               />
             </View>
             <Text style={styles.menuText}>Personal Information</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.iconLight}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
-              <Ionicons name="heart-outline" size={20} color={colors.primary} />
-            </View>
-            <Text style={styles.menuText}>Favorites</Text>
             <Ionicons
               name="chevron-forward"
               size={20}
@@ -116,13 +129,22 @@ export default function ProfileScreen() {
               color={colors.iconLight}
             />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>General</Text>
 
           <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
+            <View
+              style={[
+                styles.menuIconContainer,
+                { backgroundColor: colors.borderLight },
+              ]}
+            >
               <Ionicons
                 name="shield-checkmark-outline"
                 size={20}
-                color={colors.primary}
+                color={colors.textMedium}
               />
             </View>
             <Text style={styles.menuText}>Privacy & Security</Text>
@@ -134,11 +156,16 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
+            <View
+              style={[
+                styles.menuIconContainer,
+                { backgroundColor: colors.borderLight },
+              ]}
+            >
               <Ionicons
                 name="help-circle-outline"
                 size={20}
-                color={colors.primary}
+                color={colors.textMedium}
               />
             </View>
             <Text style={styles.menuText}>Help & Support</Text>
@@ -150,11 +177,16 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
+            <View
+              style={[
+                styles.menuIconContainer,
+                { backgroundColor: colors.borderLight },
+              ]}
+            >
               <Ionicons
                 name="information-circle-outline"
                 size={20}
-                color={colors.primary}
+                color={colors.textMedium}
               />
             </View>
             <Text style={styles.menuText}>About</Text>
@@ -229,11 +261,48 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: spacing.md,
   },
+  avatarWrapper: {
+    marginTop: 0,
+    marginBottom: spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  editAvatarBadge: {
+    position: "absolute",
+    bottom: 8,
+    right: -4,
+    backgroundColor: colors.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
   userName: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
     marginBottom: spacing.xs,
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EBF4FF", // Light blue background for the badge
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: 100, // Pill shape
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: "#D3E4F9",
+  },
+  userRole: {
+    fontSize: typography.fontSize.xs,
+    color: colors.primary,
+    fontWeight: typography.fontWeight.bold,
+    letterSpacing: 1,
   },
   userEmail: {
     fontSize: typography.fontSize.sm,
@@ -254,13 +323,23 @@ const styles = StyleSheet.create({
   menuSection: {
     backgroundColor: colors.white,
     marginTop: spacing.sm,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.textLight,
+    textTransform: "uppercase",
+    marginBottom: spacing.sm,
+    marginLeft: spacing.sm,
+    marginTop: spacing.md,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
@@ -283,16 +362,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.white,
+    backgroundColor: "#FEF2F2", // very light red/pink for error backing
+    borderWidth: 1,
+    borderColor: "#FCC2D7",
     marginHorizontal: spacing.xxl,
-    marginTop: spacing.md,
+    marginTop: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.xxl,
     gap: spacing.sm,
   },
   logoutText: {
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
+    fontWeight: typography.fontWeight.bold,
     color: colors.error,
   },
 });

@@ -8,10 +8,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuthStore } from "../(auth)/store/authStore";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 
 export default function AppHomeScreen() {
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
 
   const handleMChat = () => {
     router.push("/(app)/mchat-privacy" as Href);
@@ -33,7 +35,7 @@ export default function AppHomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Good Morning</Text>
-          <Text style={styles.userName}>Abenezer</Text>
+          <Text style={styles.userName}>{user?.firstName || "Guest"}</Text>
         </View>
         <View style={styles.avatar}>
           <Ionicons name="person" size={28} color={colors.text} />

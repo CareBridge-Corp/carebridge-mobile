@@ -20,6 +20,12 @@ export function useSignup(
     onSuccess: async (response) => {
       if (response && response.token) {
         await SecureStore.setItemAsync("authToken", response.token);
+        if (response.user) {
+          await SecureStore.setItemAsync(
+            "authUser",
+            JSON.stringify(response.user),
+          );
+        }
         login(response.token, response.user);
       } else {
         Toast.show({
