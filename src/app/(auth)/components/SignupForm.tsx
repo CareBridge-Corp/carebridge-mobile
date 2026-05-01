@@ -1,19 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
 import { useSignup } from "../hooks/useSignup";
 
@@ -25,12 +25,12 @@ export function SignupForm() {
   const signupMutation = useSignup();
 
   const handleSignup = () => {
-    signupMutation.mutate({ 
-      email, 
-      password, 
-      firstName, 
-      lastName, 
-      role: "patient" 
+    signupMutation.mutate({
+      email,
+      password,
+      firstName,
+      lastName,
+      role: "patient",
     });
   };
 
