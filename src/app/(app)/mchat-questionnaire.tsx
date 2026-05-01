@@ -373,12 +373,13 @@ const styles = StyleSheet.create({
   },
   progressDotsContainer: {
     flexDirection: "row",
-    gap: 8,
+    gap: 4,
     flex: 1,
     justifyContent: "center",
+    paddingHorizontal: spacing.sm,
   },
   progressDot: {
-    width: 32,
+    flex: 1,
     height: 6,
     borderRadius: 3,
     backgroundColor: "#C0D4E0",
