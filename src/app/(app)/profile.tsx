@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import {
   ScrollView,
   StatusBar,
@@ -7,9 +8,21 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLogout } from "../(auth)/hooks/useLogout";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const logoutMutation = useLogout();
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        router.replace("/(auth)/welcome");
+      },
+    });
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar
@@ -154,9 +167,15 @@ export default function ProfileScreen() {
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          disabled={logoutMutation.isPending}
+        >
           <Ionicons name="log-out-outline" size={20} color={colors.error} />
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>
+            {logoutMutation.isPending ? "Logging out..." : "Logout"}
+          </Text>
         </TouchableOpacity>
 
         <View style={{ height: 20 }} />
