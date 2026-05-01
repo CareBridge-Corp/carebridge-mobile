@@ -1,9 +1,5 @@
 import { apiClient } from "../../../shared/api/client";
-import {
-  AuthResponse,
-  LoginCredentials,
-  SignupCredentials,
-} from "../types";
+import { AuthResponse, LoginCredentials, SignupCredentials } from "../types";
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
@@ -13,7 +9,7 @@ export const authService = {
       // Map it to AuthResponse
       return {
         token: response.accessToken,
-        user: response.user
+        user: response.user,
       };
     }
     throw new Error(response?.message || "Login failed");
@@ -27,7 +23,7 @@ export const authService = {
     if (response && response.user) {
       return {
         token: "", // Requires login to get token as per docs usually, unless otherwise returned
-        user: response.user
+        user: response.user,
       };
     }
     throw new Error(response?.message || "Registration failed");
