@@ -26,26 +26,51 @@ class ApiClient {
   }
 
   private setupInterceptors() {
-    // Request interceptor - Add auth token
+    // Request interceptor - Add auth token and log request
     this.client.interceptors.request.use(
       async (config) => {
+        console.log(
+          `[API Request] ${config.method?.toUpperCase()} ${config.baseURL || ""}${config.url}`,
+        );
+        if (config.data) {
+          console.log(
+            `[API Request Data]`,
+            JSON.stringify(config.data, null, 2),
+          );
+        }
+
         try {
           const token = await SecureStore.getItemAsync("authToken");
           if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
           }
         } catch (error) {
-          console.error("Error reading token", error);
+          console.log("Error reading token", error);
         }
         return config;
       },
       (error) => Promise.reject(error),
     );
 
-    // Response interceptor - Handle errors globally
+    // Response interceptor - Handle errors globally and log response
     this.client.interceptors.response.use(
-      (response) => response.data,
+      (response) => {
+        console.log(
+          `[API Response] ${response.config.method?.toUpperCase()} ${response.config.baseURL || ""}${response.config.url} - Status: ${response.status}`,
+        );
+        return response.data;
+      },
       async (error: AxiosError) => {
+        console.log(
+          `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.baseURL || ""}${error.config?.url} - Status: ${error.response?.status || "UNKNOWN"}`,
+        );
+        if (error.response?.data) {
+          console.log(
+            `[API Error Data]`,
+            JSON.stringify(error.response.data, null, 2),
+          );
+        }
+
         if (error.response?.status === 401) {
           // Clear token on unauthorized
           try {

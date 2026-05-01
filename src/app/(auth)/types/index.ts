@@ -18,7 +18,7 @@ export interface SignupCredentials {
   password: string;
   firstName: string;
   lastName: string;
-  surname?: string;
+  surname?: string | null;
   role: "PARENT" | "CLINICIAN" | "patient" | "caregiver";
   phone?: string;
 }

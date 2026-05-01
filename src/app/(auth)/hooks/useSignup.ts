@@ -1,4 +1,6 @@
+import { Toast, ToastType } from "@iqorlobanov/react-native-toast";
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { authService } from "../services/authService";
 import { useAuthStore } from "../store/authStore";
@@ -11,20 +13,30 @@ export function useSignup(
   >,
 ) {
   const { login } = useAuthStore();
+  const router = useRouter();
 
   return useMutation<AuthResponse, Error, SignupCredentials>({
     mutationFn: authService.register,
     onSuccess: async (response) => {
-      // API might only return user on register or also token
-      if (response.token) {
+      if (response && response.token) {
         await SecureStore.setItemAsync("authToken", response.token);
         login(response.token, response.user);
+      } else {
+        Toast.show({
+          type: ToastType.SUCCESS,
+          title: "Success",
+          description: "Registration successful! Please login.",
+        });
+        router.replace("/(auth)/login");
       }
-      // If backend doesn't return token, it requires manually redirecting to login.
-      // This varies by flow, but we are mapping register correctly in authService.
     },
     onError: (error: Error) => {
       console.error("Signup failed:", error);
+      Toast.show({
+        type: ToastType.ERROR,
+        title: "Error",
+        description: error.message || "Registration failed.",
+      });
     },
     ...options,
   });

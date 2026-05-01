@@ -22,15 +22,21 @@ export function SignupForm() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
   const signupMutation = useSignup();
 
   const handleSignup = () => {
+    // Only prepend +251 if phone is provided
+    const formattedPhone = phone.trim() ? `+251${phone}` : undefined;
+
     signupMutation.mutate({
       email,
       password,
       firstName,
       lastName,
-      role: "patient",
+      surname: null,
+      role: "PARENT",
+      phone: formattedPhone,
     });
   };
 
@@ -93,6 +99,29 @@ export function SignupForm() {
           />
           <View style={styles.iconContainer}>
             <Ionicons name="mail-outline" size={20} color={colors.icon} />
+          </View>
+        </View>
+
+        {/* Phone Input */}
+        <View style={styles.inputWrapper}>
+          <View style={styles.phonePrefixContainer}>
+            <Text style={styles.phonePrefix}>+251</Text>
+          </View>
+          <TextInput
+            style={[styles.input, { paddingLeft: 64 }]} // Make room for +251 prefix
+            placeholder="900000000"
+            placeholderTextColor={colors.textSecondary}
+            value={phone}
+            onChangeText={(text) => {
+              // allow numbers only
+              const numericValue = text.replace(/[^0-9]/g, "");
+              setPhone(numericValue);
+            }}
+            keyboardType="phone-pad"
+            maxLength={9}
+          />
+          <View style={styles.iconContainer}>
+            <Ionicons name="call-outline" size={20} color={colors.icon} />
           </View>
         </View>
 
@@ -163,6 +192,19 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     position: "relative",
+  },
+  phonePrefixContainer: {
+    position: "absolute",
+    left: spacing.xl,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+    zIndex: 1, // ensure it's clickable through if needed, or sit on top
+  },
+  phonePrefix: {
+    fontSize: typography.fontSize.md,
+    color: colors.text,
+    fontWeight: typography.fontWeight.medium,
   },
   input: {
     backgroundColor: colors.inputBackground,
