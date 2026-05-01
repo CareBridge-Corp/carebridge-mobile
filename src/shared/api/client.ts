@@ -1,48 +1,99 @@
-import axios from "axios";
-import { useAuthStore } from "../../app/(auth)/store/authStore";
-import { ApiError } from "../types/api";
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
+import * as SecureStore from 'expo-secure-store';
 
-const apiClient = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api",
-  timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
+export interface ApiResponse<T = any> {
+  success?: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
 
-// Request interceptor for auth token injection
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().token;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+// API Client class
+class ApiClient {
+  private client: AxiosInstance;
 
-// Response interceptor for error handling
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      const { logout } = useAuthStore.getState();
-      logout();
-    }
-
-    const apiError: ApiError = {
-      error: {
-        code: error.response?.data?.error?.code || "UNKNOWN_ERROR",
-        message: error.response?.data?.error?.message || error.message,
-        details: error.response?.data?.error?.details,
+  constructor() {
+    this.client = axios.create({
+      baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api', // Matches API documentation port
+      timeout: 30000,
+      headers: {
+        'Content-Type': 'application/json',
       },
-      timestamp: new Date().toISOString(),
-    };
+      withCredentials: true, // Needed if relying on HTTP-only cookies like the API docs say, but we also support Bearer tokens
+    });
 
-    return Promise.reject(apiError);
-  },
-);
+    this.setupInterceptors();
+  }
 
+  private setupInterceptors() {
+    // Request interceptor - Add auth token
+    this.client.interceptors.request.use(
+      async (config) => {
+        try {
+          const token = await SecureStore.getItemAsync('authToken');
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        } catch (error) {
+          console.error("Error reading token", error);
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor - Handle errors globally
+    this.client.interceptors.response.use(
+      (response) => response.data,
+      async (error: AxiosError) => {
+        if (error.response?.status === 401) {
+          // Clear token on unauthorized
+          try {
+            await SecureStore.deleteItemAsync('authToken');
+          } catch (e) {}
+          // Note: In a real app we might redirect to login here
+        }
+        return Promise.reject(this.handleError(error));
+      }
+    );
+  }
+
+  private handleError(error: AxiosError): Error {
+    if (error.response) {
+      // Server responded with error, the API documentation usually returns a message
+      const message = (error.response.data as any)?.message || (error.response.data as any)?.error?.message || 'Server error';
+      return new Error(message);
+    } else if (error.request) {
+      // Request made but no response
+      return new Error('Network error. Please check your connection.');
+    } else {
+      // Something else happened
+      return new Error(error.message || 'An unexpected error occurred');
+    }
+  }
+
+  // HTTP Methods
+  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return this.client.get(url, config) as unknown as Promise<T>;
+  }
+
+  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return this.client.post(url, data, config) as unknown as Promise<T>;
+  }
+
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return this.client.put(url, data, config) as unknown as Promise<T>;
+  }
+
+  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    return this.client.patch(url, data, config) as unknown as Promise<T>;
+  }
+
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    return this.client.delete(url, config) as unknown as Promise<T>;
+  }
+}
+
+// Export singleton instance
+export const apiClient = new ApiClient();
 export default apiClient;
