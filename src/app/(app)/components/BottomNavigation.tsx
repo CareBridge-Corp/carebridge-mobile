@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { usePathname, useRouter } from "expo-router";
+import { Href, usePathname, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
     borderRadius,
@@ -25,13 +25,13 @@ export default function BottomNavigation() {
 
   const handlePress = (tab: NavItem) => {
     if (tab === "home") {
-      router.push("/");
+      router.push("/" as Href);
     } else if (tab === "schedule") {
-      router.push("/schedule");
+      router.push("/schedule" as Href);
     } else if (tab === "chat") {
-      router.push("/chat");
+      router.push("/chat" as Href);
     } else if (tab === "profile") {
-      router.push("/profile");
+      router.push("/profile" as Href);
     }
   };
 
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 8,
-    justifyContent: "space-between",
+    justifyContent: "space-around",
     alignItems: "center",
   },
   navItem: {
