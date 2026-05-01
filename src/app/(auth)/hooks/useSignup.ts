@@ -1,19 +1,28 @@
-import { useMutation } from "@tanstack/react-query";
-import * as authService from "../services/authService";
+import { useMutation, UseMutationOptions } from "@tanstack/react-query";
+import { authService } from "../services/authService";
 import { useAuthStore } from "../store/authStore";
-import { AuthError, SignupCredentials } from "../types";
+import { AuthError, SignupCredentials, AuthResponse } from "../types";
+import * as SecureStore from 'expo-secure-store';
 
-export function useSignup() {
+export function useSignup(
+  options?: Omit<UseMutationOptions<AuthResponse, Error, SignupCredentials>, 'mutationFn'>
+) {
   const { login } = useAuthStore();
 
-  return useMutation({
-    mutationFn: (credentials: SignupCredentials) =>
-      authService.signup(credentials),
-    onSuccess: (response) => {
-      login(response.token, response.user);
+  return useMutation<AuthResponse, Error, SignupCredentials>({
+    mutationFn: authService.register,
+    onSuccess: async (response) => {
+      // API might only return user on register or also token
+      if (response.token) {
+        await SecureStore.setItemAsync('authToken', response.token);
+        login(response.token, response.user);
+      }
+      // If backend doesn't return token, it requires manually redirecting to login.
+      // This varies by flow, but we are mapping register correctly in authService.
     },
-    onError: (error: AuthError) => {
+    onError: (error: Error) => {
       console.error("Signup failed:", error);
     },
+    ...options
   });
 }

@@ -1,9 +1,11 @@
 export interface User {
-  id: string;
+  userId: string;
   email: string;
-  name: string;
-  role: "patient" | "caregiver" | "admin";
-  createdAt: string;
+  firstName: string;
+  lastName: string;
+  surname?: string | null;
+  role: "PARENT" | "CLINICIAN" | "ADMIN" | "patient" | "caregiver" | "admin";
+  createdAt?: string;
 }
 
 export interface LoginCredentials {
@@ -14,14 +16,17 @@ export interface LoginCredentials {
 export interface SignupCredentials {
   email: string;
   password: string;
-  name: string;
-  role: "patient" | "caregiver";
+  firstName: string;
+  lastName: string;
+  surname?: string;
+  role: "PARENT" | "CLINICIAN" | "patient" | "caregiver";
+  phone?: string;
 }
 
 export interface AuthResponse {
   token: string;
   user: User;
-  expiresIn: number;
+  expiresIn?: number;
 }
 
 export interface AuthError {
