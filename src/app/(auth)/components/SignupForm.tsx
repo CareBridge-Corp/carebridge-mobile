@@ -25,8 +25,13 @@ export function SignupForm() {
   const signupMutation = useSignup();
 
   const handleSignup = () => {
-    const name = `${firstName} ${lastName}`.trim();
-    signupMutation.mutate({ email, password, name, role: "patient" });
+    signupMutation.mutate({ 
+      email, 
+      password, 
+      firstName, 
+      lastName, 
+      role: "patient" 
+    });
   };
 
   return (

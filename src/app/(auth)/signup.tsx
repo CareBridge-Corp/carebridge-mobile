@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import {
     StatusBar,
     StyleSheet,
@@ -13,11 +13,21 @@ import { SignupForm } from "./components/SignupForm";
 export default function SignupScreen() {
   const router = useRouter();
 
+  const handleSkipToHome = () => {
+    router.replace("/(app)" as Href);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
+      </TouchableOpacity>
+
+      {/* Skip Button */}
+      <TouchableOpacity style={styles.skipButton} onPress={handleSkipToHome}>
+        <Text style={styles.skipText}>Skip</Text>
+        <Ionicons name="arrow-forward" size={16} color={colors.textMedium} />
       </TouchableOpacity>
 
       <SignupForm />
@@ -43,6 +53,24 @@ const styles = StyleSheet.create({
     left: spacing.xl,
     zIndex: 10,
     padding: spacing.sm,
+  },
+  skipButton: {
+    position: "absolute",
+    top: 60,
+    right: spacing.xl,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.borderLight,
+    borderRadius: 16,
+    zIndex: 10,
+  },
+  skipText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: colors.textMedium,
   },
   footer: {
     flexDirection: "row",

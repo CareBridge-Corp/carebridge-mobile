@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import {
     StatusBar,
     StyleSheet,
@@ -20,9 +20,19 @@ export default function WelcomeScreen() {
     router.push("/(auth)/signup");
   };
 
+  const handleSkipToHome = () => {
+    router.replace("/(app)" as Href);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F7FAFC" />
+
+      {/* Skip Button */}
+      <TouchableOpacity style={styles.skipButton} onPress={handleSkipToHome}>
+        <Text style={styles.skipText}>Skip</Text>
+        <Ionicons name="arrow-forward" size={16} color="#4A5568" />
+      </TouchableOpacity>
 
       {/* Main Content */}
       <View style={styles.content}>
@@ -72,6 +82,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F7FAFC",
+  },
+  skipButton: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 16,
+    zIndex: 10,
+  },
+  skipText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#4A5568",
   },
   content: {
     flex: 1,
