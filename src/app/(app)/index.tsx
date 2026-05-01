@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Href, useRouter } from "expo-router";
 import {
-  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -11,6 +11,17 @@ import {
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 
 export default function AppHomeScreen() {
+  const router = useRouter();
+
+  const handleMChat = () => {
+    router.push("/(app)/mchat-privacy" as Href);
+  };
+
+  const handleUploadVideo = () => {
+    // TODO: Implement video upload
+    console.log("Upload video pressed");
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar
@@ -22,7 +33,7 @@ export default function AppHomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Good Morning</Text>
-          <Text style={styles.userName}>Amanuel</Text>
+          <Text style={styles.userName}>Abenezer</Text>
         </View>
         <View style={styles.avatar}>
           <Ionicons name="person" size={28} color={colors.text} />
@@ -33,97 +44,95 @@ export default function AppHomeScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {/* Pediatricians Section */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>
-            More than 20{"\n"}Pediatricians
+        {/* Main Content Card */}
+        <View style={styles.mainCard}>
+          <Text style={styles.mainTitle}>
+            Fill out the information and{"\n"}start the treatment
           </Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.doctorsScroll}
+          {/* Upload Video Card */}
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleUploadVideo}
+            activeOpacity={0.7}
           >
-            {/* Doctor Card 1 */}
-            <View style={styles.doctorCard}>
-              <Image
-                source={require("../../../assets/docs/doc1.png")}
-                style={styles.doctorImage}
-                resizeMode="cover"
-              />
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>Dr. Ermias Lema</Text>
-                <Text style={styles.doctorSpecialty}>Neurology specialist</Text>
+            <View style={styles.actionCardContent}>
+              <Text style={styles.actionCardTitle}>Upload Video</Text>
+              <Text style={styles.actionCardSubtitle}>
+                Lorem ipsum doler situm amet and{"\n"}his Your information is
+                safe with.
+              </Text>
+
+              <View style={styles.watchGuideButton}>
+                <View style={styles.playIconCircle}>
+                  <Ionicons name="play" size={20} color={colors.white} />
+                </View>
+                <Text style={styles.watchGuideText}>Watch Guide</Text>
               </View>
-              <TouchableOpacity style={styles.favoriteButton}>
-                <View style={styles.favoriteCircle} />
-              </TouchableOpacity>
             </View>
 
-            {/* Doctor Card 2 */}
-            <View style={styles.doctorCard}>
-              <Image
-                source={require("../../../assets/docs/doc2.png")}
-                style={styles.doctorImage}
-                resizeMode="cover"
-              />
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>Dr. Ermias Lema</Text>
-                <Text style={styles.doctorSpecialty}>Neurology specialist</Text>
-              </View>
-              <TouchableOpacity style={styles.favoriteButton}>
-                <View style={styles.favoriteCircle} />
-              </TouchableOpacity>
+            <View style={styles.arrowCircle}>
+              <Ionicons name="arrow-forward" size={20} color="#0C4A6E" />
             </View>
-          </ScrollView>
-        </View>
-
-        {/* Child Info Card */}
-        <View style={styles.childInfoCard}>
-          <View style={styles.childInfoHeader}>
-            <View style={styles.childInfoTextContainer}>
-              <Text style={styles.childInfoTitle}>
-                Provide us your{"\n"}child's info
-              </Text>
-              <Text style={styles.childInfoSubtitle}>
-                Lorem ipsum doler situm amet and his{"\n"}Your information is
-                safe with us
-              </Text>
-            </View>
-            <View style={styles.childInfoCircle} />
-          </View>
-
-          {/* Safety Info */}
-          <View style={styles.safetyInfo}>
-            <View style={styles.shieldIcon}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={24}
-                color={colors.primary}
-              />
-            </View>
-            <View>
-              <Text style={styles.safetyTitle}>Safety and regulations</Text>
-              <Text style={styles.safetySubtitle}>
-                Your information is safe with us
-              </Text>
-            </View>
-          </View>
-
-          {/* Continue Button */}
-          <TouchableOpacity style={styles.continueButton} activeOpacity={0.8}>
-            <View style={styles.continueIconCircle}>
-              <View style={styles.continueIconInner} />
-            </View>
-            <Text style={styles.continueText}>Continue</Text>
-            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
-            <Ionicons
-              name="chevron-forward"
-              size={24}
-              color={colors.primary}
-              style={styles.chevronSecond}
-            />
           </TouchableOpacity>
+
+          {/* M-chat Card */}
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleMChat}
+            activeOpacity={0.7}
+          >
+            <View style={styles.actionCardContent}>
+              <Text style={styles.actionCardTitle}>M-chat</Text>
+              <Text style={styles.actionCardSubtitle}>
+                Lorem ipsum doler situm amet and{"\n"}his Your information is
+                safe with.
+              </Text>
+
+              <View style={styles.verifiedBadge}>
+                <View style={styles.whoIcon}>
+                  <Ionicons name="shield-checkmark" size={24} color="#4A9FD8" />
+                </View>
+                <View>
+                  <Text style={styles.verifiedTitle}>Verified by who</Text>
+                  <Text style={styles.verifiedSubtitle}>
+                    Your information is safe with us
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.arrowCircle}>
+              <Ionicons name="arrow-forward" size={20} color="#0C4A6E" />
+            </View>
+          </TouchableOpacity>
+
+          {/* Feature Cards */}
+          <View style={styles.placeholderRow}>
+            <TouchableOpacity
+              style={styles.featureCard}
+              activeOpacity={0.7}
+              onPress={() => router.push("/(app)/schedule" as Href)}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="calendar" size={32} color="#0C4A6E" />
+              </View>
+              <Text style={styles.featureCardTitle}>My Schedule</Text>
+              <Text style={styles.featureCardSubtitle}>View appointments</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featureCard}
+              activeOpacity={0.7}
+              onPress={() => router.push("/(app)/chat" as Href)}
+            >
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="chatbubbles" size={32} color="#0C4A6E" />
+              </View>
+              <Text style={styles.featureCardTitle}>Messages</Text>
+              <Text style={styles.featureCardSubtitle}>Chat with doctors</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={{ height: 100 }} />
@@ -147,13 +156,13 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: typography.fontSize.md,
-    color: colors.textMedium,
+    color: "#5A7A8F",
     marginBottom: 4,
   },
   userName: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
+    color: "#0C4A6E",
   },
   avatar: {
     width: 50,
@@ -166,7 +175,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  card: {
+  mainCard: {
     backgroundColor: colors.white,
     borderTopLeftRadius: borderRadius.xxxl,
     borderTopRightRadius: borderRadius.xxxl,
@@ -174,142 +183,120 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.xl,
   },
-  sectionTitle: {
-    fontSize: typography.fontSize.xxl,
+  mainTitle: {
+    fontSize: 28,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.xl,
-    lineHeight: typography.lineHeight.tight * typography.fontSize.xxl,
+    color: "#0C4A6E",
+    marginBottom: spacing.xxl,
+    lineHeight: 36,
   },
-  doctorsScroll: {
-    marginHorizontal: -spacing.xxl,
-    paddingHorizontal: spacing.xxl,
-  },
-  doctorCard: {
-    width: 200,
-    backgroundColor: colors.cardBackground,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    marginRight: spacing.lg,
-    position: "relative",
-  },
-  doctorImage: {
-    width: "100%",
-    height: 120,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-  },
-  doctorInfo: {
-    gap: 4,
-  },
-  doctorName: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-  },
-  doctorSpecialty: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textMedium,
-  },
-  favoriteButton: {
-    position: "absolute",
-    bottom: spacing.lg,
-    right: spacing.lg,
-  },
-  favoriteCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.borderLight,
-  },
-  childInfoCard: {
-    backgroundColor: colors.cardLightBlue,
-    marginHorizontal: spacing.xxl,
-    marginTop: spacing.xl,
+  actionCard: {
+    backgroundColor: "#E8F0F5",
     borderRadius: borderRadius.xxl,
     padding: spacing.xxl,
+    marginBottom: spacing.lg,
+    position: "relative",
   },
-  childInfoHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: spacing.xxxl,
+  actionCardContent: {
+    paddingRight: 50,
   },
-  childInfoTextContainer: {
-    flex: 1,
-  },
-  childInfoTitle: {
-    fontSize: typography.fontSize.xxl,
+  actionCardTitle: {
+    fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.md,
-    lineHeight: typography.lineHeight.tight * typography.fontSize.xxl,
+    color: "#0C4A6E",
+    marginBottom: spacing.sm,
   },
-  childInfoSubtitle: {
+  actionCardSubtitle: {
     fontSize: typography.fontSize.sm,
-    color: colors.textMedium,
+    color: "#5A7A8F",
     lineHeight: typography.lineHeight.relaxed * typography.fontSize.sm,
-  },
-  childInfoCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.white,
-    opacity: 0.5,
-  },
-  safetyInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
     marginBottom: spacing.xl,
   },
-  shieldIcon: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  safetyTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  safetySubtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textMedium,
-  },
-  continueButton: {
+  watchGuideButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxl,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
     gap: spacing.md,
   },
-  continueIconCircle: {
+  playIconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.primary,
+    backgroundColor: "#0C4A6E",
     justifyContent: "center",
     alignItems: "center",
   },
-  continueIconInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primaryDark,
-  },
-  continueText: {
-    flex: 1,
-    fontSize: typography.fontSize.lg,
+  watchGuideText: {
+    fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.medium,
-    color: colors.text,
+    color: "#0C4A6E",
   },
-  chevronSecond: {
-    marginLeft: -16,
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  whoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  verifiedTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: "#0C4A6E",
+    marginBottom: 2,
+  },
+  verifiedSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: "#5A7A8F",
+  },
+  arrowCircle: {
+    position: "absolute",
+    top: spacing.xxl,
+    right: spacing.xxl,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  placeholderRow: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  featureCard: {
+    flex: 1,
+    backgroundColor: "#E8F0F5",
+    borderRadius: borderRadius.xxl,
+    padding: spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 160,
+  },
+  featureIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  featureCardTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: "#0C4A6E",
+    marginBottom: spacing.xs,
+    textAlign: "center",
+  },
+  featureCardSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: "#5A7A8F",
+    textAlign: "center",
   },
 });
