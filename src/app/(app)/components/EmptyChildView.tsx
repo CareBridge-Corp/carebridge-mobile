@@ -100,7 +100,7 @@ export function EmptyChildView() {
 
         <TouchableOpacity
           style={styles.continueButton}
-          onPress={() => router.push("/(app)/childrens" as Href)}
+          onPress={() => router.push("/(app)/create-child" as Href)}
           activeOpacity={0.8}
         >
           <View style={styles.continueIconCircle}>

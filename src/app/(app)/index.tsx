@@ -1,28 +1,31 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useAuthStore } from "../(auth)/store/authStore";
-import apiClient from "../../shared/api/client";
 import { colors, spacing, typography } from "../../shared/theme";
 
+import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { EmptyChildView } from "./components/EmptyChildView";
 import { HasChildView } from "./components/HasChildView";
+import { useChildren } from "./hooks/useChildren";
+import { useChildrenStore } from "./store/childrenStore";
 
 export default function AppHomeScreen() {
-  const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const { activeChild, children } = useChildrenStore();
+  const [showChildSelector, setShowChildSelector] = useState(false);
 
-  const { data: childrenData, isLoading } = useQuery({
-    queryKey: ["children"],
-    queryFn: async () => {
-      // Assuming standard API response. Need to check if count is 0
-      const response = await apiClient.get("/users/children");
-      return response;
-    },
-  });
+  // Fetch children and sync with store
+  const { isLoading } = useChildren();
 
-  const hasChildren = childrenData?.data && childrenData.data.length > 0;
+  const hasChildren = children.length > 0;
 
   return (
     <View style={styles.container}>
@@ -35,11 +38,22 @@ export default function AppHomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Good Morning</Text>
-          <Text style={styles.userName}>{user?.firstName || "Guest"}</Text>
+          <Text style={styles.userName}>
+            {activeChild ? activeChild.firstName : user?.firstName || "Guest"}
+          </Text>
         </View>
-        <View style={styles.avatar}>
+        <TouchableOpacity
+          style={styles.avatar}
+          onPress={() => children.length > 0 && setShowChildSelector(true)}
+          activeOpacity={0.7}
+        >
           <Ionicons name="person" size={28} color={colors.text} />
-        </View>
+          {children.length > 1 && (
+            <View style={styles.childCountBadge}>
+              <Text style={styles.childCountText}>{children.length}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -50,6 +64,12 @@ export default function AppHomeScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Child Selector Modal */}
+      <ChildSelectorModal
+        visible={showChildSelector}
+        onClose={() => setShowChildSelector(false)}
+      />
     </View>
   );
 }
@@ -84,6 +104,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
+  },
+  childCountBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#10B981",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  childCountText: {
+    fontSize: 12,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.white,
   },
   scrollView: {
     flex: 1,
