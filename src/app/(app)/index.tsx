@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -47,7 +48,14 @@ export default function AppHomeScreen() {
           onPress={() => children.length > 0 && setShowChildSelector(true)}
           activeOpacity={0.7}
         >
-          <Ionicons name="person" size={28} color={colors.text} />
+          {activeChild?.profilePictureUrl ? (
+            <Image
+              source={{ uri: activeChild.profilePictureUrl }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Ionicons name="person" size={28} color={colors.text} />
+          )}
           {children.length > 1 && (
             <View style={styles.childCountBadge}>
               <Text style={styles.childCountText}>{children.length}</Text>
@@ -105,6 +113,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+  },
+  avatarImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   childCountBadge: {
     position: "absolute",

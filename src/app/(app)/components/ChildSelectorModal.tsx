@@ -1,18 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
 import { Child, useChildrenStore } from "../store/childrenStore";
 
@@ -78,7 +79,14 @@ export function ChildSelectorModal({
                     activeOpacity={0.7}
                   >
                     <View style={styles.childAvatar}>
-                      <Ionicons name="person" size={24} color="#0C4A6E" />
+                      {child.profilePictureUrl ? (
+                        <Image
+                          source={{ uri: child.profilePictureUrl }}
+                          style={styles.childAvatarImage}
+                        />
+                      ) : (
+                        <Ionicons name="person" size={24} color="#0C4A6E" />
+                      )}
                     </View>
                     <View style={styles.childInfo}>
                       <Text style={styles.childName}>{child.firstName}</Text>
@@ -184,6 +192,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: spacing.md,
+  },
+  childAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   childInfo: {
     flex: 1,

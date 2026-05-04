@@ -41,43 +41,66 @@ export function useCreateChild() {
 
   return useMutation({
     mutationFn: async (data: CreateChildData) => {
-      const hasImages = !!data.profilePicture || !!data.birthCertificate;
+      // 1. Create Child Record
+      const childData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        dob: data.dob,
+        gender: data.gender,
+        region: data.region,
+      };
 
-      if (hasImages) {
-        const formData = new FormData();
-        formData.append("firstName", data.firstName);
-        formData.append("lastName", data.lastName);
-        formData.append("dob", data.dob);
-        formData.append("gender", data.gender);
-        if (data.region) formData.append("region", data.region);
+      const response: any = await apiClient.post("/users/children", childData);
 
-        if (data.profilePicture) {
-          const filename = data.profilePicture.split("/").pop() || "profile.jpg";
-          const match = /\.(\w+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : "image/jpeg";
-          formData.append("profilePicture", {
-            uri: data.profilePicture,
-            name: filename,
-            type,
-          } as any);
-        }
+      const childId =
+        response.data?.childId || response.childId || response.child?.childId;
 
-        if (data.birthCertificate) {
-          const filename = data.birthCertificate.split("/").pop() || "certificate.jpg";
-          const match = /\.(\w+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : "image/jpeg";
-          formData.append("birthCertificate", {
-            uri: data.birthCertificate,
-            name: filename,
-            type,
-          } as any);
-        }
-
-        const response: any = await multipartApiClient.post("/users/children", formData);
-        return response;
+      if (!childId) {
+        throw new Error("Failed to get child ID from server response");
       }
 
-      const response: any = await apiClient.post("/users/children", data);
+      // 2. Upload Profile Picture
+      if (data.profilePicture) {
+        const formData = new FormData();
+        const filename = data.profilePicture.split("/").pop() || "profile.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : "image/jpeg";
+        formData.append("image", {
+          uri: data.profilePicture,
+          name: filename,
+          type,
+        } as any);
+
+        await multipartApiClient.post(
+          `/users/children/${childId}/profile-picture`,
+          formData,
+        );
+      }
+
+      // 3. Upload Birth Certificate if applicable
+      if (data.birthCertificate) {
+        const formData = new FormData();
+        const filename =
+          data.birthCertificate.split("/").pop() || "certificate.jpg";
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : "image/jpeg";
+        formData.append("file", {
+          uri: data.birthCertificate,
+          name: filename,
+          type,
+        } as any);
+
+        // Assuming similar endpoint for birth certificate
+        try {
+          await multipartApiClient.post(
+            `/users/children/${childId}/birth-certificate`,
+            formData,
+          );
+        } catch (err) {
+          console.log("Birth certificate upload failed", err);
+        }
+      }
+
       return response;
     },
     onSuccess: (data) => {

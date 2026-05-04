@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { Href, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -14,7 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
   borderRadius,
@@ -34,7 +34,9 @@ export default function CreateChildScreen() {
   const [gender, setGender] = useState<"Male" | "Female" | "">("");
   const [region, setRegion] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [birthCertificateImage, setBirthCertificateImage] = useState<string | null>(null);
+  const [birthCertificateImage, setBirthCertificateImage] = useState<
+    string | null
+  >(null);
   const [showRegionDropdown, setShowRegionDropdown] = useState(false);
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
@@ -92,7 +94,8 @@ export default function CreateChildScreen() {
       setStatusModalConfig({
         type: "error",
         title: "Permission Required",
-        message: "Please grant camera roll permissions to upload a certificate.",
+        message:
+          "Please grant camera roll permissions to upload a certificate.",
         onPrimaryPress: () => setStatusModalVisible(false),
       });
       setStatusModalVisible(true);
