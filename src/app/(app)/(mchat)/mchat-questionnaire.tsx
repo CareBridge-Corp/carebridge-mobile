@@ -1,20 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation } from "@tanstack/react-query";
 import { Href, useRouter } from "expo-router";
-import * as SecureStore from "expo-secure-store";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import apiClient from "../../../shared/api/client";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import {
+  borderRadius,
+  colors,
+  spacing,
+  typography,
+} from "../../../shared/theme";
+import { useMChatStore } from "../store/mchatStore";
 
-// M-CHAT-R/F Questions (20 Questions)
 const MCHAT_QUESTIONS = [
   {
     id: 1,
@@ -142,37 +143,14 @@ const MCHAT_QUESTIONS = [
 export default function MChatQuestionnaireScreen() {
   const router = useRouter();
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<{ [key: number]: boolean }>({});
+
+  const { answers, setAnswer } = useMChatStore();
 
   const question = MCHAT_QUESTIONS[currentQuestion];
   const totalQuestions = MCHAT_QUESTIONS.length;
 
-  const submitScreeningMutation = useMutation({
-    mutationFn: async (screeningData: any) => {
-      // Save locally forever just in case
-      await SecureStore.setItemAsync(
-        `screening-${Date.now()}`,
-        JSON.stringify(screeningData),
-      );
-      // Submit to the endpoint
-      return apiClient.post("/screenings", screeningData);
-    },
-    onSuccess: () => {
-      router.replace("/(app)/mchat-success" as Href);
-    },
-    onError: (error) => {
-      console.log("Failed to submit screening", error);
-      // Fallback: still navigate if we safely stored it, or handle UI error
-      router.replace("/(app)/mchat-success" as Href);
-    },
-  });
-
   const handleAnswer = (answer: boolean) => {
-    // If we're already submitting, ignore
-    if (submitScreeningMutation.isPending) return;
-
-    const newAnswers = { ...answers, [question.id]: answer };
-    setAnswers(newAnswers);
+    setAnswer(`Q${question.id}`, answer);
 
     // Move to next question or finish
     if (currentQuestion < MCHAT_QUESTIONS.length - 1) {
@@ -180,20 +158,9 @@ export default function MChatQuestionnaireScreen() {
         setCurrentQuestion(currentQuestion + 1);
       }, 300);
     } else {
-      // Questionnaire complete - build payload and run mutation
-      const finalAnswers: Record<string, boolean> = {};
-      for (let i = 1; i <= MCHAT_QUESTIONS.length; i++) {
-        // Fallback to false if somehow undefined
-        finalAnswers[`Q${i}`] = newAnswers[i] ?? false;
-      }
-
-      const payload = {
-        childId: "3c0163f2-c287-437b-a990-bcd25e5f1414",
-        answers: finalAnswers,
-      };
-
+      // Navigate to supporting info step
       setTimeout(() => {
-        submitScreeningMutation.mutate(payload);
+        router.push("/(app)/(mchat)/mchat-supporting-info" as Href);
       }, 300);
     }
   };
@@ -260,10 +227,10 @@ export default function MChatQuestionnaireScreen() {
       {/* Question at Top */}
       <View style={styles.topQuestionContainer}>
         <Text style={styles.topQuestionText}>{question.question}</Text>
-        {answers[question.id] !== undefined && (
+        {answers[`Q${question.id}`] !== undefined && (
           <View style={styles.answerBadge}>
             <Text style={styles.answerBadgeText}>
-              {answers[question.id] ? "Yes" : "No"}
+              {answers[`Q${question.id}`] ? "Yes" : "No"}
             </Text>
           </View>
         )}
@@ -289,61 +256,41 @@ export default function MChatQuestionnaireScreen() {
 
       {/* Answer Buttons at Bottom */}
       <View style={styles.answerContainer}>
-        {submitScreeningMutation.isPending ? (
-          <View
+        <TouchableOpacity
+          style={[
+            styles.answerButton,
+            answers[`Q${question.id}`] === false && styles.answerButtonSelected,
+          ]}
+          onPress={() => handleAnswer(false)}
+          activeOpacity={0.7}
+        >
+          <Text
             style={[
-              styles.answerButton,
-              { borderColor: "transparent", backgroundColor: "transparent" },
+              styles.answerText,
+              answers[`Q${question.id}`] === false && styles.answerTextSelected,
             ]}
           >
-            <ActivityIndicator size="large" color="#0C4A6E" />
-            <Text
-              style={{ marginTop: 10, color: "#0C4A6E", fontWeight: "600" }}
-            >
-              Saving Screening...
-            </Text>
-          </View>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={[
-                styles.answerButton,
-                answers[question.id] === false && styles.answerButtonSelected,
-              ]}
-              onPress={() => handleAnswer(false)}
-              activeOpacity={0.7}
-              disabled={submitScreeningMutation.isPending}
-            >
-              <Text
-                style={[
-                  styles.answerText,
-                  answers[question.id] === false && styles.answerTextSelected,
-                ]}
-              >
-                No
-              </Text>
-            </TouchableOpacity>
+            No
+          </Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.answerButton,
-                answers[question.id] === true && styles.answerButtonSelected,
-              ]}
-              onPress={() => handleAnswer(true)}
-              activeOpacity={0.7}
-              disabled={submitScreeningMutation.isPending}
-            >
-              <Text
-                style={[
-                  styles.answerText,
-                  answers[question.id] === true && styles.answerTextSelected,
-                ]}
-              >
-                Yes
-              </Text>
-            </TouchableOpacity>
-          </>
-        )}
+        <TouchableOpacity
+          style={[
+            styles.answerButton,
+            answers[`Q${question.id}`] === true && styles.answerButtonSelected,
+          ]}
+          onPress={() => handleAnswer(true)}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.answerText,
+              answers[`Q${question.id}`] === true && styles.answerTextSelected,
+            ]}
+          >
+            Yes
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

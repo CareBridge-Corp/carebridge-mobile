@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
   borderRadius,
@@ -33,6 +34,7 @@ export default function CreateChildScreen() {
   const [gender, setGender] = useState<"Male" | "Female" | "">("");
   const [region, setRegion] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [birthCertificateImage, setBirthCertificateImage] = useState<string | null>(null);
   const [showRegionDropdown, setShowRegionDropdown] = useState(false);
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
@@ -59,15 +61,53 @@ export default function CreateChildScreen() {
     "Tigray",
   ];
 
-  const handleImageUpload = () => {
-    // TODO: Implement image picker
-    setStatusModalConfig({
-      type: "info",
-      title: "Image Upload",
-      message: "Image picker will be implemented soon.",
-      onPrimaryPress: () => setStatusModalVisible(false),
+  const handleImageUpload = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      setStatusModalConfig({
+        type: "error",
+        title: "Permission Required",
+        message: "Please grant camera roll permissions to upload an image.",
+        onPrimaryPress: () => setStatusModalVisible(false),
+      });
+      setStatusModalVisible(true);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
     });
-    setStatusModalVisible(true);
+
+    if (!result.canceled && result.assets?.[0]) {
+      setProfileImage(result.assets[0].uri);
+    }
+  };
+
+  const handleBirthCertificateUpload = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      setStatusModalConfig({
+        type: "error",
+        title: "Permission Required",
+        message: "Please grant camera roll permissions to upload a certificate.",
+        onPrimaryPress: () => setStatusModalVisible(false),
+      });
+      setStatusModalVisible(true);
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: false,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.[0]) {
+      setBirthCertificateImage(result.assets[0].uri);
+    }
   };
 
   const handleNext = () => {
@@ -134,6 +174,8 @@ export default function CreateChildScreen() {
         dob: dob.trim(),
         gender: gender,
         region: region,
+        profilePicture: profileImage || undefined,
+        birthCertificate: birthCertificateImage || undefined,
       },
       {
         onSuccess: () => {
@@ -293,6 +335,7 @@ export default function CreateChildScreen() {
         <TouchableOpacity
           style={styles.uploadCertificateContainer}
           activeOpacity={0.7}
+          onPress={handleBirthCertificateUpload}
         >
           <View style={styles.uploadIconCircle}>
             <Ionicons name="cloud-upload-outline" size={28} color="#0C4A6E" />

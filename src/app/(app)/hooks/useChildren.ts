@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../../../shared/api/client";
+import multipartApiClient from "../../../shared/api/multipartClient";
 import { useChildrenStore } from "../store/childrenStore";
 
 interface CreateChildData {
@@ -8,6 +9,8 @@ interface CreateChildData {
   dob: string;
   gender: string;
   region?: string;
+  profilePicture?: string;
+  birthCertificate?: string;
 }
 
 export function useChildren() {
@@ -38,6 +41,42 @@ export function useCreateChild() {
 
   return useMutation({
     mutationFn: async (data: CreateChildData) => {
+      const hasImages = !!data.profilePicture || !!data.birthCertificate;
+
+      if (hasImages) {
+        const formData = new FormData();
+        formData.append("firstName", data.firstName);
+        formData.append("lastName", data.lastName);
+        formData.append("dob", data.dob);
+        formData.append("gender", data.gender);
+        if (data.region) formData.append("region", data.region);
+
+        if (data.profilePicture) {
+          const filename = data.profilePicture.split("/").pop() || "profile.jpg";
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : "image/jpeg";
+          formData.append("profilePicture", {
+            uri: data.profilePicture,
+            name: filename,
+            type,
+          } as any);
+        }
+
+        if (data.birthCertificate) {
+          const filename = data.birthCertificate.split("/").pop() || "certificate.jpg";
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : "image/jpeg";
+          formData.append("birthCertificate", {
+            uri: data.birthCertificate,
+            name: filename,
+            type,
+          } as any);
+        }
+
+        const response: any = await multipartApiClient.post("/users/children", formData);
+        return response;
+      }
+
       const response: any = await apiClient.post("/users/children", data);
       return response;
     },
