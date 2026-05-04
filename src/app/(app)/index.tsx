@@ -15,6 +15,7 @@ import { colors, spacing, typography } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { EmptyChildView } from "./components/EmptyChildView";
 import { HasChildView } from "./components/HasChildView";
+import { HomeSkeletonView } from "./components/HomeSkeletonView";
 import { useChildren } from "./hooks/useChildren";
 import { useChildrenStore } from "./store/childrenStore";
 
@@ -68,7 +69,13 @@ export default function AppHomeScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {isLoading ? null : hasChildren ? <HasChildView /> : <EmptyChildView />}
+        {isLoading ? (
+          <HomeSkeletonView />
+        ) : hasChildren ? (
+          <HasChildView />
+        ) : (
+          <EmptyChildView />
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
