@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useAuthStore } from "../../(auth)/store/authStore";
 import multipartApiClient from "../../../shared/api/multipartClient";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
@@ -23,23 +24,20 @@ import {
   spacing,
   typography,
 } from "../../../shared/theme";
-import { useChildrenStore } from "../store/childrenStore";
 
-interface VerifyChildProps {
+interface VerifyParentProps {
   onSuccess?: () => void;
   hideHeader?: boolean;
 }
 
-export default function VerifyChildScreen({
+export default function VerifyParentScreen({
   onSuccess,
   hideHeader,
-}: VerifyChildProps = {}) {
+}: VerifyParentProps = {}) {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { activeChild, updateChild } = useChildrenStore();
+  const { user } = useAuthStore(); // Using auth store to get parent details
 
   const [documentImage, setDocumentImage] = useState<string | null>(null);
-
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [statusConfig, setStatusConfig] = useState({
     type: "info" as "success" | "error" | "info",
@@ -47,14 +45,14 @@ export default function VerifyChildScreen({
     message: "",
   });
 
-  const uploadVerificationDocMutation = useMutation({
+  const uploadParentVerificationMutation = useMutation({
     mutationFn: async () => {
-      if (!activeChild?.childId || !documentImage) {
-        throw new Error("Missing required information or document.");
+      if (!documentImage) {
+        throw new Error("Missing parent document.");
       }
 
       const formData = new FormData();
-      const filename = documentImage.split("/").pop() || "certificate.jpg";
+      const filename = documentImage.split("/").pop() || "parent.jpg";
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : "image/jpeg";
 
@@ -64,24 +62,18 @@ export default function VerifyChildScreen({
         type,
       } as any);
 
-      // Send to verification endpoint
       const response: any = await multipartApiClient.post(
-        `/users/children/${activeChild.childId}/verify/birth`,
+        `/users/me/verify/parent`,
         formData,
       );
       return response;
     },
     onSuccess: () => {
-      if (activeChild) {
-        // Optimistically update the child status to PENDING
-        updateChild(activeChild.childId, { status: "PENDING" });
-      }
-      queryClient.invalidateQueries({ queryKey: ["children"] });
       setStatusConfig({
         type: "success",
         title: "Document Submitted",
         message:
-          "Your document has been uploaded successfully for verification. We will notify you once it's reviewed.",
+          "Your Fayda ID has been uploaded successfully for verification.",
       });
       setStatusModalVisible(true);
       if (onSuccess) onSuccess();
@@ -103,8 +95,7 @@ export default function VerifyChildScreen({
       setStatusConfig({
         type: "error",
         title: "Permission Required",
-        message:
-          "Please grant camera roll permissions to upload a certificate.",
+        message: "Please grant camera roll permissions to upload an ID.",
       });
       setStatusModalVisible(true);
       return;
@@ -128,7 +119,7 @@ export default function VerifyChildScreen({
     }
   };
 
-  if (!activeChild) {
+  if (!user) {
     return (
       <View
         style={[
@@ -148,7 +139,6 @@ export default function VerifyChildScreen({
     >
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
-      {/* Header */}
       {!hideHeader && (
         <View style={styles.header}>
           <TouchableOpacity
@@ -165,45 +155,35 @@ export default function VerifyChildScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <Text style={styles.title}>Verify Profile</Text>
+        <Text style={styles.title}>Parent Verification</Text>
         <Text style={styles.subtitle}>
-          Please review the child details below and securely upload a birth
-          certificate or vaccine document.
+          Please securely upload your Fayda image for parent identity
+          verification.
         </Text>
 
-        {/* Existing Child Details (Read-only representation) */}
         <View style={styles.detailsCard}>
-          <Text style={styles.sectionHeader}>Child Details</Text>
+          <Text style={styles.sectionHeader}>Your Details</Text>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Name:</Text>
-            <Text style={styles.detailValue}>
-              {activeChild.firstName} {activeChild.lastName}
-            </Text>
+            <Text style={styles.detailLabel}>First Name:</Text>
+            <Text style={styles.detailValue}>{user.firstName}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Date of Birth:</Text>
-            <Text style={styles.detailValue}>{activeChild.dob}</Text>
+            <Text style={styles.detailLabel}>Last Name:</Text>
+            <Text style={styles.detailValue}>{user.lastName}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Gender:</Text>
-            <Text style={styles.detailValue}>{activeChild.gender}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Region:</Text>
-            <Text style={styles.detailValue}>
-              {activeChild.region || "Not specified"}
-            </Text>
+            <Text style={styles.detailLabel}>Email:</Text>
+            <Text style={styles.detailValue}>{user.email}</Text>
           </View>
         </View>
 
-        {/* Document Upload Area */}
         <Text
           style={[
             styles.sectionHeader,
             { marginTop: spacing.xl, marginBottom: spacing.md },
           ]}
         >
-          Document Upload
+          Fayda Image Upload
         </Text>
 
         {documentImage ? (
@@ -232,7 +212,7 @@ export default function VerifyChildScreen({
                 color="#0C4A6E"
               />
             </View>
-            <Text style={styles.uploadTitle}>Upload Official Document</Text>
+            <Text style={styles.uploadTitle}>Upload Fayda Image</Text>
             <Text style={styles.uploadSubtitle}>
               Tap to browse photos (Max file size 5MB)
             </Text>
@@ -240,20 +220,21 @@ export default function VerifyChildScreen({
         )}
       </ScrollView>
 
-      {/* Submit Action */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (uploadVerificationDocMutation.isPending || !documentImage) &&
+            (uploadParentVerificationMutation.isPending || !documentImage) &&
               styles.submitButtonDisabled,
           ]}
-          onPress={() => uploadVerificationDocMutation.mutate()}
-          disabled={uploadVerificationDocMutation.isPending || !documentImage}
+          onPress={() => uploadParentVerificationMutation.mutate()}
+          disabled={
+            uploadParentVerificationMutation.isPending || !documentImage
+          }
           activeOpacity={0.8}
         >
           <Text style={styles.submitButtonText}>
-            {uploadVerificationDocMutation.isPending
+            {uploadParentVerificationMutation.isPending
               ? "Submitting..."
               : "Submit Document"}
           </Text>
@@ -261,7 +242,6 @@ export default function VerifyChildScreen({
         </TouchableOpacity>
       </View>
 
-      {/* Response Modal */}
       <StatusModal
         visible={statusModalVisible}
         type={statusConfig.type}

@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -25,15 +25,7 @@ import {
 } from "../../../shared/theme";
 import { useChildrenStore } from "../store/childrenStore";
 
-interface VerifyChildProps {
-  onSuccess?: () => void;
-  hideHeader?: boolean;
-}
-
-export default function VerifyChildScreen({
-  onSuccess,
-  hideHeader,
-}: VerifyChildProps = {}) {
+export default function VerifyChildScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { activeChild, updateChild } = useChildrenStore();
@@ -84,7 +76,6 @@ export default function VerifyChildScreen({
           "Your document has been uploaded successfully for verification. We will notify you once it's reviewed.",
       });
       setStatusModalVisible(true);
-      if (onSuccess) onSuccess();
     },
     onError: (error: any) => {
       setStatusConfig({
@@ -149,16 +140,14 @@ export default function VerifyChildScreen({
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* Header */}
-      {!hideHeader && (
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         style={styles.scrollView}

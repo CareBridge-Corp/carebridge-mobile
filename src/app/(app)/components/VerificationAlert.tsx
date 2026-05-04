@@ -39,7 +39,7 @@ export function VerificationAlert({ status }: VerificationAlertProps) {
       style={[styles.container, { backgroundColor: bgColor }]}
       disabled={isPending}
       activeOpacity={0.7}
-      onPress={() => router.push("/(app)/verify-child" as Href)}
+      onPress={() => router.push("/(app)/(verification)/verify" as Href)}
     >
       <View style={styles.iconContainer}>
         <Ionicons name={iconName} size={28} color={iconColor} />
