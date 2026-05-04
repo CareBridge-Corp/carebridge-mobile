@@ -2,20 +2,25 @@ import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
-import { useCreateChild } from "./hooks/useChildren";
+import {
+  borderRadius,
+  colors,
+  spacing,
+  typography,
+} from "../../../shared/theme";
+import { useCreateChild } from "../hooks/useChildren";
 
 export default function CreateChildScreen() {
   const router = useRouter();
@@ -38,6 +43,11 @@ export default function CreateChildScreen() {
       return;
     }
 
+    if (!lastName.trim()) {
+      Alert.alert("Error", "Please enter last name");
+      return;
+    }
+
     if (!dob.trim()) {
       Alert.alert("Error", "Please enter date of birth");
       return;
@@ -52,8 +62,10 @@ export default function CreateChildScreen() {
     createChildMutation.mutate(
       {
         firstName: firstName.trim(),
+        lastName: lastName.trim(),
         dob: dob.trim(),
         gender: gender,
+        region: "Addis Ababa", // Defaulting region or could add an input for it
       },
       {
         onSuccess: () => {
@@ -67,7 +79,7 @@ export default function CreateChildScreen() {
         onError: (error: any) => {
           Alert.alert(
             "Error",
-            error.response?.data?.error || "Failed to create child profile",
+            error.message || "Failed to create child profile",
           );
         },
       },
@@ -97,9 +109,6 @@ export default function CreateChildScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <Text style={styles.title}>Child's Info</Text>
-        <Text style={styles.subtitle}>
-          Provide your child's info Birth certificate is required
-        </Text>
 
         {/* Profile Image Upload */}
         <TouchableOpacity

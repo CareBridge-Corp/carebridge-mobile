@@ -5,8 +5,12 @@ import { createJSONStorage, persist } from "zustand/middleware";
 export interface Child {
   childId: string;
   firstName: string;
+  lastName?: string;
+  fullName?: string;
+  profilePictureUrl?: string | null;
   dob: string;
   gender: string;
+  parentId?: string;
   region: string | null;
   assignedClinicianId: string | null;
   createdAt?: string;

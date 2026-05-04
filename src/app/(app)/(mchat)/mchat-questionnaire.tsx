@@ -11,8 +11,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import apiClient from "../../shared/api/client";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import apiClient from "../../../shared/api/client";
+import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
 
 // M-CHAT-R/F Questions (20 Questions)
 const MCHAT_QUESTIONS = [

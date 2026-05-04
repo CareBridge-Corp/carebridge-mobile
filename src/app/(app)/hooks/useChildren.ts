@@ -4,6 +4,7 @@ import { useChildrenStore } from "../store/childrenStore";
 
 interface CreateChildData {
   firstName: string;
+  lastName: string;
   dob: string;
   gender: string;
   region?: string;
@@ -17,13 +18,13 @@ export function useChildren() {
     queryFn: async () => {
       setLoading(true);
       try {
-        const response = await apiClient.get("/users/children");
-        const children = response.data.children || [];
+        const response: any = await apiClient.get("/users/children");
+        const children = response.children || [];
         setChildren(children);
         setLoading(false);
-        return response.data;
+        return response;
       } catch (error: any) {
-        setError(error.response?.data?.error || "Failed to fetch children");
+        setError(error.message || "Failed to fetch children");
         setLoading(false);
         throw error;
       }
@@ -37,16 +38,18 @@ export function useCreateChild() {
 
   return useMutation({
     mutationFn: async (data: CreateChildData) => {
-      const response = await apiClient.post("/users/children", data);
-      return response.data;
+      const response: any = await apiClient.post("/users/children", data);
+      return response;
     },
     onSuccess: (data) => {
-      addChild(data.child);
+      if (data && data.child) {
+        addChild(data.child);
+      }
       queryClient.invalidateQueries({ queryKey: ["children"] });
       setError(null);
     },
     onError: (error: any) => {
-      setError(error.response?.data?.error || "Failed to create child profile");
+      setError(error.message || "Failed to create child profile");
     },
   });
 }

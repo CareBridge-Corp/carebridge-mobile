@@ -9,7 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
 
 export default function BookingSelectDateScreen() {
   const router = useRouter();

@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
 
 interface Doctor {
   id: string;
@@ -30,7 +30,7 @@ export default function BookingSelectDoctorScreen() {
       id: "1",
       name: "Dr. Walter White",
       specialty: "Neurology specialist",
-      image: require("../../../assets/docs/doc1.png"),
+      image: require("../../../../assets/docs/doc1.png"),
       rating: 4.8,
       experience: "15 years",
     },
@@ -38,7 +38,7 @@ export default function BookingSelectDoctorScreen() {
       id: "2",
       name: "Dr. Ermias Lema",
       specialty: "Pediatrician",
-      image: require("../../../assets/docs/doc2.png"),
+      image: require("../../../../assets/docs/doc2.png"),
       rating: 4.9,
       experience: "12 years",
     },
@@ -46,7 +46,7 @@ export default function BookingSelectDoctorScreen() {
       id: "3",
       name: "Dr. Sarah Johnson",
       specialty: "Child Psychologist",
-      image: require("../../../assets/docs/doc1.png"),
+      image: require("../../../../assets/docs/doc1.png"),
       rating: 4.7,
       experience: "10 years",
     },

@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
 
 export default function DoctorConsultationScreen() {
   const router = useRouter();
@@ -61,7 +61,7 @@ export default function DoctorConsultationScreen() {
         <View style={styles.profileCard}>
           <View style={styles.doctorImageContainer}>
             <Image
-              source={require("../../../assets/docs/doc1.png")}
+              source={require("../../../../assets/docs/doc1.png")}
               style={styles.doctorImage}
               resizeMode="cover"
             />

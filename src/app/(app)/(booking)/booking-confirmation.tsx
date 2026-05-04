@@ -1,15 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import {
-    Image,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import {
+  borderRadius,
+  colors,
+  spacing,
+  typography,
+} from "../../../shared/theme";
 
 export default function BookingConfirmationScreen() {
   const router = useRouter();
@@ -61,7 +66,7 @@ export default function BookingConfirmationScreen() {
           <Text style={styles.cardTitle}>Doctor</Text>
           <View style={styles.doctorInfo}>
             <Image
-              source={require("../../../assets/docs/doc1.png")}
+              source={require("../../../../assets/docs/doc1.png")}
               style={styles.doctorImage}
             />
             <View style={styles.doctorDetails}>

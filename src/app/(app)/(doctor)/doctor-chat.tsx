@@ -13,7 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
 
 interface Message {
   id: string;
@@ -131,7 +131,7 @@ export default function DoctorChatScreen() {
 
         <View style={styles.doctorInfo}>
           <Image
-            source={require("../../../assets/docs/doc1.png")}
+            source={require("../../../../assets/docs/doc1.png")}
             style={styles.doctorAvatar}
             resizeMode="cover"
           />
