@@ -51,9 +51,11 @@ export default function ChatScreen() {
     return date.toLocaleDateString();
   };
 
-  const filteredConversations = conversations?.filter((conv) =>
-    conv.clinician.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredConversations = conversations?.filter((conv) => {
+    const clinicianName =
+      `${conv.clinician.firstName} ${conv.clinician.lastName}`.toLowerCase();
+    return clinicianName.includes(searchQuery.toLowerCase());
+  });
 
   const renderConversation = ({ item }: { item: ChatConversation }) => {
     const isUnread = item.lastMessage && !item.lastMessage.readAt;

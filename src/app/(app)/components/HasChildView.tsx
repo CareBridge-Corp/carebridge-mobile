@@ -7,9 +7,13 @@ import {
   spacing,
   typography,
 } from "../../../shared/theme";
+import { useChildrenStore } from "../store/childrenStore";
+import { VerificationAlert } from "./VerificationAlert";
 
 export function HasChildView() {
   const router = useRouter();
+  const { activeChild } = useChildrenStore();
+  const status = activeChild?.status || "UNVERIFIED";
 
   const handleUploadVideo = () => {
     // TODO: Implement video upload
@@ -25,6 +29,8 @@ export function HasChildView() {
       <Text style={styles.mainTitle}>
         Fill out the information and{"\n"}start the treatment
       </Text>
+
+      <VerificationAlert status={status} />
 
       {/* Upload Video Card */}
       <TouchableOpacity
@@ -237,5 +243,50 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: "#5A7A8F",
     textAlign: "center",
+  },
+  statusContainer: {
+    backgroundColor: "#F4F8FA",
+    borderRadius: borderRadius.xxl,
+    padding: spacing.xxl,
+    alignItems: "center",
+    marginTop: spacing.xl,
+  },
+  statusIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+  statusTitle: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: "#0C4A6E",
+    marginBottom: spacing.sm,
+    textAlign: "center",
+  },
+  statusSubtitle: {
+    fontSize: typography.fontSize.md,
+    color: "#5A7A8F",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: spacing.xxl,
+  },
+  verifyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0C4A6E",
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxxl,
+    borderRadius: borderRadius.xxl,
+    gap: spacing.sm,
+    width: "100%",
+  },
+  verifyButtonText: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
   },
 });

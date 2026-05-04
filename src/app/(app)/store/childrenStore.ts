@@ -12,6 +12,7 @@ export interface Child {
   gender: string;
   parentId?: string;
   region: string | null;
+  status?: "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED";
   assignedClinicianId: string | null;
   createdAt?: string;
 }

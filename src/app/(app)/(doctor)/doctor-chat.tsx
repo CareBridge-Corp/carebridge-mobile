@@ -2,22 +2,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { socketService } from "../../../shared/api/socket";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
 import { useChatMessages, useSendMessage } from "../hooks/useChat";
 import { useChatStore } from "../store/chatStore";
