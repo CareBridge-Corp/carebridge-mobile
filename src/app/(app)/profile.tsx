@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,14 +10,17 @@ import {
   View,
 } from "react-native";
 import { useLogout } from "../(auth)/hooks/useLogout";
-import { useAuthStore } from "../(auth)/store/authStore";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { useProfile } from "./hooks/useProfile";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const logoutMutation = useLogout();
-  const user = useAuthStore((state) => state.user);
 
+  // Use the profile from our new profile feature hook/store
+  const { data: profile } = useProfile();
+
+  console.log("Loaded profile:", profile);
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
@@ -48,7 +52,14 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.avatarWrapper}>
             <View style={styles.avatarLarge}>
-              <Ionicons name="person" size={48} color={colors.white} />
+              {profile?.profilePictureUrl ? (
+                <Image
+                  source={{ uri: profile?.profilePictureUrl }}
+                  style={{ width: 80, height: 80, borderRadius: 40 }}
+                />
+              ) : (
+                <Ionicons name="person" size={48} color={colors.white} />
+              )}
             </View>
             <View style={styles.editAvatarBadge}>
               <Ionicons name="camera" size={14} color={colors.white} />
@@ -56,7 +67,8 @@ export default function ProfileScreen() {
           </View>
 
           <Text style={styles.userName}>
-            {user?.firstName} {user?.lastName}
+            {profile?.fullName ||
+              `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim()}
           </Text>
 
           <View style={styles.roleBadge}>
@@ -67,22 +79,22 @@ export default function ProfileScreen() {
               style={{ marginRight: 4 }}
             />
             <Text style={styles.userRole}>
-              {user?.role?.toUpperCase() || "PATIENT"}
+              {profile?.role?.toUpperCase() || "PATIENT"}
             </Text>
           </View>
 
-          <Text style={styles.userEmail}>{user?.email}</Text>
-
-          <TouchableOpacity style={styles.editProfileButton}>
-            <Text style={styles.editProfileText}>Edit Profile</Text>
-          </TouchableOpacity>
+          <Text style={styles.userEmail}>{profile?.email}</Text>
         </View>
 
         {/* Menu Items */}
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>Account settings</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/(app)/(parent)/update-profile" as any)}
+            activeOpacity={0.7}
+          >
             <View style={styles.menuIconContainer}>
               <Ionicons
                 name="person-outline"

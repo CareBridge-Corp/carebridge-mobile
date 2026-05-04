@@ -4,8 +4,13 @@ export interface User {
   firstName: string;
   lastName: string;
   surname?: string | null;
+  fullName?: string;
   role: "PARENT" | "CLINICIAN" | "ADMIN" | "patient" | "caregiver" | "admin";
+  status?: string;
   createdAt?: string;
+  updatedAt?: string;
+  phone?: string;
+  profilePictureUrl?: string;
 }
 
 export interface LoginCredentials {
