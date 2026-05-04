@@ -1,108 +1,104 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-    FlatList,
-    Image,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { socketService } from "../../shared/api/socket";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
-
-interface ChatConversation {
-  id: string;
-  doctorName: string;
-  doctorImage: any;
-  lastMessage: string;
-  timestamp: string;
-  unreadCount: number;
-  isOnline: boolean;
-}
+import { useConversations } from "./hooks/useChat";
+import { ChatConversation, useChatStore } from "./store/chatStore";
 
 export default function ChatScreen() {
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
+  const { data: conversations, isLoading } = useConversations();
+  const { setActiveConversation } = useChatStore();
 
-  const conversations: ChatConversation[] = [
-    {
-      id: "1",
-      doctorName: "Dr. Sarah Johnson",
-      doctorImage: require("../../../assets/docs/doc1.png"),
-      lastMessage: "Your appointment is confirmed for tomorrow at 10 AM",
-      timestamp: "2m ago",
-      unreadCount: 2,
-      isOnline: true,
-    },
-    {
-      id: "2",
-      doctorName: "Dr. Walter White",
-      doctorImage: require("../../../assets/docs/doc1.png"),
-      lastMessage: "Please bring the test results with you",
-      timestamp: "1h ago",
-      unreadCount: 0,
-      isOnline: false,
-    },
-    {
-      id: "3",
-      doctorName: "Dr. Ermias Lema",
-      doctorImage: require("../../../assets/docs/doc2.png"),
-      lastMessage: "How is your child feeling today?",
-      timestamp: "3h ago",
-      unreadCount: 1,
-      isOnline: true,
-    },
-    {
-      id: "4",
-      doctorName: "Dr. Michael Chen",
-      doctorImage: require("../../../assets/docs/doc1.png"),
-      lastMessage: "The medication should help with the symptoms",
-      timestamp: "Yesterday",
-      unreadCount: 0,
-      isOnline: false,
-    },
-  ];
+  // Connect socket when component mounts
+  useEffect(() => {
+    socketService.connect();
+    return () => {
+      // Don't disconnect on unmount, keep connection alive
+    };
+  }, []);
 
-  const handleChatPress = (conversationId: string) => {
-    router.push("/(app)/doctor-chat" as Href);
+  const handleChatPress = (conversation: ChatConversation) => {
+    setActiveConversation(conversation);
+    router.push("/(app)/(doctor)/doctor-chat" as Href);
   };
 
-  const renderConversation = ({ item }: { item: ChatConversation }) => (
-    <TouchableOpacity
-      style={styles.conversationCard}
-      onPress={() => handleChatPress(item.id)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.avatarContainer}>
-        <Image source={item.doctorImage} style={styles.avatar} />
-        {item.isOnline && <View style={styles.onlineIndicator} />}
-      </View>
+  const formatTimestamp = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-      <View style={styles.conversationContent}>
-        <View style={styles.conversationHeader}>
-          <Text style={styles.doctorName}>{item.doctorName}</Text>
-          <Text style={styles.timestamp}>{item.timestamp}</Text>
-        </View>
-        <View style={styles.messageRow}>
-          <Text
-            style={[
-              styles.lastMessage,
-              item.unreadCount > 0 && styles.unreadMessage,
-            ]}
-            numberOfLines={1}
-          >
-            {item.lastMessage}
-          </Text>
-          {item.unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{item.unreadCount}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const filteredConversations = conversations?.filter((conv) =>
+    conv.clinician.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const renderConversation = ({ item }: { item: ChatConversation }) => {
+    const isUnread = item.lastMessage && !item.lastMessage.readAt;
+    const lastMessageText = item.lastMessage?.content || "No messages yet";
+    const timestamp = item.lastMessage?.createdAt
+      ? formatTimestamp(item.lastMessage.createdAt)
+      : "";
+
+    return (
+      <TouchableOpacity
+        style={styles.conversationCard}
+        onPress={() => handleChatPress(item)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="person" size={28} color="#0C4A6E" />
+          </View>
+        </View>
+
+        <View style={styles.conversationContent}>
+          <View style={styles.conversationHeader}>
+            <Text style={styles.doctorName}>
+              Dr. {item.clinician.firstName} {item.clinician.lastName}
+            </Text>
+            <Text style={styles.timestamp}>{timestamp}</Text>
+          </View>
+          <View style={styles.messageRow}>
+            <Text
+              style={[styles.lastMessage, isUnread && styles.unreadMessage]}
+              numberOfLines={1}
+            >
+              {lastMessageText}
+            </Text>
+            {isUnread && (
+              <View style={styles.unreadBadge}>
+                <View style={styles.unreadDot} />
+              </View>
+            )}
+          </View>
+          <Text style={styles.childName}>Child: {item.child.firstName}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -127,19 +123,35 @@ export default function ChatScreen() {
             style={styles.searchInput}
             placeholder="Search conversations..."
             placeholderTextColor="#A0B8C8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
       </View>
 
       {/* Conversations List */}
       <View style={styles.conversationsContainer}>
-        <FlatList
-          data={conversations}
-          renderItem={renderConversation}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.conversationsList}
-        />
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0C4A6E" />
+          </View>
+        ) : filteredConversations && filteredConversations.length > 0 ? (
+          <FlatList
+            data={filteredConversations}
+            renderItem={renderConversation}
+            keyExtractor={(item) => item.child.childId}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.conversationsList}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="chatbubbles-outline" size={64} color="#A0B8C8" />
+            <Text style={styles.emptyText}>No conversations yet</Text>
+            <Text style={styles.emptySubtext}>
+              Start chatting with your child's doctor
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -210,10 +222,13 @@ const styles = StyleSheet.create({
     position: "relative",
     marginRight: spacing.md,
   },
-  avatar: {
+  avatarPlaceholder: {
     width: 56,
     height: 56,
     borderRadius: 28,
+    backgroundColor: "#E8F0F5",
+    justifyContent: "center",
+    alignItems: "center",
   },
   onlineIndicator: {
     position: "absolute",
@@ -261,17 +276,41 @@ const styles = StyleSheet.create({
     color: "#0C4A6E",
   },
   unreadBadge: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: "#0C4A6E",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+  },
+  unreadDot: {
+    width: "100%",
+    height: "100%",
+  },
+  childName: {
+    fontSize: typography.fontSize.xs,
+    color: "#A0B8C8",
+    marginTop: spacing.xs,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 6,
   },
-  unreadCount: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.white,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing.xxl,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.semibold,
+    color: "#0C4A6E",
+    marginTop: spacing.lg,
+  },
+  emptySubtext: {
+    fontSize: typography.fontSize.md,
+    color: "#A0B8C8",
+    marginTop: spacing.sm,
+    textAlign: "center",
   },
 });

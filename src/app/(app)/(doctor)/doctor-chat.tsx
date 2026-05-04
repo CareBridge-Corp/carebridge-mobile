@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     FlatList,
-    Image,
     KeyboardAvoidingView,
     Platform,
     StatusBar,
@@ -13,73 +12,113 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
-
-interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "doctor";
-  timestamp: string;
-  date?: string;
-}
+import { socketService } from "../../../shared/api/socket";
+import {
+    borderRadius,
+    colors,
+    spacing,
+    typography,
+} from "../../../shared/theme";
+import { useChatMessages, useSendMessage } from "../hooks/useChat";
+import { useChatStore } from "../store/chatStore";
 
 export default function DoctorChatScreen() {
   const router = useRouter();
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      text: "some message from the admin",
-      sender: "user",
-      timestamp: "09:21",
-    },
-    {
-      id: "2",
-      text: "some message from the admin",
-      sender: "doctor",
-      timestamp: "09:21",
-      date: "Nov 11",
-    },
-    {
-      id: "3",
-      text: "some message from the admin",
-      sender: "doctor",
-      timestamp: "09:21",
-    },
-  ]);
+  const flatListRef = useRef<FlatList>(null);
+
+  const { activeConversation } = useChatStore();
+  const childId = activeConversation?.child.childId || "";
+
+  const { data: messagesData, isLoading } = useChatMessages(childId);
+  const sendMessageMutation = useSendMessage();
+
+  const messages = useChatStore((state) => state.messages[childId] || []);
+
+  // Join socket room for this child
+  useEffect(() => {
+    if (childId) {
+      socketService.joinChildRoom(childId);
+    }
+    return () => {
+      if (childId) {
+        socketService.leaveChildRoom(childId);
+      }
+    };
+  }, [childId]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages.length]);
 
   const handleSend = () => {
-    if (message.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: message,
-        sender: "user",
-        timestamp: new Date().toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }),
-      };
-      setMessages([...messages, newMessage]);
-      setMessage("");
+    if (message.trim() && childId) {
+      sendMessageMutation.mutate(
+        { childId, content: message.trim() },
+        {
+          onSuccess: () => {
+            setMessage("");
+          },
+        },
+      );
     }
   };
 
-  const renderMessage = ({ item, index }: { item: Message; index: number }) => {
-    const isUser = item.sender === "user";
-    const showDate = item.date !== undefined;
+  const formatTimestamp = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+    }
+  };
+
+  const shouldShowDate = (currentMsg: any, prevMsg: any): boolean => {
+    if (!prevMsg) return true;
+    const currentDate = new Date(currentMsg.createdAt).toDateString();
+    const prevDate = new Date(prevMsg.createdAt).toDateString();
+    return currentDate !== prevDate;
+  };
+
+  const renderMessage = ({ item, index }: { item: any; index: number }) => {
+    const prevMsg = index > 0 ? messages[index - 1] : null;
+    const showDate = shouldShowDate(item, prevMsg);
+    const isFromParent = item.senderId === activeConversation?.parent.userId;
 
     return (
       <View>
         {showDate && (
           <View style={styles.dateContainer}>
-            <Text style={styles.dateText}>{item.date}</Text>
+            <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
           </View>
         )}
         <View
           style={[
             styles.messageContainer,
-            isUser
+            isFromParent
               ? styles.userMessageContainer
               : styles.doctorMessageContainer,
           ]}
@@ -87,30 +126,46 @@ export default function DoctorChatScreen() {
           <View
             style={[
               styles.messageBubble,
-              isUser ? styles.userBubble : styles.doctorBubble,
+              isFromParent ? styles.userBubble : styles.doctorBubble,
             ]}
           >
             <Text
               style={[
                 styles.messageText,
-                isUser ? styles.userMessageText : styles.doctorMessageText,
+                isFromParent
+                  ? styles.userMessageText
+                  : styles.doctorMessageText,
               ]}
             >
-              {item.text}
+              {item.content}
             </Text>
             <Text
               style={[
                 styles.timestampText,
-                isUser ? styles.userTimestamp : styles.doctorTimestamp,
+                isFromParent ? styles.userTimestamp : styles.doctorTimestamp,
               ]}
             >
-              {item.timestamp}
+              {formatTimestamp(item.createdAt)}
             </Text>
           </View>
         </View>
       </View>
     );
   };
+
+  if (!activeConversation) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>No conversation selected</Text>
+        <TouchableOpacity
+          style={styles.backToChatsButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backToChatsText}>Back to Chats</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -130,17 +185,17 @@ export default function DoctorChatScreen() {
         </TouchableOpacity>
 
         <View style={styles.doctorInfo}>
-          <Image
-            source={require("../../../../assets/docs/doc1.png")}
-            style={styles.doctorAvatar}
-            resizeMode="cover"
-          />
+          <View style={styles.doctorAvatarPlaceholder}>
+            <Ionicons name="person" size={24} color="#0C4A6E" />
+          </View>
           <View style={styles.doctorDetails}>
-            <Text style={styles.doctorName}>Dr. Sarah Johnson</Text>
-            <View style={styles.onlineStatus}>
-              <View style={styles.onlineDot} />
-              <Text style={styles.onlineText}>Online</Text>
-            </View>
+            <Text style={styles.doctorName}>
+              Dr. {activeConversation.clinician.firstName}{" "}
+              {activeConversation.clinician.lastName}
+            </Text>
+            <Text style={styles.childText}>
+              Child: {activeConversation.child.firstName}
+            </Text>
           </View>
         </View>
 
@@ -148,13 +203,20 @@ export default function DoctorChatScreen() {
       </View>
 
       {/* Messages List */}
-      <FlatList
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messagesList}
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0C4A6E" />
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.messageId}
+          contentContainerStyle={styles.messagesList}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       {/* Input Area */}
       <View style={styles.inputContainer}>
@@ -176,11 +238,19 @@ export default function DoctorChatScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.sendButton}
+          style={[
+            styles.sendButton,
+            sendMessageMutation.isPending && styles.sendButtonDisabled,
+          ]}
           onPress={handleSend}
+          disabled={sendMessageMutation.isPending || !message.trim()}
           activeOpacity={0.7}
         >
-          <Ionicons name="send" size={20} color="#0C4A6E" />
+          {sendMessageMutation.isPending ? (
+            <ActivityIndicator size="small" color="#0C4A6E" />
+          ) : (
+            <Ionicons name="send" size={20} color="#0C4A6E" />
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -211,10 +281,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  doctorAvatar: {
+  doctorAvatarPlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    backgroundColor: "#E8F0F5",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: spacing.md,
   },
   doctorDetails: {
@@ -226,21 +299,9 @@ const styles = StyleSheet.create({
     color: "#0C4A6E",
     marginBottom: 4,
   },
-  onlineStatus: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#10B981",
-  },
-  onlineText: {
+  childText: {
     fontSize: typography.fontSize.sm,
-    color: "#10B981",
-    fontWeight: typography.fontWeight.medium,
+    color: "#5A7A8F",
   },
   messagesList: {
     paddingHorizontal: spacing.lg,
@@ -333,6 +394,34 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: "#E8F0F5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sendButtonDisabled: {
+    opacity: 0.5,
+  },
+  centerContent: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: {
+    fontSize: typography.fontSize.lg,
+    color: "#5A7A8F",
+    marginBottom: spacing.lg,
+  },
+  backToChatsButton: {
+    backgroundColor: "#0C4A6E",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.xl,
+  },
+  backToChatsText: {
+    color: colors.white,
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
