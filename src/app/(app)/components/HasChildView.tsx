@@ -2,18 +2,28 @@ import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
+    borderRadius,
+    colors,
+    spacing,
+    typography,
 } from "../../../shared/theme";
+import { useProfile } from "../hooks/useProfile";
 import { useChildrenStore } from "../store/childrenStore";
 import { VerificationAlert } from "./VerificationAlert";
 
 export function HasChildView() {
   const router = useRouter();
   const { activeChild } = useChildrenStore();
+  const { data: profile } = useProfile();
+
   const status = activeChild?.status || "UNVERIFIED";
+  const parentStatus = profile?.status || "PENDING";
+  // The alert should be shown if either the child is explicitly unverified OR the parent/profile is still pending/unverified
+  const needsVerification =
+    status === "UNVERIFIED" ||
+    status === "PENDING" ||
+    parentStatus === "PENDING" ||
+    parentStatus === "UNVERIFIED";
 
   const handleUploadVideo = () => {
     // TODO: Implement video upload
@@ -30,7 +40,7 @@ export function HasChildView() {
         Fill out the information and{"\n"}start the treatment
       </Text>
 
-      <VerificationAlert status={status} />
+      {needsVerification && <VerificationAlert status={status} />}
 
       {/* Upload Video Card */}
       <TouchableOpacity
@@ -121,10 +131,7 @@ export function HasChildView() {
 
 const styles = StyleSheet.create({
   mainCard: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xxxl,
-    borderTopRightRadius: borderRadius.xxxl,
-    paddingTop: spacing.xxxl,
+    paddingTop: 0,
     paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.xl,
   },

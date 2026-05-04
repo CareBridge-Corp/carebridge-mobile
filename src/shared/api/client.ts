@@ -14,7 +14,7 @@ class ApiClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api", // Matches API documentation port
+      baseURL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api",
       timeout: 30000,
       headers: {
         "Content-Type": "application/json",

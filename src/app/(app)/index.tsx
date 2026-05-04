@@ -13,6 +13,7 @@ import { useAuthStore } from "../(auth)/store/authStore";
 import { colors, spacing, typography } from "../../shared/theme";
 
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
+import { DoctorsSection } from "./components/DoctorsSection";
 import { EmptyChildView } from "./components/EmptyChildView";
 import { HasChildView } from "./components/HasChildView";
 import { HomeSkeletonView } from "./components/HomeSkeletonView";
@@ -73,10 +74,16 @@ export default function AppHomeScreen() {
       >
         {isLoading ? (
           <HomeSkeletonView />
-        ) : hasChildren ? (
-          <HasChildView />
         ) : (
-          <EmptyChildView />
+          <View style={styles.contentContainer}>
+            {/* Doctors Section - Always visible */}
+            <View style={styles.doctorsWrapper}>
+              <DoctorsSection />
+            </View>
+
+            {/* Child-specific content */}
+            {hasChildren ? <HasChildView /> : <EmptyChildView />}
+          </View>
         )}
 
         <View style={{ height: 100 }} />
@@ -147,5 +154,14 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  contentContainer: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: spacing.xxxl,
+  },
+  doctorsWrapper: {
+    marginBottom: 0,
   },
 });
