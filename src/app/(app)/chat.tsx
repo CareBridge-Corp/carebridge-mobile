@@ -64,6 +64,11 @@ export default function ChatScreen() {
       ? formatTimestamp(item.lastMessage.createdAt)
       : "";
 
+    // Build clinician display name with surname if available
+    const clinicianDisplayName = item.clinician.surname
+      ? `${item.clinician.surname} ${item.clinician.firstName} ${item.clinician.lastName}`
+      : `Dr. ${item.clinician.firstName} ${item.clinician.lastName}`;
+
     return (
       <TouchableOpacity
         style={styles.conversationCard}
@@ -78,9 +83,7 @@ export default function ChatScreen() {
 
         <View style={styles.conversationContent}>
           <View style={styles.conversationHeader}>
-            <Text style={styles.doctorName}>
-              Dr. {item.clinician.firstName} {item.clinician.lastName}
-            </Text>
+            <Text style={styles.doctorName}>{clinicianDisplayName}</Text>
             <Text style={styles.timestamp}>{timestamp}</Text>
           </View>
           <View style={styles.messageRow}>

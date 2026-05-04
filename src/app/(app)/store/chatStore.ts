@@ -23,15 +23,18 @@ export interface ChatConversation {
     userId: string;
     firstName: string;
     lastName: string;
-    name: string;
+    name?: string;
+    surname?: string;
   };
   clinician: {
     userId: string;
     firstName: string;
     lastName: string;
-    name: string;
+    name?: string;
+    surname?: string;
   };
   lastMessage: ChatMessage | null;
+  conversationId?: string; // Optional for backward compatibility
 }
 
 interface ChatState {

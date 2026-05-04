@@ -2,23 +2,23 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { socketService } from "../../../shared/api/socket";
 import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
+    borderRadius,
+    colors,
+    spacing,
+    typography,
 } from "../../../shared/theme";
 import { useChatMessages, useSendMessage } from "../hooks/useChat";
 import { useChatStore } from "../store/chatStore";
@@ -30,8 +30,12 @@ export default function DoctorChatScreen() {
 
   const { activeConversation } = useChatStore();
   const childId = activeConversation?.child.childId || "";
+  const conversationId = activeConversation?.conversationId || childId; // Use conversationId if available, fallback to childId
 
-  const { data: messagesData, isLoading } = useChatMessages(childId);
+  const { data: messagesData, isLoading } = useChatMessages(
+    childId,
+    conversationId,
+  );
   const sendMessageMutation = useSendMessage();
 
   const messages = useChatStore((state) => state.messages[childId] || []);
@@ -60,7 +64,7 @@ export default function DoctorChatScreen() {
   const handleSend = () => {
     if (message.trim() && childId) {
       sendMessageMutation.mutate(
-        { childId, content: message.trim() },
+        { childId, conversationId, content: message.trim() },
         {
           onSuccess: () => {
             setMessage("");
@@ -168,6 +172,11 @@ export default function DoctorChatScreen() {
     );
   }
 
+  // Build clinician display name with surname if available
+  const clinicianDisplayName = activeConversation.clinician.surname
+    ? `${activeConversation.clinician.surname} ${activeConversation.clinician.firstName} ${activeConversation.clinician.lastName}`
+    : `Dr. ${activeConversation.clinician.firstName} ${activeConversation.clinician.lastName}`;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -190,10 +199,7 @@ export default function DoctorChatScreen() {
             <Ionicons name="person" size={24} color="#0C4A6E" />
           </View>
           <View style={styles.doctorDetails}>
-            <Text style={styles.doctorName}>
-              Dr. {activeConversation.clinician.firstName}{" "}
-              {activeConversation.clinician.lastName}
-            </Text>
+            <Text style={styles.doctorName}>{clinicianDisplayName}</Text>
             <Text style={styles.childText}>
               Child: {activeConversation.child.firstName}
             </Text>
