@@ -19,10 +19,15 @@ import { useLogin } from "../hooks/useLogin";
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const loginMutation = useLogin();
 
   const handleLogin = () => {
     loginMutation.mutate({ email, password });
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -63,15 +68,19 @@ export function LoginForm() {
             placeholderTextColor={colors.textSecondary}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
           />
-          <View style={styles.iconContainer}>
+          <TouchableOpacity
+            style={styles.iconContainer}
+            onPress={togglePasswordVisibility}
+            activeOpacity={0.7}
+          >
             <Ionicons
-              name="lock-closed-outline"
+              name={showPassword ? "eye-outline" : "eye-off-outline"}
               size={20}
               color={colors.icon}
             />
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 

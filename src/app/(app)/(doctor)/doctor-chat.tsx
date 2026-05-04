@@ -1,36 +1,38 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { socketService } from "../../../shared/api/socket";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
 import { useChatMessages, useSendMessage } from "../hooks/useChat";
 import { useChatStore } from "../store/chatStore";
 
 export default function DoctorChatScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
   const flatListRef = useRef<FlatList>(null);
 
   const { activeConversation } = useChatStore();
   const childId = activeConversation?.child.childId || "";
-  const conversationId = activeConversation?.conversationId || childId; // Use conversationId if available, fallback to childId
+  const conversationId = activeConversation?.conversationId || childId;
 
   const { data: messagesData, isLoading } = useChatMessages(
     childId,
@@ -38,7 +40,13 @@ export default function DoctorChatScreen() {
   );
   const sendMessageMutation = useSendMessage();
 
-  const messages = useChatStore((state) => state.messages[childId] || []);
+  // Use query data directly - no store subscription
+  const messages = messagesData || [];
+
+  // Set query client for socket service
+  useEffect(() => {
+    socketService.setQueryClient(queryClient);
+  }, [queryClient]);
 
   // Join socket room for this child
   useEffect(() => {

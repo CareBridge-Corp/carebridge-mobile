@@ -37,7 +37,7 @@ export function useLogin(
       router.replace("/(app)" as Href);
     },
     onError: (error: Error) => {
-      console.error("Login failed:", error);
+      // Login failed - error will be displayed in UI
       Toast.show({
         type: ToastType.ERROR,
         title: "Error",

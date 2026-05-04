@@ -6,17 +6,30 @@ import {
     useChatStore,
 } from "../store/chatStore";
 
-export function useConversations() {
-  const { setConversations } = useChatStore();
-
+export function useConversations(childId?: string) {
   return useQuery({
-    queryKey: ["chat-conversations"],
+    queryKey: ["chat-conversations", childId],
     queryFn: async () => {
+      // If childId is provided, fetch conversation for that specific child
+      if (childId) {
+        const response: any = await apiClient.get(
+          `/chat/conversations/${childId}`,
+        );
+        const conversation = response.conversation;
+        if (conversation) {
+          return [conversation] as ChatConversation[];
+        }
+        return [];
+      }
+
+      // Otherwise fetch all conversations
       const response: any = await apiClient.get("/chat/conversations");
       const conversations = response.conversations || [];
-      setConversations(conversations);
       return conversations as ChatConversation[];
     },
+    enabled: true,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
   });
 }
 
@@ -41,8 +54,6 @@ export function useConversation(childId: string) {
 }
 
 export function useChatMessages(childId: string, conversationId?: string) {
-  const { setMessages } = useChatStore();
-
   return useQuery({
     queryKey: ["chat-messages", childId, conversationId],
     queryFn: async () => {
@@ -55,7 +66,6 @@ export function useChatMessages(childId: string, conversationId?: string) {
 
       const response: any = await apiClient.get(endpoint);
       const messages = response.messages || [];
-      setMessages(childId, messages);
       return messages as ChatMessage[];
     },
     enabled: !!childId,
@@ -64,7 +74,6 @@ export function useChatMessages(childId: string, conversationId?: string) {
 
 export function useSendMessage() {
   const queryClient = useQueryClient();
-  const { addMessage, updateLastMessage } = useChatStore();
 
   return useMutation({
     mutationFn: async ({
@@ -85,9 +94,7 @@ export function useSendMessage() {
       return response.chatMessage as ChatMessage;
     },
     onSuccess: (message, variables) => {
-      addMessage(variables.childId, message);
-      updateLastMessage(variables.childId, message);
-      // Invalidate queries to refetch
+      // Invalidate and refetch messages immediately
       queryClient.invalidateQueries({
         queryKey: ["chat-messages", variables.childId],
       });

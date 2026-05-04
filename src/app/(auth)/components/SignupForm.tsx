@@ -1,19 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
+    borderRadius,
+    colors,
+    spacing,
+    typography,
 } from "../../../shared/theme";
 import { useSignup } from "../hooks/useSignup";
 
@@ -23,6 +23,7 @@ export function SignupForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const signupMutation = useSignup();
 
   const handleSignup = () => {
@@ -38,6 +39,10 @@ export function SignupForm() {
       role: "PARENT",
       phone: formattedPhone,
     });
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -133,15 +138,19 @@ export function SignupForm() {
             placeholderTextColor={colors.textSecondary}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
           />
-          <View style={styles.iconContainer}>
+          <TouchableOpacity
+            style={styles.iconContainer}
+            onPress={togglePasswordVisibility}
+            activeOpacity={0.7}
+          >
             <Ionicons
-              name="lock-closed-outline"
+              name={showPassword ? "eye-outline" : "eye-off-outline"}
               size={20}
               color={colors.icon}
             />
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
 

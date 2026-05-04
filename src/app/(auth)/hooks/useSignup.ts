@@ -37,7 +37,7 @@ export function useSignup(
       }
     },
     onError: (error: Error) => {
-      console.error("Signup failed:", error);
+      // Signup failed - error will be displayed in UI
       Toast.show({
         type: ToastType.ERROR,
         title: "Error",

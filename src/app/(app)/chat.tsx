@@ -15,20 +15,33 @@ import { socketService } from "../../shared/api/socket";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 import { useConversations } from "./hooks/useChat";
 import { ChatConversation, useChatStore } from "./store/chatStore";
+import { useChildrenStore } from "./store/childrenStore";
 
 export default function ChatScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const { data: conversations, isLoading } = useConversations();
+  const [socketConnected, setSocketConnected] = useState(false);
+  const { activeChild } = useChildrenStore();
   const { setActiveConversation } = useChatStore();
 
-  // Connect socket when component mounts
+  // Connect socket FIRST before fetching conversations
   useEffect(() => {
     socketService.connect();
+    // Give socket a moment to connect
+    const timer = setTimeout(() => {
+      setSocketConnected(true);
+    }, 500);
+
     return () => {
+      clearTimeout(timer);
       // Don't disconnect on unmount, keep connection alive
     };
   }, []);
+
+  // Only fetch conversations after socket is connected and we have an active child
+  const { data: conversations, isLoading } = useConversations(
+    activeChild?.childId,
+  );
 
   const handleChatPress = (conversation: ChatConversation) => {
     setActiveConversation(conversation);
@@ -136,15 +149,26 @@ export default function ChatScreen() {
 
       {/* Conversations List */}
       <View style={styles.conversationsContainer}>
-        {isLoading ? (
+        {!socketConnected || isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#0C4A6E" />
+            <Text style={styles.loadingText}>
+              {!socketConnected ? "Connecting..." : "Loading conversations..."}
+            </Text>
+          </View>
+        ) : !activeChild ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="person-outline" size={64} color="#A0B8C8" />
+            <Text style={styles.emptyText}>No child selected</Text>
+            <Text style={styles.emptySubtext}>
+              Please select a child to view conversations
+            </Text>
           </View>
         ) : filteredConversations && filteredConversations.length > 0 ? (
           <FlatList
             data={filteredConversations}
             renderItem={renderConversation}
-            keyExtractor={(item) => item.child.childId}
+            keyExtractor={(item) => item.conversationId || item.child.childId}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.conversationsList}
           />
@@ -153,7 +177,7 @@ export default function ChatScreen() {
             <Ionicons name="chatbubbles-outline" size={64} color="#A0B8C8" />
             <Text style={styles.emptyText}>No conversations yet</Text>
             <Text style={styles.emptySubtext}>
-              Start chatting with your child's doctor
+              Start chatting with {activeChild.firstName}'s doctor
             </Text>
           </View>
         )}
@@ -299,6 +323,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontSize: typography.fontSize.md,
+    color: "#5A7A8F",
+    marginTop: spacing.sm,
   },
   emptyContainer: {
     flex: 1,

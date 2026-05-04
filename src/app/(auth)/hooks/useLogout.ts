@@ -1,7 +1,7 @@
 import {
-  useMutation,
-  UseMutationOptions,
-  useQueryClient,
+    useMutation,
+    UseMutationOptions,
+    useQueryClient,
 } from "@tanstack/react-query";
 import * as SecureStore from "expo-secure-store";
 import { useProfileStore } from "../../(app)/store/profileStore";
@@ -31,7 +31,6 @@ export function useLogout(
     onError: async (error) => {
       // Still logout locally even if API call fails
       await clearEverything();
-      console.error("Logout API call failed:", error);
     },
     ...options,
   });

@@ -1,5 +1,5 @@
+import { QueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";
-import { useChatStore } from "../../app/(app)/store/chatStore";
 import { useAuthStore } from "../../app/(auth)/store/authStore";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
@@ -7,6 +7,11 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
 class SocketService {
   private socket: Socket | null = null;
   private currentChildRoom: string | null = null;
+  private queryClient: QueryClient | null = null;
+
+  setQueryClient(client: QueryClient) {
+    this.queryClient = client;
+  }
 
   connect() {
     if (this.socket?.connected) return;
@@ -32,13 +37,19 @@ class SocketService {
     });
 
     this.socket.on("chat:newMessage", (message: any) => {
-      const { addMessage, updateLastMessage } = useChatStore.getState();
-      addMessage(message.childId, message);
-      updateLastMessage(message.childId, message);
+      // Invalidate queries to refetch messages
+      if (this.queryClient) {
+        this.queryClient.invalidateQueries({
+          queryKey: ["chat-messages", message.childId],
+        });
+        this.queryClient.invalidateQueries({
+          queryKey: ["chat-conversations"],
+        });
+      }
     });
 
-    this.socket.on("chat:error", (error) => {
-      console.error("Socket chat error:", error);
+    this.socket.on("chat:error", () => {
+      // Socket chat error occurred
     });
   }
 

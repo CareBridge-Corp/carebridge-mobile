@@ -19,7 +19,7 @@ export default function Index() {
           login(token, JSON.parse(userStr));
         }
       } catch (e) {
-        console.error("Failed to initialize auth", e);
+        // Failed to initialize auth - user will need to login
       } finally {
         setIsInitializing(false);
       }

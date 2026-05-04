@@ -24,7 +24,7 @@ export default function AppHomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { activeChild, children } = useChildrenStore();
 
-  console.log(children);
+  // console.log(children);
   const [showChildSelector, setShowChildSelector] = useState(false);
 
   // Fetch children and sync with store

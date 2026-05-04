@@ -33,7 +33,7 @@ export const authService = {
     try {
       await apiClient.post("/auth/logout");
     } catch (error) {
-      console.error("Logout API call failed:", error);
+      // Logout API call failed - continue with local cleanup
     }
   },
 };
