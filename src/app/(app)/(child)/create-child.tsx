@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StatusBar,
@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import StatusModal from "../../../shared/components/StatusModal";
 import {
   borderRadius,
   colors,
@@ -30,31 +31,98 @@ export default function CreateChildScreen() {
   const [lastName, setLastName] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState<"Male" | "Female" | "">("");
+  const [region, setRegion] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [showRegionDropdown, setShowRegionDropdown] = useState(false);
+
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [statusModalConfig, setStatusModalConfig] = useState({
+    type: "success" as "success" | "error" | "info",
+    title: "",
+    message: "",
+    onPrimaryPress: () => {},
+  });
+
+  const regions = [
+    "Addis Ababa",
+    "Afar",
+    "Amhara",
+    "Benishangul-Gumuz",
+    "Dire Dawa",
+    "Gambela",
+    "Harari",
+    "Oromia",
+    "Sidama",
+    "Somali",
+    "South Ethiopia",
+    "South West Ethiopia Peoples",
+    "Tigray",
+  ];
 
   const handleImageUpload = () => {
     // TODO: Implement image picker
-    Alert.alert("Image Upload", "Image picker will be implemented");
+    setStatusModalConfig({
+      type: "info",
+      title: "Image Upload",
+      message: "Image picker will be implemented soon.",
+      onPrimaryPress: () => setStatusModalVisible(false),
+    });
+    setStatusModalVisible(true);
   };
 
   const handleNext = () => {
     if (!firstName.trim()) {
-      Alert.alert("Error", "Please enter first name");
+      setStatusModalConfig({
+        type: "error",
+        title: "Validation Error",
+        message: "Please enter first name",
+        onPrimaryPress: () => setStatusModalVisible(false),
+      });
+      setStatusModalVisible(true);
       return;
     }
 
     if (!lastName.trim()) {
-      Alert.alert("Error", "Please enter last name");
+      setStatusModalConfig({
+        type: "error",
+        title: "Validation Error",
+        message: "Please enter last name",
+        onPrimaryPress: () => setStatusModalVisible(false),
+      });
+      setStatusModalVisible(true);
       return;
     }
 
     if (!dob.trim()) {
-      Alert.alert("Error", "Please enter date of birth");
+      setStatusModalConfig({
+        type: "error",
+        title: "Validation Error",
+        message: "Please enter date of birth",
+        onPrimaryPress: () => setStatusModalVisible(false),
+      });
+      setStatusModalVisible(true);
       return;
     }
 
     if (!gender) {
-      Alert.alert("Error", "Please select gender");
+      setStatusModalConfig({
+        type: "error",
+        title: "Validation Error",
+        message: "Please select gender",
+        onPrimaryPress: () => setStatusModalVisible(false),
+      });
+      setStatusModalVisible(true);
+      return;
+    }
+
+    if (!region) {
+      setStatusModalConfig({
+        type: "error",
+        title: "Validation Error",
+        message: "Please select region",
+        onPrimaryPress: () => setStatusModalVisible(false),
+      });
+      setStatusModalVisible(true);
       return;
     }
 
@@ -65,22 +133,29 @@ export default function CreateChildScreen() {
         lastName: lastName.trim(),
         dob: dob.trim(),
         gender: gender,
-        region: "Addis Ababa", // Defaulting region or could add an input for it
+        region: region,
       },
       {
         onSuccess: () => {
-          Alert.alert("Success", "Child profile created successfully", [
-            {
-              text: "OK",
-              onPress: () => router.replace("/(app)" as Href),
+          setStatusModalConfig({
+            type: "success",
+            title: "Success",
+            message: "Child profile created successfully.",
+            onPrimaryPress: () => {
+              setStatusModalVisible(false);
+              router.replace("/(app)" as Href);
             },
-          ]);
+          });
+          setStatusModalVisible(true);
         },
         onError: (error: any) => {
-          Alert.alert(
-            "Error",
-            error.message || "Failed to create child profile",
-          );
+          setStatusModalConfig({
+            type: "error",
+            title: "Error",
+            message: error.message || "Failed to create child profile.",
+            onPrimaryPress: () => setStatusModalVisible(false),
+          });
+          setStatusModalVisible(true);
         },
       },
     );
@@ -111,19 +186,25 @@ export default function CreateChildScreen() {
         <Text style={styles.title}>Child's Info</Text>
 
         {/* Profile Image Upload */}
-        <TouchableOpacity
-          style={styles.imageUploadContainer}
-          onPress={handleImageUpload}
-          activeOpacity={0.7}
-        >
-          {profileImage ? (
-            <Image source={{ uri: profileImage }} style={styles.profileImage} />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="camera" size={32} color="#A0B8C8" />
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.imageUploadWrapper}>
+          <TouchableOpacity
+            style={styles.imageUploadContainer}
+            onPress={handleImageUpload}
+            activeOpacity={0.7}
+          >
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="camera" size={32} color="#A0B8C8" />
+              </View>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.optionalText}>Profile Picture (Optional)</Text>
+        </View>
 
         {/* First Name Input */}
         <TextInput
@@ -191,6 +272,23 @@ export default function CreateChildScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Region Dropdown */}
+        <TouchableOpacity
+          style={styles.dropdownSelector}
+          onPress={() => setShowRegionDropdown(true)}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.dropdownSelectorText,
+              !region && styles.dropdownPlaceholderText,
+            ]}
+          >
+            {region || "Select Region"}
+          </Text>
+          <Ionicons name="chevron-down" size={24} color="#A0B8C8" />
+        </TouchableOpacity>
+
         {/* Upload Birth Certificate */}
         <TouchableOpacity
           style={styles.uploadCertificateContainer}
@@ -199,7 +297,9 @@ export default function CreateChildScreen() {
           <View style={styles.uploadIconCircle}>
             <Ionicons name="cloud-upload-outline" size={28} color="#0C4A6E" />
           </View>
-          <Text style={styles.uploadTitle}>Upload Birth Certificate</Text>
+          <Text style={styles.uploadTitle}>
+            Upload Birth Certificate (Optional)
+          </Text>
           <Text style={styles.uploadSubtitle}>
             Max file size should be 100 GB
           </Text>
@@ -223,6 +323,65 @@ export default function CreateChildScreen() {
           <Ionicons name="arrow-forward" size={20} color={colors.white} />
         </TouchableOpacity>
       </View>
+
+      {/* Region Modal */}
+      <Modal
+        visible={showRegionDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRegionDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowRegionDropdown(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Region</Text>
+              <TouchableOpacity onPress={() => setShowRegionDropdown(false)}>
+                <Ionicons name="close" size={24} color="#0C4A6E" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {regions.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[
+                    styles.regionOption,
+                    region === item && styles.regionOptionSelected,
+                  ]}
+                  onPress={() => {
+                    setRegion(item);
+                    setShowRegionDropdown(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.regionOptionText,
+                      region === item && styles.regionOptionTextSelected,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                  {region === item && (
+                    <Ionicons name="checkmark" size={24} color="#0C4A6E" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Reusable Custom Status Modal */}
+      <StatusModal
+        visible={statusModalVisible}
+        type={statusModalConfig.type}
+        title={statusModalConfig.title}
+        message={statusModalConfig.message}
+        onPrimaryPress={statusModalConfig.onPrimaryPress}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -260,9 +419,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxxl,
     lineHeight: typography.lineHeight.relaxed * typography.fontSize.md,
   },
+  imageUploadWrapper: {
+    alignItems: "center",
+    marginBottom: spacing.xxxl,
+  },
   imageUploadContainer: {
     alignSelf: "center",
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing.sm,
   },
   imagePlaceholder: {
     width: 140,
@@ -276,6 +439,11 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
+  },
+  optionalText: {
+    fontSize: typography.fontSize.sm,
+    color: "#A0B8C8",
+    marginTop: spacing.xs,
   },
   input: {
     backgroundColor: "#E8F0F5",
@@ -340,6 +508,72 @@ const styles = StyleSheet.create({
   uploadSubtitle: {
     fontSize: typography.fontSize.sm,
     color: "#A0B8C8",
+  },
+  dropdownSelector: {
+    backgroundColor: "#E8F0F5",
+    borderRadius: borderRadius.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  dropdownSelectorText: {
+    fontSize: typography.fontSize.md,
+    color: "#0C4A6E",
+  },
+  dropdownPlaceholderText: {
+    color: "#A0B8C8",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: borderRadius.xxxl,
+    borderTopRightRadius: borderRadius.xxxl,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: Platform.OS === "ios" ? 40 : 20,
+    maxHeight: "70%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8F0F5",
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: "#0C4A6E",
+  },
+  regionOption: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F4F8FA",
+  },
+  regionOptionSelected: {
+    backgroundColor: "#F0F7FB",
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: 0,
+  },
+  regionOptionText: {
+    fontSize: typography.fontSize.md,
+    color: "#5A7A8F",
+  },
+  regionOptionTextSelected: {
+    fontWeight: typography.fontWeight.bold,
+    color: "#0C4A6E",
   },
   buttonContainer: {
     paddingHorizontal: spacing.xxl,
