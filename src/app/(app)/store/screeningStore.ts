@@ -64,11 +64,12 @@ export const useScreeningStore = create<ScreeningStore>()(
 
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
-      clearAll: () => set({ screeningsByChild: {}, error: null, isLoading: false }),
+      clearAll: () =>
+        set({ screeningsByChild: {}, error: null, isLoading: false }),
     }),
     {
       name: "carebridge-screening-storage",
       storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+    },
+  ),
 );

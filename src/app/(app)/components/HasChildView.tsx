@@ -7,8 +7,8 @@ import {
   spacing,
   typography,
 } from "../../../shared/theme";
-import { useChildScreenings } from "../hooks/useScreenings";
 import { useProfile } from "../hooks/useProfile";
+import { useChildScreenings } from "../hooks/useScreenings";
 import { useChildrenStore } from "../store/childrenStore";
 import { useScreeningStore } from "../store/screeningStore";
 import { ScreeningResultCard } from "./ScreeningResultCard";
@@ -18,15 +18,17 @@ export function HasChildView() {
   const router = useRouter();
   const { activeChild } = useChildrenStore();
   const { data: profile } = useProfile();
-  
+
   // Use the new hook to fetch screenings
   const { data: screeningsData } = useChildScreenings(activeChild?.childId);
-  const screeningsByChild = useScreeningStore((state) => state.screeningsByChild);
-  
-  const childScreenings = activeChild 
-    ? (screeningsData?.screenings || screeningsByChild[activeChild.childId] || [])
+  const screeningsByChild = useScreeningStore(
+    (state) => state.screeningsByChild,
+  );
+
+  const childScreenings = activeChild
+    ? screeningsData?.screenings || screeningsByChild[activeChild.childId] || []
     : [];
-  
+
   const latestScreening = childScreenings[0];
 
   const status = activeChild?.status || "UNVERIFIED";

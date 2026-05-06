@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "../../../shared/api/client";
-import { useScreeningStore, Screening } from "../store/screeningStore";
+import { Screening, useScreeningStore } from "../store/screeningStore";
 
 interface ScreeningsResponse {
   message: string;
@@ -16,10 +16,12 @@ export function useChildScreenings(childId: string | undefined) {
     queryKey: ["screenings", childId],
     queryFn: async () => {
       if (!childId) return null;
-      
+
       setLoading(true);
       try {
-        const response: ScreeningsResponse = await apiClient.get(`/screenings/child/${childId}`);
+        const response: ScreeningsResponse = await apiClient.get(
+          `/screenings/child/${childId}`,
+        );
         const screenings = response.screenings || [];
         setScreenings(childId, screenings);
         setLoading(false);

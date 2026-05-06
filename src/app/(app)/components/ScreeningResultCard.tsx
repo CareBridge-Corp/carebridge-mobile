@@ -30,18 +30,26 @@ export function ScreeningResultCard({ screening }: ScreeningResultCardProps) {
   };
 
   const handlePress = () => {
+    if (screening.status === "UNDER_REVIEW") return;
     router.push("/(app)/(mchat)/mchat-results" as Href);
   };
 
+  const isUnderReview = screening.status === "UNDER_REVIEW";
+
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isUnderReview && styles.cardDisabled]}
       onPress={handlePress}
-      activeOpacity={0.7}
+      activeOpacity={isUnderReview ? 1 : 0.7}
+      disabled={isUnderReview}
     >
       <View style={styles.cardHeader}>
         <View style={styles.iconContainer}>
-          <Ionicons name="document-text" size={24} color="#0C4A6E" />
+          <Ionicons
+            name={isUnderReview ? "time" : "document-text"}
+            size={24}
+            color="#0C4A6E"
+          />
         </View>
         <View style={styles.headerInfo}>
           <Text style={styles.title}>Screening Result</Text>
@@ -49,36 +57,51 @@ export function ScreeningResultCard({ screening }: ScreeningResultCardProps) {
             {new Date(screening.createdAt).toLocaleDateString()}
           </Text>
         </View>
-        <View
-          style={[
-            styles.riskBadge,
-            { backgroundColor: getRiskColor(screening.riskLevel) + "20" },
-          ]}
-        >
-          <Text
-            style={[styles.riskText, { color: getRiskColor(screening.riskLevel) }]}
+        {!isUnderReview && (
+          <View
+            style={[
+              styles.riskBadge,
+              { backgroundColor: getRiskColor(screening.riskLevel) + "20" },
+            ]}
           >
-            {screening.riskLevel} RISK
-          </Text>
-        </View>
+            <Text
+              style={[
+                styles.riskText,
+                { color: getRiskColor(screening.riskLevel) },
+              ]}
+            >
+              {screening.riskLevel} RISK
+            </Text>
+          </View>
+        )}
       </View>
 
       <Text style={styles.description}>
-        Click to view full results and professional interpretation from your
-        recent screening.
+        {isUnderReview
+          ? "Your screening is currently being reviewed by our medical professionals. You will be notified once the results are ready."
+          : "Click to view full results and professional interpretation from your recent screening."}
       </Text>
 
       <View style={styles.footer}>
         <View style={styles.statusContainer}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>
+          <View
+            style={[styles.statusDot, isUnderReview && styles.statusDotReview]}
+          />
+          <Text
+            style={[
+              styles.statusText,
+              isUnderReview && styles.statusTextReview,
+            ]}
+          >
             {screening.status.replace("_", " ")}
           </Text>
         </View>
-        <View style={styles.viewResult}>
-          <Text style={styles.viewResultText}>View Results</Text>
-          <Ionicons name="arrow-forward" size={16} color="#4A9FD8" />
-        </View>
+        {!isUnderReview && (
+          <View style={styles.viewResult}>
+            <Text style={styles.viewResultText}>View Results</Text>
+            <Ionicons name="arrow-forward" size={16} color="#4A9FD8" />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -97,6 +120,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
+  },
+  cardDisabled: {
+    borderColor: "#D1DFE8",
+    opacity: 0.9,
   },
   cardHeader: {
     flexDirection: "row",
@@ -159,10 +186,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#4A9FD8",
     marginRight: 6,
   },
+  statusDotReview: {
+    backgroundColor: "#F59E0B",
+    width: 10,
+    height: 10,
+  },
   statusText: {
     fontSize: typography.fontSize.xs,
     color: "#5A7A8F",
     fontWeight: typography.fontWeight.medium,
+  },
+  statusTextReview: {
+    color: "#D97706",
+    fontWeight: typography.fontWeight.bold,
+    fontSize: typography.fontSize.sm,
   },
   viewResult: {
     flexDirection: "row",
