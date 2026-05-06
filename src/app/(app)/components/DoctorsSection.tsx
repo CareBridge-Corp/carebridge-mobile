@@ -1,13 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { borderRadius, spacing, typography } from "../../../shared/theme";
+import {
+  borderRadius,
+  colors,
+  spacing,
+  typography,
+} from "../../../shared/theme";
 
 // Mock data for pediatricians
 const doctors = [
@@ -61,7 +66,11 @@ export function DoctorsSection() {
 
 const styles = StyleSheet.create({
   doctorsSection: {
-    marginBottom: spacing.xxxl,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: borderRadius.xxxl,
+    borderTopRightRadius: borderRadius.xxxl,
+    paddingTop: spacing.xxxl,
+    paddingBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: typography.fontSize.xxl,
@@ -116,7 +125,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#fff",
+    backgroundColor: colors.white,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,

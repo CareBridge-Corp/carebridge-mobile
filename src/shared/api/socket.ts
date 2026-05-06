@@ -26,6 +26,9 @@ class SocketService {
     this.socket = io(origin, {
       auth: { token },
       transports: ["websocket"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     });
 
     this.socket.on("connect", () => {
@@ -36,11 +39,19 @@ class SocketService {
       }
     });
 
+    this.socket.on("disconnect", () => {
+      console.log("Socket disconnected");
+    });
+
     this.socket.on("chat:newMessage", (message: any) => {
-      // Invalidate queries to refetch messages
+      console.log("New message received:", message);
+      // Invalidate queries to refetch messages immediately
       if (this.queryClient) {
         this.queryClient.invalidateQueries({
           queryKey: ["chat-messages", message.childId],
+        });
+        this.queryClient.invalidateQueries({
+          queryKey: ["chat-conversations", message.childId],
         });
         this.queryClient.invalidateQueries({
           queryKey: ["chat-conversations"],
@@ -48,8 +59,8 @@ class SocketService {
       }
     });
 
-    this.socket.on("chat:error", () => {
-      // Socket chat error occurred
+    this.socket.on("chat:error", (error: any) => {
+      console.log("Socket chat error:", error);
     });
   }
 
@@ -73,13 +84,19 @@ class SocketService {
 
     this.currentChildRoom = childId;
     this.socket?.emit("chat:joinChild", { childId });
+    console.log("Joined child room:", childId);
   }
 
   leaveChildRoom(childId: string) {
     this.socket?.emit("chat:leaveChild", { childId });
+    console.log("Left child room:", childId);
     if (this.currentChildRoom === childId) {
       this.currentChildRoom = null;
     }
+  }
+
+  isConnected(): boolean {
+    return this.socket?.connected || false;
   }
 }
 

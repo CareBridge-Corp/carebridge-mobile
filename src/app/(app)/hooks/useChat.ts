@@ -69,6 +69,8 @@ export function useChatMessages(childId: string, conversationId?: string) {
       return messages as ChatMessage[];
     },
     enabled: !!childId,
+    refetchOnWindowFocus: true,
+    refetchInterval: false, // Don't poll, rely on socket updates
   });
 }
 
@@ -85,10 +87,8 @@ export function useSendMessage() {
       conversationId?: string;
       content: string;
     }) => {
-      // Use the new endpoint structure if conversationId is provided
-      const endpoint = conversationId
-        ? `/chat/${childId}/conversations/${conversationId}/messages`
-        : `/chat/children/${childId}/messages`;
+      // Always use the children endpoint
+      const endpoint = `/chat/children/${childId}/messages`;
 
       const response: any = await apiClient.post(endpoint, { content });
       return response.chatMessage as ChatMessage;

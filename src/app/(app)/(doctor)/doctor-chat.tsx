@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -28,7 +31,9 @@ export default function DoctorChatScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const flatListRef = useRef<FlatList>(null);
+  const textInputRef = useRef<TextInput>(null);
 
   const { activeConversation } = useChatStore();
   const childId = activeConversation?.child.childId || "";
@@ -70,12 +75,74 @@ export default function DoctorChatScreen() {
   }, [messages.length]);
 
   const handleSend = () => {
+    // If there are images selected, send with images
+    if (selectedImages.length > 0) {
+      handleSendWithImages();
+      return;
+    }
+
+    // Otherwise send text message
     if (message.trim() && childId) {
       sendMessageMutation.mutate(
         { childId, conversationId, content: message.trim() },
         {
           onSuccess: () => {
             setMessage("");
+          },
+        },
+      );
+    }
+  };
+
+  const handleEmojiPress = () => {
+    // Focus the text input to open the keyboard with emoji support
+    if (textInputRef.current) {
+      textInputRef.current.focus();
+    }
+  };
+
+  const handleAttachmentPress = async () => {
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      alert("Sorry, we need camera roll permissions to attach images!");
+      return;
+    }
+
+    // Launch image picker with multiple selection
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: "images" as any,
+      allowsEditing: false,
+      quality: 0.8,
+      allowsMultipleSelection: true,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      // Add new images to the existing collection
+      const newImageUris = result.assets.map((asset) => asset.uri);
+      setSelectedImages((prev) => [...prev, ...newImageUris]);
+    }
+  };
+
+  const handleRemoveImage = (imageUri: string) => {
+    setSelectedImages((prev) => prev.filter((uri) => uri !== imageUri));
+  };
+
+  const handleSendWithImages = () => {
+    if (selectedImages.length > 0 && childId) {
+      // TODO: Upload images to server and get URLs
+      // For now, send a message indicating images were sent
+      const imageCount = selectedImages.length;
+      const content =
+        message.trim() ||
+        `📷 ${imageCount} ${imageCount === 1 ? "Image" : "Images"}`;
+      sendMessageMutation.mutate(
+        { childId, conversationId, content },
+        {
+          onSuccess: () => {
+            setMessage("");
+            setSelectedImages([]);
           },
         },
       );
@@ -132,22 +199,22 @@ export default function DoctorChatScreen() {
           style={[
             styles.messageContainer,
             isFromParent
-              ? styles.userMessageContainer
-              : styles.doctorMessageContainer,
+              ? styles.doctorMessageContainer
+              : styles.userMessageContainer,
           ]}
         >
           <View
             style={[
               styles.messageBubble,
-              isFromParent ? styles.userBubble : styles.doctorBubble,
+              isFromParent ? styles.doctorBubble : styles.userBubble,
             ]}
           >
             <Text
               style={[
                 styles.messageText,
                 isFromParent
-                  ? styles.userMessageText
-                  : styles.doctorMessageText,
+                  ? styles.doctorMessageText
+                  : styles.userMessageText,
               ]}
             >
               {item.content}
@@ -155,7 +222,7 @@ export default function DoctorChatScreen() {
             <Text
               style={[
                 styles.timestampText,
-                isFromParent ? styles.userTimestamp : styles.doctorTimestamp,
+                isFromParent ? styles.doctorTimestamp : styles.userTimestamp,
               ]}
             >
               {formatTimestamp(item.createdAt)}
@@ -188,8 +255,8 @@ export default function DoctorChatScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
     >
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
@@ -230,25 +297,69 @@ export default function DoctorChatScreen() {
           keyExtractor={(item) => item.messageId}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
         />
+      )}
+
+      {/* Image Preview */}
+      {selectedImages.length > 0 && (
+        <View style={styles.imagePreviewContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.imagePreviewScroll}
+          >
+            {selectedImages.map((imageUri, index) => (
+              <View key={index} style={styles.imagePreviewWrapper}>
+                <Image
+                  source={{ uri: imageUri }}
+                  style={styles.imagePreview}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => handleRemoveImage(imageUri)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close-circle" size={28} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+          <Text style={styles.imageCountText}>
+            {selectedImages.length}{" "}
+            {selectedImages.length === 1 ? "image" : "images"} selected
+          </Text>
+        </View>
       )}
 
       {/* Input Area */}
       <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.attachButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.attachButton}
+          onPress={handleAttachmentPress}
+          activeOpacity={0.7}
+        >
           <Ionicons name="attach" size={24} color="#5A7A8F" />
         </TouchableOpacity>
 
         <TextInput
+          ref={textInputRef}
           style={styles.input}
           placeholder="Send Message"
           placeholderTextColor="#A0B8C8"
           value={message}
           onChangeText={setMessage}
           multiline
+          maxLength={1000}
         />
 
-        <TouchableOpacity style={styles.emojiButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.emojiButton}
+          onPress={handleEmojiPress}
+          activeOpacity={0.7}
+        >
           <Ionicons name="happy-outline" size={24} color="#5A7A8F" />
         </TouchableOpacity>
 
@@ -258,7 +369,10 @@ export default function DoctorChatScreen() {
             sendMessageMutation.isPending && styles.sendButtonDisabled,
           ]}
           onPress={handleSend}
-          disabled={sendMessageMutation.isPending || !message.trim()}
+          disabled={
+            sendMessageMutation.isPending ||
+            (!message.trim() && selectedImages.length === 0)
+          }
           activeOpacity={0.7}
         >
           {sendMessageMutation.isPending ? (
@@ -350,11 +464,11 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
   },
   userBubble: {
-    backgroundColor: "#0C4A6E",
+    backgroundColor: "#E8F0F5",
     borderBottomLeftRadius: 4,
   },
   doctorBubble: {
-    backgroundColor: "#E8F0F5",
+    backgroundColor: "#0C4A6E",
     borderBottomRightRadius: 4,
   },
   messageText: {
@@ -363,20 +477,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   userMessageText: {
-    color: colors.white,
+    color: "#5A7A8F",
   },
   doctorMessageText: {
-    color: "#5A7A8F",
+    color: colors.white,
   },
   timestampText: {
     fontSize: typography.fontSize.xs,
     alignSelf: "flex-end",
   },
   userTimestamp: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: "#A0B8C8",
   },
   doctorTimestamp: {
-    color: "#A0B8C8",
+    color: "rgba(255, 255, 255, 0.7)",
   },
   inputContainer: {
     flexDirection: "row",
@@ -387,6 +501,38 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E8F0F5",
     gap: spacing.sm,
+  },
+  imagePreviewContainer: {
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: "#E8F0F5",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  imagePreviewScroll: {
+    gap: spacing.md,
+  },
+  imagePreviewWrapper: {
+    position: "relative",
+    alignSelf: "flex-start",
+  },
+  imagePreview: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.lg,
+  },
+  imageCountText: {
+    fontSize: typography.fontSize.sm,
+    color: "#5A7A8F",
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: colors.white,
+    borderRadius: 14,
   },
   attachButton: {
     padding: spacing.sm,

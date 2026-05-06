@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -13,6 +14,7 @@ import {
 } from "react-native";
 import { socketService } from "../../shared/api/socket";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { useConversations } from "./hooks/useChat";
 import { ChatConversation, useChatStore } from "./store/chatStore";
 import { useChildrenStore } from "./store/childrenStore";
@@ -21,7 +23,8 @@ export default function ChatScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
-  const { activeChild } = useChildrenStore();
+  const [showChildSelector, setShowChildSelector] = useState(false);
+  const { activeChild, children } = useChildrenStore();
   const { setActiveConversation } = useChatStore();
 
   // Connect socket FIRST before fetching conversations
@@ -128,8 +131,24 @@ export default function ChatScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity style={styles.newChatButton} activeOpacity={0.7}>
-          <Ionicons name="create-outline" size={24} color="#0C4A6E" />
+        <TouchableOpacity
+          style={styles.avatar}
+          onPress={() => children.length > 0 && setShowChildSelector(true)}
+          activeOpacity={0.7}
+        >
+          {activeChild?.profilePictureUrl ? (
+            <Image
+              source={{ uri: activeChild.profilePictureUrl }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Ionicons name="person" size={24} color="#0C4A6E" />
+          )}
+          {children.length > 1 && (
+            <View style={styles.childCountBadge}>
+              <Text style={styles.childCountText}>{children.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -182,6 +201,12 @@ export default function ChatScreen() {
           </View>
         )}
       </View>
+
+      {/* Child Selector Modal */}
+      <ChildSelectorModal
+        visible={showChildSelector}
+        onClose={() => setShowChildSelector(false)}
+      />
     </View>
   );
 }
@@ -204,13 +229,36 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: "#0C4A6E",
   },
-  newChatButton: {
+  avatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.white,
     justifyContent: "center",
     alignItems: "center",
+    position: "relative",
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  childCountBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#10B981",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  childCountText: {
+    fontSize: 12,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.white,
   },
   searchContainer: {
     paddingHorizontal: spacing.xxl,
