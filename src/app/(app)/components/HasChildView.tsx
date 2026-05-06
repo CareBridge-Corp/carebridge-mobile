@@ -2,19 +2,32 @@ import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
+import { useChildScreenings } from "../hooks/useScreenings";
 import { useProfile } from "../hooks/useProfile";
 import { useChildrenStore } from "../store/childrenStore";
+import { useScreeningStore } from "../store/screeningStore";
+import { ScreeningResultCard } from "./ScreeningResultCard";
 import { VerificationAlert } from "./VerificationAlert";
 
 export function HasChildView() {
   const router = useRouter();
   const { activeChild } = useChildrenStore();
   const { data: profile } = useProfile();
+  
+  // Use the new hook to fetch screenings
+  const { data: screeningsData } = useChildScreenings(activeChild?.childId);
+  const screeningsByChild = useScreeningStore((state) => state.screeningsByChild);
+  
+  const childScreenings = activeChild 
+    ? (screeningsData?.screenings || screeningsByChild[activeChild.childId] || [])
+    : [];
+  
+  const latestScreening = childScreenings[0];
 
   const status = activeChild?.status || "UNVERIFIED";
   const parentStatus = profile?.status || "PENDING";
@@ -42,7 +55,40 @@ export function HasChildView() {
 
       {needsVerification && <VerificationAlert status={status} />}
 
-      {/* Upload Video Card */}
+      {latestScreening && <ScreeningResultCard screening={latestScreening} />}
+
+      {!latestScreening && (
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={handleMChat}
+          activeOpacity={0.7}
+        >
+          <View style={styles.actionCardContent}>
+            <Text style={styles.actionCardTitle}>M-chat</Text>
+            <Text style={styles.actionCardSubtitle}>
+              Lorem ipsum doler situm amet and{"\n"}his Your information is safe
+              with.
+            </Text>
+
+            <View style={styles.verifiedBadge}>
+              <View style={styles.whoIcon}>
+                <Ionicons name="shield-checkmark" size={24} color="#4A9FD8" />
+              </View>
+              <View>
+                <Text style={styles.verifiedTitle}>Verified by who</Text>
+                <Text style={styles.verifiedSubtitle}>
+                  Your information is safe with us
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.arrowCircle}>
+            <Ionicons name="arrow-forward" size={20} color="#0C4A6E" />
+          </View>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity
         style={styles.actionCard}
         onPress={handleUploadVideo}
@@ -60,37 +106,6 @@ export function HasChildView() {
               <Ionicons name="play" size={20} color={colors.white} />
             </View>
             <Text style={styles.watchGuideText}>Watch Guide</Text>
-          </View>
-        </View>
-
-        <View style={styles.arrowCircle}>
-          <Ionicons name="arrow-forward" size={20} color="#0C4A6E" />
-        </View>
-      </TouchableOpacity>
-
-      {/* M-chat Card */}
-      <TouchableOpacity
-        style={styles.actionCard}
-        onPress={handleMChat}
-        activeOpacity={0.7}
-      >
-        <View style={styles.actionCardContent}>
-          <Text style={styles.actionCardTitle}>M-chat</Text>
-          <Text style={styles.actionCardSubtitle}>
-            Lorem ipsum doler situm amet and{"\n"}his Your information is safe
-            with.
-          </Text>
-
-          <View style={styles.verifiedBadge}>
-            <View style={styles.whoIcon}>
-              <Ionicons name="shield-checkmark" size={24} color="#4A9FD8" />
-            </View>
-            <View>
-              <Text style={styles.verifiedTitle}>Verified by who</Text>
-              <Text style={styles.verifiedSubtitle}>
-                Your information is safe with us
-              </Text>
-            </View>
           </View>
         </View>
 
@@ -131,7 +146,10 @@ export function HasChildView() {
 
 const styles = StyleSheet.create({
   mainCard: {
-    paddingTop: 0,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: borderRadius.xxxl,
+    borderTopRightRadius: borderRadius.xxxl,
+    paddingTop: spacing.xxxl,
     paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.xl,
   },

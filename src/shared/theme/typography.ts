@@ -1,4 +1,12 @@
 export const typography = {
+  // Font families
+  fontFamily: {
+    regular: "Inter-Regular",
+    medium: "Inter-Medium",
+    semibold: "Inter-SemiBold",
+    bold: "Inter-Bold",
+  },
+
   // Font sizes
   fontSize: {
     xs: 12,

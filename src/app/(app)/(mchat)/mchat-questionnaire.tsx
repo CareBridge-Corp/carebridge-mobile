@@ -150,7 +150,7 @@ export default function MChatQuestionnaireScreen() {
   const totalQuestions = MCHAT_QUESTIONS.length;
 
   const handleAnswer = (answer: boolean) => {
-    setAnswer(`Q${question.id}`, answer);
+    setAnswer(question.question, answer);
 
     // Move to next question or finish
     if (currentQuestion < MCHAT_QUESTIONS.length - 1) {
