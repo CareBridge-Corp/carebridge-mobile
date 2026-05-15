@@ -24,6 +24,22 @@
   },
   "home": {
     "title": "Mana",
-    "screenings": "Madaalliiwwan"
+    "screenings": "Madaalliiwwan",
+    "goodMorning": "Akkaam bulte",
+    "goodAfternoon": "Akkaam oolte",
+    "goodEvening": "Akkaam galte",
+    "guest": "Keessummaa",
+    "doctorsSectionTitle": "Ogeessota ijoollee\n20 ol",
+    "provideChildInfo": "Oofii ijoollee keessanii\nnuuf kennaa",
+    "registerChildren": "Ijoollee galmeessi",
+    "safetyRegulations": "Nageenya fi dambiiwwan",
+    "infoSafe": "Oofii keessan nu biratti eegamaadha",
+    "fillInfoStartTreatment": "Oofii guutaa\nwal'aansa jalqabaa",
+    "verifiedBy": "WHO-n kan mirkanaa'e",
+    "verifiedBySub": "Dhaabbata Fayyaa Addunyaa",
+    "uploadVideo": "Viidiyoo olkaayi",
+    "curatedBy": "Kan qophaa'e",
+    "treatmentTimeline": "Adeemsa wal'aansaa",
+    "phase": "Marsaa"
   }
 }

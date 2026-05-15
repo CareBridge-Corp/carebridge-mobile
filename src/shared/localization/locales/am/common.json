@@ -24,6 +24,22 @@
   },
   "home": {
     "title": "መነሻ",
-    "screenings": "ምርመራዎች"
+    "screenings": "ምርመራዎች",
+    "goodMorning": "እንደምን አደሩ",
+    "goodAfternoon": "እንደምን ዋሉ",
+    "goodEvening": "እንደምን አመሹ",
+    "guest": "እንግዳ",
+    "doctorsSectionTitle": "ከ20 በላይ\nየህጻናት ሐኪሞች",
+    "provideChildInfo": "የልጅዎን መረጃ\nይስጡን",
+    "registerChildren": "ልጆችን ይመዝግቡ",
+    "safetyRegulations": "ደህንነት እና ደንቦች",
+    "infoSafe": "የእርስዎ መረጃ በእኛ ዘንድ የተጠበቀ ነው",
+    "fillInfoStartTreatment": "መረጃውን ይሙሉ እና\nህክምናውን ይጀምሩ",
+    "verifiedBy": "በዓለም የጤና ድርጅት (WHO) የተረጋገጠ",
+    "verifiedBySub": "ዓለም አቀፍ የጤና ድርጅት",
+    "uploadVideo": "ቪዲዮ ይጫኑ",
+    "curatedBy": "የተዘጋጀው በ",
+    "treatmentTimeline": "የህክምና ሂደት",
+    "phase": "ደረጃ"
   }
 }

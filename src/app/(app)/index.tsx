@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   ScrollView,
@@ -27,9 +28,18 @@ export default function AppHomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { activeChild, children } = useChildrenStore();
   const { language, setLanguage } = useLanguageStore();
+  const { t } = useTranslation();
 
   // console.log(children);
   const [showChildSelector, setShowChildSelector] = useState(false);
+
+  // Determine greeting based on time of day
+  const getGreeting = () => {
+    const hours = new Date().getHours();
+    if (hours < 12) return t("home.goodMorning");
+    if (hours < 17) return t("home.goodAfternoon");
+    return t("home.goodEvening");
+  };
 
   // Fetch children and sync with store
   const { isLoading } = useChildren();
@@ -52,9 +62,11 @@ export default function AppHomeScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>Good Morning</Text>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
           <Text style={styles.userName}>
-            {activeChild ? activeChild.firstName : user?.firstName || "Guest"}
+            {activeChild
+              ? activeChild.firstName
+              : user?.firstName || t("home.guest")}
           </Text>
         </View>
 

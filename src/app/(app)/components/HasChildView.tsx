@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
   borderRadius,
@@ -16,6 +17,7 @@ import { VerificationAlert } from "./VerificationAlert";
 
 export function HasChildView() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { activeChild } = useChildrenStore();
   const { data: profile } = useProfile();
 
@@ -51,9 +53,7 @@ export function HasChildView() {
 
   return (
     <View style={styles.mainCard}>
-      <Text style={styles.mainTitle}>
-        Fill out the information and{"\n"}start the treatment
-      </Text>
+      <Text style={styles.mainTitle}>{t("home.fillInfoStartTreatment")}</Text>
 
       {needsVerification && <VerificationAlert status={status} />}
 
@@ -67,19 +67,16 @@ export function HasChildView() {
         >
           <View style={styles.actionCardContent}>
             <Text style={styles.actionCardTitle}>M-chat</Text>
-            <Text style={styles.actionCardSubtitle}>
-              Lorem ipsum doler situm amet and{"\n"}his Your information is safe
-              with.
-            </Text>
+            <Text style={styles.actionCardSubtitle}>{t("home.infoSafe")}</Text>
 
             <View style={styles.verifiedBadge}>
               <View style={styles.whoIcon}>
                 <Ionicons name="shield-checkmark" size={24} color="#4A9FD8" />
               </View>
               <View>
-                <Text style={styles.verifiedTitle}>Verified by who</Text>
+                <Text style={styles.verifiedTitle}>{t("home.verifiedBy")}</Text>
                 <Text style={styles.verifiedSubtitle}>
-                  Your information is safe with us
+                  {t("home.verifiedBySub")}
                 </Text>
               </View>
             </View>
@@ -97,11 +94,8 @@ export function HasChildView() {
         activeOpacity={0.7}
       >
         <View style={styles.actionCardContent}>
-          <Text style={styles.actionCardTitle}>Upload Video</Text>
-          <Text style={styles.actionCardSubtitle}>
-            Lorem ipsum doler situm amet and{"\n"}his Your information is safe
-            with.
-          </Text>
+          <Text style={styles.actionCardTitle}>{t("home.uploadVideo")}</Text>
+          <Text style={styles.actionCardSubtitle}>{t("home.infoSafe")}</Text>
 
           <View style={styles.watchGuideButton}>
             <View style={styles.playIconCircle}>

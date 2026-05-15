@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   ScrollView,
@@ -37,9 +38,11 @@ const doctors = [
 ];
 
 export function DoctorsSection() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.doctorsSection}>
-      <Text style={styles.sectionTitle}>More than 20{"\n"}Pediatricians</Text>
+      <Text style={styles.sectionTitle}>{t("home.doctorsSectionTitle")}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

@@ -24,6 +24,22 @@
   },
   "home": {
     "title": "Home",
-    "screenings": "Screenings"
+    "screenings": "Screenings",
+    "goodMorning": "Good Morning",
+    "goodAfternoon": "Good Afternoon",
+    "goodEvening": "Good Evening",
+    "guest": "Guest",
+    "doctorsSectionTitle": "More than 20\nPediatricians",
+    "provideChildInfo": "Provide us your\nchild's info",
+    "registerChildren": "Register Children",
+    "safetyRegulations": "Safety and regulations",
+    "infoSafe": "Your information is safe with us",
+    "fillInfoStartTreatment": "Fill out the information and\nstart the treatment",
+    "verifiedBy": "Verified by WHO",
+    "verifiedBySub": "World Health Organization",
+    "uploadVideo": "Upload Video",
+    "curatedBy": "Curated by",
+    "treatmentTimeline": "Treatment Timeline",
+    "phase": "Phase"
   }
 }

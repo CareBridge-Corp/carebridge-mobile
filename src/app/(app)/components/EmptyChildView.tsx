@@ -1,15 +1,17 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
 
 export function EmptyChildView() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.mainContainer}>
@@ -18,12 +20,9 @@ export function EmptyChildView() {
         <View style={styles.infoCardHeader}>
           <View style={styles.infoCardTitleContainer}>
             <Text style={styles.infoCardTitle}>
-              Provide us your{"\n"}child's info
+              {t("home.provideChildInfo")}
             </Text>
-            <Text style={styles.infoCardSubtitle}>
-              Lorem ipsum doler situm amet and his{"\n"}Your information is safe
-              with us
-            </Text>
+            <Text style={styles.infoCardSubtitle}>{t("home.infoSafe")}</Text>
           </View>
           <View style={styles.infoCardCircle} />
         </View>
@@ -37,10 +36,10 @@ export function EmptyChildView() {
             />
           </View>
           <View style={styles.safetyTexts}>
-            <Text style={styles.safetyTitle}>Safety and regulations</Text>
-            <Text style={styles.safetySubtitle}>
-              Your information is safe with us
+            <Text style={styles.safetyTitle}>
+              {t("home.safetyRegulations")}
             </Text>
+            <Text style={styles.safetySubtitle}>{t("home.infoSafe")}</Text>
           </View>
         </View>
 
@@ -52,7 +51,9 @@ export function EmptyChildView() {
           <View style={styles.continueIconCircle}>
             <View style={styles.continueIconInner} />
           </View>
-          <Text style={styles.continueButtonText}>Register Children</Text>
+          <Text style={styles.continueButtonText}>
+            {t("home.registerChildren")}
+          </Text>
 
           <MaterialCommunityIcons
             name="forwardburger"
