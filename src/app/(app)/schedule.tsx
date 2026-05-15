@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Image,
@@ -27,6 +27,7 @@ export default function ScheduleScreen() {
   const { language } = useLanguageStore();
 
   const [showChildSelector, setShowChildSelector] = useState(false);
+  const [expandedWeekId, setExpandedWeekId] = useState<string | null>(null);
 
   const isVerified = activeChild?.status === "VERIFIED";
   const { data: roadmapData, isLoading } = useRoadmaps(
@@ -35,20 +36,24 @@ export default function ScheduleScreen() {
 
   // Get active week plan
   const activeRoadmap = roadmapData?.roadmaps?.[0];
-  const activeWeekPlan =
-    activeRoadmap?.weekPlans?.find((wp) => wp.status === "IN_PROGRESS") ||
-    activeRoadmap?.weekPlans?.[0];
+  const weekPlans = activeRoadmap?.weekPlans || [];
 
-  // Demo data for calendar (could be made dynamic later)
-  const weekDays = [
-    { date: 14, day: "Sat" },
-    { date: 15, day: "Sun" },
-    { date: 16, day: "Mon" },
-    { date: 17, day: "Tue", selected: true },
-    { date: 18, day: "Wed" },
-    { date: 19, day: "Thu" },
-    { date: 20, day: "Fri" },
-  ];
+  // Find the current week (first one that is IN_PROGRESS or the first PENDING after a COMPLETED)
+  const currentWeek =
+    weekPlans.find((wp) => wp.status === "IN_PROGRESS") ||
+    weekPlans.find((wp) => wp.status === "PENDING") ||
+    weekPlans[0];
+
+  useEffect(() => {
+    if (currentWeek && !expandedWeekId) {
+      setExpandedWeekId(currentWeek.weekPlanId);
+    }
+  }, [currentWeek]);
+
+  // Handle accordion toggle
+  const toggleWeek = (id: string) => {
+    setExpandedWeekId(expandedWeekId === id ? null : id);
+  };
 
   const handleMChat = () => {
     router.push("/(app)/mchat-privacy" as Href);
@@ -105,16 +110,6 @@ export default function ScheduleScreen() {
     );
   }
 
-  // Calculate progress for circles
-  const activities = activeWeekPlan?.activities || [];
-  const totalActivities = activities.length;
-  const completedCount =
-    activeWeekPlan?.activityStatuses?.filter((s) => s.completed).length || 0;
-  const progressPercentage =
-    totalActivities > 0
-      ? Math.round((completedCount / totalActivities) * 100)
-      : 0;
-
   return (
     <View style={styles.container}>
       <StatusBar
@@ -156,123 +151,176 @@ export default function ScheduleScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.calendarCard}>
-          <View style={styles.weekContainer}>
-            {weekDays.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.dayItem,
-                  item.selected && styles.dayItemSelected,
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.dateText,
-                    item.selected && styles.dateTextSelected,
-                  ]}
-                >
-                  {item.date}
-                </Text>
-                <Text
-                  style={[
-                    styles.dayText,
-                    item.selected && styles.dayTextSelected,
-                  ]}
-                >
-                  {item.day}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {/* Week Plans Mapping */}
+          {weekPlans.length > 0 ? (
+            weekPlans.map((weekPlan, index) => {
+              // Only show if it's the current week, a completed week,
+              // or the very next pending week after a completed one.
+              const isCompleted = weekPlan.status === "COMPLETED";
+              const isCurrent = weekPlan.weekPlanId === currentWeek?.weekPlanId;
+              const prevWeek = index > 0 ? weekPlans[index - 1] : null;
+              const isNextAvailable =
+                prevWeek?.status === "COMPLETED" &&
+                weekPlan.status === "PENDING";
 
-          {activeWeekPlan ? (
-            <>
-              {/* Therapy Progress */}
-              <View style={styles.therapySection}>
-                <View style={styles.therapyHeader}>
-                  <View style={styles.therapyInfo}>
-                    <Text style={styles.therapyTitle}>
-                      Week {activeWeekPlan.weekNumber}
-                    </Text>
-                    <Text style={styles.therapyStatus}>
-                      {activeWeekPlan.description}
-                    </Text>
-                  </View>
-                  <View style={styles.progressCircle}>
-                    <Text style={styles.progressText}>
-                      {progressPercentage}%
-                    </Text>
-                  </View>
-                </View>
+              if (!isCompleted && !isCurrent && !isNextAvailable) return null;
 
-                {/* Progress Circles */}
-                <View style={styles.progressCirclesContainer}>
-                  {activities.map((activity, index) => {
-                    const isCompleted = activeWeekPlan.activityStatuses?.find(
-                      (s) => s.activityId === activity.activityId,
-                    )?.completed;
-                    return (
-                      <View
-                        key={activity.activityId}
-                        style={[
-                          styles.progressDot,
-                          isCompleted && styles.progressDotCompleted,
-                        ]}
-                      >
+              const activities = weekPlan.activities || [];
+              const totalActivities = activities.length;
+              const completedCount =
+                weekPlan.activityStatuses?.filter((s) => s.completed).length ||
+                0;
+              const progressPercentage =
+                totalActivities > 0
+                  ? Math.round((completedCount / totalActivities) * 100)
+                  : 0;
+              const clinician = weekPlan.clinician;
+              const isExpanded = expandedWeekId === weekPlan.weekPlanId;
+
+              return (
+                <View key={weekPlan.weekPlanId} style={styles.weekPlanSection}>
+                  {/* Week Header - Toggle for Accordion */}
+                  <TouchableOpacity
+                    style={styles.weekHeader}
+                    onPress={() => toggleWeek(weekPlan.weekPlanId)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.weekTitleContainer}>
+                      <View style={styles.weekBadgeRow}>
+                        <Text style={styles.therapyTitle}>
+                          Week {weekPlan.weekNumber}
+                        </Text>
                         {isCompleted && (
-                          <Ionicons
-                            name="checkmark"
-                            size={24}
-                            color={colors.primary}
-                          />
+                          <View style={styles.completedBadge}>
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={14}
+                              color={colors.success}
+                            />
+                            <Text style={styles.completedBadgeText}>Done</Text>
+                          </View>
+                        )}
+                        {isCurrent && (
+                          <View style={styles.currentBadge}>
+                            <Text style={styles.currentBadgeText}>Current</Text>
+                          </View>
                         )}
                       </View>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* Task Cards */}
-              {activities.map((activity, index) => (
-                <View key={activity.activityId} style={styles.taskCard}>
-                  <View style={styles.taskHeader}>
-                    <View style={styles.taskInfo}>
-                      <Text style={styles.taskTitle}>
-                        Activity {index + 1}: {activity.title}
-                      </Text>
-                      <Text style={styles.taskStatus}>
-                        {activity.riskCategory}
-                      </Text>
+                      {clinician && (
+                        <Text style={styles.clinicianName}>
+                          Curated by Dr. {clinician.firstName}{" "}
+                          {clinician.lastName}
+                        </Text>
+                      )}
                     </View>
-                    <View style={styles.taskIconCircle}>
+                    <View style={styles.headerRight}>
+                      <View style={styles.progressCircleSmall}>
+                        <Text style={styles.progressTextSmall}>
+                          {progressPercentage}%
+                        </Text>
+                      </View>
                       <Ionicons
-                        name="play-circle"
-                        size={32}
-                        color={colors.primary}
+                        name={isExpanded ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color="#0C4A6E"
+                        style={{ marginLeft: spacing.sm }}
                       />
                     </View>
-                  </View>
-
-                  <Text style={styles.taskDescription} numberOfLines={3}>
-                    {activity.instruction}
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.continueButton}
-                    onPress={handleContinue}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.continueButtonText}>Continue</Text>
                   </TouchableOpacity>
+
+                  {isExpanded && (
+                    <View style={styles.expandedContent}>
+                      <Text style={styles.weekDescription}>
+                        {weekPlan.description}
+                      </Text>
+
+                      {/* Activity Progress */}
+                      <View style={styles.progressContainer}>
+                        <View style={styles.progressLabelRow}>
+                          <Text style={styles.progressLabel}>
+                            Activity Progress
+                          </Text>
+                          <Text style={styles.progressCount}>
+                            {completedCount}/{totalActivities}
+                          </Text>
+                        </View>
+                        <View style={styles.progressCirclesContainer}>
+                          {activities.map((activity) => {
+                            const activityCompleted =
+                              weekPlan.activityStatuses?.find(
+                                (s) => s.activityId === activity.activityId,
+                              )?.completed;
+                            return (
+                              <View
+                                key={activity.activityId}
+                                style={[
+                                  styles.progressDot,
+                                  activityCompleted &&
+                                    styles.progressDotCompleted,
+                                ]}
+                              >
+                                {activityCompleted && (
+                                  <Ionicons
+                                    name="checkmark"
+                                    size={18}
+                                    color={colors.primary}
+                                  />
+                                )}
+                              </View>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      {/* Task Cards */}
+                      {activities.map((activity, index) => (
+                        <View key={activity.activityId} style={styles.taskCard}>
+                          <View style={styles.taskHeader}>
+                            <View style={styles.taskInfo}>
+                              <Text style={styles.taskTitle}>
+                                Activity {index + 1}: {activity.title}
+                              </Text>
+                              <Text style={styles.taskStatus}>
+                                {activity.riskCategory}
+                              </Text>
+                            </View>
+                            <View style={styles.taskIconCircle}>
+                              <Ionicons
+                                name="play-circle"
+                                size={32}
+                                color={colors.primary}
+                              />
+                            </View>
+                          </View>
+
+                          <Text
+                            style={styles.taskDescription}
+                            numberOfLines={3}
+                          >
+                            {activity.instruction}
+                          </Text>
+
+                          <TouchableOpacity
+                            style={styles.continueButton}
+                            onPress={handleContinue}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.continueButtonText}>
+                              Continue
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  <View style={styles.weekDivider} />
                 </View>
-              ))}
-            </>
+              );
+            })
           ) : (
             <View style={styles.noPlanContainer}>
-              <Text style={styles.noPlanText}>
-                No active schedule found for this week.
-              </Text>
+              <Text style={styles.noPlanText}>No active schedule found.</Text>
             </View>
           )}
         </View>
@@ -543,5 +591,113 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.white,
+  },
+  weekPlanSection: {
+    marginBottom: spacing.xxxl,
+  },
+  weekHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: spacing.sm,
+  },
+  weekTitleContainer: {
+    flex: 1,
+  },
+  clinicianName: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  progressCircleSmall: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: "#0C4A6E",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: spacing.md,
+  },
+  progressTextSmall: {
+    fontSize: 12,
+    fontWeight: typography.fontWeight.bold,
+    color: "#0C4A6E",
+  },
+  weekDivider: {
+    height: 1,
+    backgroundColor: "#F1F5F9",
+    marginTop: spacing.xxxl,
+  },
+  weekBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  completedBadge: {
+    backgroundColor: "#ECFDF5",
+    borderRadius: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  completedBadgeText: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: "500",
+  },
+  currentBadge: {
+    backgroundColor: "#E0F2FE",
+    borderRadius: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  currentBadgeText: {
+    fontSize: 12,
+    color: "#0C4A6E",
+    fontWeight: "500",
+  },
+  expandedContent: {
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  weekDescription: {
+    fontSize: typography.fontSize.md,
+    color: "#475569",
+    lineHeight: 22,
+    marginBottom: spacing.xl,
+  },
+  progressContainer: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  progressLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  progressLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  progressCount: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0C4A6E",
   },
 });
