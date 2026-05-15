@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -10,21 +11,114 @@ import {
   View,
 } from "react-native";
 import { borderRadius, colors, spacing } from "../../../../shared/theme";
+import { useRoadmaps } from "../../hooks/useRoadmaps";
+import { useChildrenStore } from "../../store/childrenStore";
+import { useRoadmapStore } from "../../store/roadmapStore";
+import { CompletionModal } from "./components/CompletionModal";
 import { RecommendedGames } from "./components/RecommendedGames";
 import { SectionHeader } from "./components/SectionHeader";
 import { VerifiedBadge } from "./components/VerifiedBadge";
 
 export default function ActivityDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const params = useLocalSearchParams<{
+    title: string;
+    description: string;
+    weekPlanId: string;
+    activityId: string;
+  }>();
 
-  // Mock data - would normally come from store/params
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  const { activeChild } = useChildrenStore();
+  const { data: roadmapData } = useRoadmaps(activeChild?.childId);
+  const completeActivityApi = useRoadmapStore(
+    (state) => state.completeActivity,
+  );
+
+  // Find current activity and the next one
+  const activeRoadmap = roadmapData?.roadmaps?.[0];
+  const weekPlans = activeRoadmap?.weekPlans || [];
+
+  // Flatten all activities in order across week plans
+  const allActivitiesWithContext = weekPlans.flatMap((wp) =>
+    (wp.activities || []).map((a) => {
+      // Find status from activityStatuses array
+      const statusObj = wp.activityStatuses?.find(
+        (s) => s.activityId === a.activityId,
+      );
+      return {
+        ...a,
+        weekPlanId: wp.weekPlanId,
+        weekNumber: wp.weekNumber,
+        completed: statusObj ? statusObj.completed : a.completed,
+      };
+    }),
+  );
+
+  const currentIndex = allActivitiesWithContext.findIndex(
+    (a) => a.activityId === params.activityId,
+  );
+
+  const currentActivity = allActivitiesWithContext[currentIndex];
+  const nextActivity = allActivitiesWithContext[currentIndex + 1];
+
+  const [isCompleted, setIsCompleted] = useState(
+    currentActivity?.completed || false,
+  );
+
+  // Sync state if currentActivity changes (due to setParams or data reload)
+  useEffect(() => {
+    const activity = allActivitiesWithContext.find(
+      (a) => a.activityId === params.activityId,
+    );
+    if (activity) {
+      setIsCompleted(activity.completed || false);
+    }
+  }, [params.activityId, roadmapData]);
+
+  const handleNext = () => {
+    if (!isCompleted) {
+      setShowCompletionModal(true);
+    } else if (nextActivity) {
+      // If already completed, just move to next
+      router.setParams({
+        activityId: nextActivity.activityId,
+        weekPlanId: nextActivity.weekPlanId,
+        title: nextActivity.title,
+        description: nextActivity.instruction,
+      });
+      setIsCompleted(nextActivity.completed || false);
+    } else {
+      router.back();
+    }
+  };
+
+  const handleConfirmCompletion = async () => {
+    if (!params.weekPlanId || !params.activityId) return;
+
+    try {
+      setIsCompleting(true);
+      await completeActivityApi(params.weekPlanId, params.activityId);
+      setIsCompleted(true);
+      setShowCompletionModal(false);
+    } catch (error: any) {
+      if (error.response?.data?.error === "Activity is already completed") {
+        setIsCompleted(true);
+        setShowCompletionModal(false);
+      } else {
+        console.error("Failed to complete activity", error);
+      }
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const activityData = {
-    title: params.title || "Speech and Language Therapy",
-    description:
-      params.description ||
-      "Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Vestibulum, non suscipit magna interdum eu. Curabitur pellentesque nibh",
+    title: currentActivity?.title || params.title || "Activity",
+    description: currentActivity?.instruction || params.description || "",
   };
 
   return (
@@ -87,11 +181,41 @@ export default function ActivityDetailScreen() {
 
       {/* Sticky Bottom Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.nextButton} activeOpacity={0.8}>
-          <Text style={styles.nextButtonText}>Next</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.white} />
+        <TouchableOpacity
+          style={[styles.nextButton, isCompleted && styles.completedNextButton]}
+          activeOpacity={0.8}
+          onPress={handleNext}
+          disabled={isCompleting}
+        >
+          {isCompleting ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <>
+              <Text style={styles.nextButtonText}>
+                {isCompleted
+                  ? nextActivity
+                    ? "Go to Next"
+                    : "Finish"
+                  : "Mark as Completed"}
+              </Text>
+              <Ionicons
+                name={
+                  isCompleted ? "checkmark-done-circle" : "checkmark-circle"
+                }
+                size={22}
+                color={colors.white}
+              />
+            </>
+          )}
         </TouchableOpacity>
       </View>
+
+      <CompletionModal
+        visible={showCompletionModal}
+        title={activityData.title}
+        onClose={() => setShowCompletionModal(false)}
+        onConfirm={handleConfirmCompletion}
+      />
     </View>
   );
 }
@@ -181,9 +305,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.lg,
     borderRadius: 40,
     gap: 8,
+  },
+  completedNextButton: {
+    backgroundColor: colors.success,
   },
   nextButtonText: {
     color: colors.white,

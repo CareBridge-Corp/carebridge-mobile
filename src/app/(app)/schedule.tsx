@@ -363,11 +363,18 @@ export default function ScheduleScreen() {
                           </Text>
 
                           <TouchableOpacity
-                            style={styles.continueButton}
+                            style={[
+                              styles.continueButton,
+                              weekPlan.activityStatuses?.find(
+                                (s) => s.activityId === activity.activityId,
+                              )?.completed && styles.completedContinueButton,
+                            ]}
                             onPress={() => {
                               router.push({
                                 pathname: "/(app)/(doctor)/activity-detail",
                                 params: {
+                                  activityId: activity.activityId,
+                                  weekPlanId: weekPlan.weekPlanId,
                                   title: activity.title,
                                   description: activity.instruction,
                                 },
@@ -376,7 +383,11 @@ export default function ScheduleScreen() {
                             activeOpacity={0.8}
                           >
                             <Text style={styles.continueButtonText}>
-                              Continue
+                              {weekPlan.activityStatuses?.find(
+                                (s) => s.activityId === activity.activityId,
+                              )?.completed
+                                ? "Completed"
+                                : "Continue"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -670,12 +681,15 @@ const styles = StyleSheet.create({
   },
   continueButton: {
     backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.xxxl,
     alignItems: "center",
   },
+  completedContinueButton: {
+    backgroundColor: colors.success,
+  },
   continueButtonText: {
-    fontSize: typography.fontSize.lg,
+    fontSize: 16,
     fontWeight: typography.fontWeight.semibold,
     color: colors.white,
   },
