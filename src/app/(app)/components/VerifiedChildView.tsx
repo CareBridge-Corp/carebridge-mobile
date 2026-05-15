@@ -41,11 +41,14 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
         : wp.status === "PENDING"
           ? "pending"
           : "active",
-    tasks: wp.activities.map((a) => a.title),
+    tasks: wp.activities?.map((a) => a.title) || [],
     progress:
-      wp.activityStatuses?.length > 0
-        ? wp.activityStatuses.map((s) => s.completed)
-        : wp.activities.map(() => false),
+      wp.activities?.map((a) => {
+        return (
+          wp.activityStatuses?.find((s) => s.activityId === a.activityId)
+            ?.completed || false
+        );
+      }) || [],
   }));
 
   // Logic to handle loading/fallback states correctly
@@ -97,7 +100,7 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
           onPress={() =>
             router.push({
               pathname: "/(app)/(doctor)/doctor-details",
-              params: { childId: clinician.userId }, // This would need the actual childId in reality
+              params: { childId: clinician.userId },
             } as any)
           }
         >

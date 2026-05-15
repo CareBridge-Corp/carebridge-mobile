@@ -221,17 +221,23 @@ export default function ScheduleScreen() {
 
               if (!isCompleted && !isCurrent && !isNextAvailable) return null;
 
-              const activities = weekPlan.activities || [];
-              const totalActivities = activities.length;
+              const filteredActivities = weekPlan.activities || [];
+
+              const totalActivities = filteredActivities.length;
               const completedCount =
-                weekPlan.activityStatuses?.filter((s) => s.completed).length ||
-                0;
+                weekPlan.activityStatuses?.filter(
+                  (s) =>
+                    s.completed &&
+                    filteredActivities.some(
+                      (fa) => fa.activityId === s.activityId,
+                    ),
+                ).length || 0;
               const progressPercentage =
                 totalActivities > 0
                   ? Math.round((completedCount / totalActivities) * 100)
                   : 0;
-              const clinician = weekPlan.clinician;
               const isExpanded = expandedWeekId === weekPlan.weekPlanId;
+              const clinician = weekPlan.clinician;
 
               return (
                 <View key={weekPlan.weekPlanId} style={styles.weekPlanSection}>
@@ -301,7 +307,7 @@ export default function ScheduleScreen() {
                           </Text>
                         </View>
                         <View style={styles.progressCirclesContainer}>
-                          {activities.map((activity) => {
+                          {filteredActivities.map((activity) => {
                             const activityCompleted =
                               weekPlan.activityStatuses?.find(
                                 (s) => s.activityId === activity.activityId,
@@ -329,7 +335,7 @@ export default function ScheduleScreen() {
                       </View>
 
                       {/* Task Cards */}
-                      {activities.map((activity, index) => (
+                      {filteredActivities.map((activity, index) => (
                         <View key={activity.activityId} style={styles.taskCard}>
                           <View style={styles.taskHeader}>
                             <View style={styles.taskInfo}>
