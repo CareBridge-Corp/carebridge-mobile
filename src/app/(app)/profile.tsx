@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import {
   Image,
   ScrollView,
@@ -22,7 +22,7 @@ export default function ProfileScreen() {
 
   // Use the profile from our new profile feature hook/store
   const { data: profile } = useProfile();
-  
+
   // Fetch clinician for the active child if available
   const { data: clinician } = useAssignedClinician(activeChild?.childId);
 
@@ -98,10 +98,12 @@ export default function ProfileScreen() {
             <Text style={styles.sectionTitle}>Assigned Clinician</Text>
             <TouchableOpacity
               style={styles.menuItem}
-              onPress={() => router.push({
-                pathname: "/(app)/(doctor)/doctor-details",
-                params: { childId: activeChild?.childId }
-              } as any)}
+              onPress={() =>
+                router.push({
+                  pathname: "/(app)/(doctor)/doctor-details",
+                  params: { childId: activeChild?.childId },
+                } as any)
+              }
               activeOpacity={0.7}
             >
               <View style={styles.menuIconContainer}>
@@ -115,7 +117,11 @@ export default function ProfileScreen() {
                   {clinician.specializations[0]?.name || "Specialist"}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.iconLight} />
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.iconLight}
+              />
             </TouchableOpacity>
           </View>
         )}

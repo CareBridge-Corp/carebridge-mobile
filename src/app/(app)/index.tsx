@@ -17,7 +17,9 @@ import { DoctorsSection } from "./components/DoctorsSection";
 import { EmptyChildView } from "./components/EmptyChildView";
 import { HasChildView } from "./components/HasChildView";
 import { HomeSkeletonView } from "./components/HomeSkeletonView";
+import { VerifiedChildView } from "./components/VerifiedChildView";
 import { useChildren } from "./hooks/useChildren";
+import { useAssignedClinician } from "./hooks/useClinician";
 import { useChildrenStore } from "./store/childrenStore";
 
 export default function AppHomeScreen() {
@@ -30,7 +32,13 @@ export default function AppHomeScreen() {
   // Fetch children and sync with store
   const { isLoading } = useChildren();
 
+  // Fetch clinician if child is verified
+  const { data: clinician } = useAssignedClinician(
+    activeChild?.status === "VERIFIED" ? activeChild?.childId : undefined,
+  );
+
   const hasChildren = children.length > 0;
+  const isVerified = activeChild?.status === "VERIFIED";
 
   return (
     <View style={styles.container}>
@@ -82,7 +90,15 @@ export default function AppHomeScreen() {
             </View>
 
             {/* Child-specific content */}
-            {hasChildren ? <HasChildView /> : <EmptyChildView />}
+            {hasChildren ? (
+              isVerified ? (
+                <VerifiedChildView clinician={clinician} />
+              ) : (
+                <HasChildView />
+              )
+            ) : (
+              <EmptyChildView />
+            )}
           </View>
         )}
 

@@ -179,6 +179,9 @@ export default function MChatQuestionnaireScreen() {
     }
   };
 
+  const prevQuestion =
+    currentQuestion > 0 ? MCHAT_QUESTIONS[currentQuestion - 1] : null;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#E8F0F5" />
@@ -238,6 +241,37 @@ export default function MChatQuestionnaireScreen() {
 
       {/* Main Content */}
       <View style={styles.content}>
+        {/* Previous Question Blurry Card */}
+        {prevQuestion && (
+          <View style={styles.previousQuestionContainer}>
+            <View style={styles.blurryCard}>
+              <View style={styles.questionNumberContainer}>
+                <Text style={styles.questionNumberSecondary}>
+                  {String(currentQuestion).padStart(2, "0")}
+                </Text>
+                <View style={styles.questionDotSecondary} />
+              </View>
+              <Text style={styles.questionTextSecondary} numberOfLines={1}>
+                {prevQuestion.question}
+              </Text>
+              <View style={styles.previousAnswerBadge}>
+                <Ionicons
+                  name={
+                    answers[prevQuestion.question]
+                      ? "checkmark-circle"
+                      : "close-circle"
+                  }
+                  size={16}
+                  color={answers[prevQuestion.question] ? "#10B981" : "#EF4444"}
+                />
+                <Text style={styles.previousAnswerText}>
+                  {answers[prevQuestion.question] ? "Yes" : "No"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View style={styles.questionCard}>
           <View style={styles.questionNumberContainer}>
             <Text style={styles.questionNumber}>
@@ -366,21 +400,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     paddingTop: spacing.lg,
   },
+  previousQuestionContainer: {
+    marginBottom: -100, // Deeper overlap for a more "stacked" deck look
+    zIndex: 1,
+    transform: [{ scale: 0.9 }, { translateY: 20 }], // Slightly smaller and shifted for depth
+  },
+  blurryCard: {
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
+    borderRadius: borderRadius.xxxl,
+    padding: spacing.xl,
+    paddingBottom: 110,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    opacity: 0.3,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  questionNumberSecondary: {
+    fontSize: 24,
+    fontWeight: typography.fontWeight.bold,
+    color: "#5A7A8F",
+  },
+  questionDotSecondary: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#B8D4E6",
+    marginLeft: 4,
+  },
+  questionTextSecondary: {
+    fontSize: typography.fontSize.sm,
+    color: "#5A7A8F",
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  previousAnswerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+    gap: 4,
+  },
+  previousAnswerText: {
+    fontSize: 12,
+    fontWeight: typography.fontWeight.bold,
+    color: "#5A7A8F",
+  },
   questionCard: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.xxxl,
     padding: spacing.xxxl,
+    zIndex: 2,
+    // Add soft elevation/shadow
+    shadowColor: "#0C4A6E",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)",
   },
   questionNumberContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   questionNumber: {
-    fontSize: 64,
+    fontSize: 72,
     fontWeight: typography.fontWeight.bold,
     color: "#0C4A6E",
-    letterSpacing: -2,
+    letterSpacing: -4,
   },
   questionDot: {
     width: 14,

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "../../../shared/api/client";
-import { useClinicianStore, Clinician } from "../store/clinicianStore";
+import { Clinician, useClinicianStore } from "../store/clinicianStore";
 
 interface AssignedClinicianResponse {
   message: string;
@@ -18,7 +18,7 @@ export function useAssignedClinician(childId: string | undefined) {
       setLoading(true);
       try {
         const response: AssignedClinicianResponse = await apiClient.get(
-          `/users/children/${childId}/assigned-clinician`
+          `/users/children/${childId}/assigned-clinician`,
         );
         if (response.clinician) {
           setClinicianForChild(childId, response.clinician);

@@ -54,6 +54,6 @@ export const useClinicianStore = create<ClinicianState & ClinicianActions>()(
     {
       name: "carebridge-clinician-storage",
       storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+    },
+  ),
 );
