@@ -364,7 +364,15 @@ export default function ScheduleScreen() {
 
                           <TouchableOpacity
                             style={styles.continueButton}
-                            onPress={handleContinue}
+                            onPress={() => {
+                              router.push({
+                                pathname: "/(app)/(doctor)/activity-detail",
+                                params: {
+                                  title: activity.title,
+                                  description: activity.instruction,
+                                },
+                              } as any);
+                            }}
                             activeOpacity={0.8}
                           >
                             <Text style={styles.continueButtonText}>
