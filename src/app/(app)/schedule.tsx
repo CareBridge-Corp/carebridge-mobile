@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Href, useRouter } from "expo-router";
+import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,6 +21,15 @@ import { useChildrenStore } from "./store/childrenStore";
 
 export default function ScheduleScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ expandWeekId?: string }>();
+
+  // Add this effect to handle expansion from home page
+  useEffect(() => {
+    if (params.expandWeekId) {
+      setExpandedWeekId(params.expandWeekId);
+    }
+  }, [params.expandWeekId]);
+
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const { activeChild, children } = useChildrenStore();
@@ -257,7 +266,7 @@ export default function ScheduleScreen() {
                             <Ionicons
                               name="checkmark-circle"
                               size={14}
-                              color={colors.success}
+                              color="#0C4A6E"
                             />
                             <Text style={styles.completedBadgeText}>Done</Text>
                           </View>
@@ -276,17 +285,21 @@ export default function ScheduleScreen() {
                       )}
                     </View>
                     <View style={styles.headerRight}>
-                      <View style={styles.progressCircleSmall}>
-                        <Text style={styles.progressTextSmall}>
+                      <View style={styles.progressStats}>
+                        <Text style={styles.progressPercentage}>
                           {progressPercentage}%
                         </Text>
+                        <Text style={styles.progressRatio}>
+                          {completedCount}/{totalActivities}
+                        </Text>
                       </View>
-                      <Ionicons
-                        name={isExpanded ? "chevron-up" : "chevron-down"}
-                        size={20}
-                        color="#0C4A6E"
-                        style={{ marginLeft: spacing.sm }}
-                      />
+                      <View style={styles.expandIconContainer}>
+                        <Ionicons
+                          name={isExpanded ? "chevron-up" : "chevron-down"}
+                          size={20}
+                          color="#0C4A6E"
+                        />
+                      </View>
                     </View>
                   </TouchableOpacity>
 
@@ -325,7 +338,7 @@ export default function ScheduleScreen() {
                                   <Ionicons
                                     name="checkmark"
                                     size={18}
-                                    color={colors.primary}
+                                    color="#0C4A6E"
                                   />
                                 )}
                               </View>
@@ -382,7 +395,15 @@ export default function ScheduleScreen() {
                             }}
                             activeOpacity={0.8}
                           >
-                            <Text style={styles.continueButtonText}>
+                            <Text
+                              style={[
+                                styles.continueButtonText,
+                                weekPlan.activityStatuses?.find(
+                                  (s) => s.activityId === activity.activityId,
+                                )?.completed &&
+                                  styles.completedContinueButtonText,
+                              ]}
+                            >
                               {weekPlan.activityStatuses?.find(
                                 (s) => s.activityId === activity.activityId,
                               )?.completed
@@ -501,7 +522,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -4,
     right: -4,
-    backgroundColor: "#10B981",
+    backgroundColor: "#0C4A6E",
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -686,21 +707,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   completedContinueButton: {
-    backgroundColor: colors.success,
+    backgroundColor: "#DBEAFE",
   },
   continueButtonText: {
     fontSize: 16,
     fontWeight: typography.fontWeight.semibold,
     color: colors.white,
   },
-  weekPlanSection: {
-    marginBottom: spacing.xxxl,
+  completedContinueButtonText: {
+    color: "#0C4A6E",
   },
   weekHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.sm,
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+  },
+  weekPlanSection: {
+    marginBottom: spacing.lg,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xxl,
+    overflow: "hidden",
   },
   weekTitleContainer: {
     flex: 1,
@@ -714,26 +742,31 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.md,
   },
-  progressCircleSmall: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: "#0C4A6E",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: spacing.md,
+  progressStats: {
+    alignItems: "flex-end",
   },
-  progressTextSmall: {
-    fontSize: 12,
-    fontWeight: typography.fontWeight.bold,
+  progressPercentage: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#0C4A6E",
   },
-  weekDivider: {
-    height: 1,
+  progressRatio: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+  expandIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#F1F5F9",
-    marginTop: spacing.xxxl,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  weekDivider: {
+    display: "none",
   },
   weekBadgeRow: {
     flexDirection: "row",
@@ -741,7 +774,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   completedBadge: {
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#DBEAFE",
     borderRadius: 12,
     paddingVertical: 2,
     paddingHorizontal: 8,
@@ -751,7 +784,7 @@ const styles = StyleSheet.create({
   },
   completedBadgeText: {
     fontSize: 12,
-    color: colors.success,
+    color: "#0C4A6E",
     fontWeight: "500",
   },
   currentBadge: {
@@ -768,6 +801,7 @@ const styles = StyleSheet.create({
   expandedContent: {
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
+    paddingHorizontal: 0,
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
@@ -776,6 +810,7 @@ const styles = StyleSheet.create({
     color: "#475569",
     lineHeight: 22,
     marginBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
   progressContainer: {
     backgroundColor: "#F8FAFC",

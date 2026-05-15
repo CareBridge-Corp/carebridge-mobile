@@ -188,10 +188,15 @@ export default function ActivityDetailScreen() {
           disabled={isCompleting}
         >
           {isCompleting ? (
-            <ActivityIndicator color={colors.white} />
+            <ActivityIndicator color={isCompleted ? "#0C4A6E" : colors.white} />
           ) : (
             <>
-              <Text style={styles.nextButtonText}>
+              <Text
+                style={[
+                  styles.nextButtonText,
+                  isCompleted && styles.completedNextButtonText,
+                ]}
+              >
                 {isCompleted
                   ? nextActivity
                     ? "Go to Next"
@@ -203,7 +208,7 @@ export default function ActivityDetailScreen() {
                   isCompleted ? "checkmark-done-circle" : "checkmark-circle"
                 }
                 size={22}
-                color={colors.white}
+                color={isCompleted ? "#0C4A6E" : colors.white}
               />
             </>
           )}
@@ -310,11 +315,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   completedNextButton: {
-    backgroundColor: colors.success,
+    backgroundColor: "#DBEAFE",
   },
   nextButtonText: {
     color: colors.white,
     fontSize: 18,
     fontWeight: "600",
+  },
+  completedNextButtonText: {
+    color: "#0C4A6E",
   },
 });

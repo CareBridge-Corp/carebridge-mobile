@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Image,
@@ -41,6 +42,8 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
         : wp.status === "PENDING"
           ? "pending"
           : "active",
+    weekPlanId: wp.weekPlanId,
+    description: wp.description,
     tasks: wp.activities?.map((a) => a.title) || [],
     progress:
       wp.activities?.map((a) => {
@@ -50,6 +53,15 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
         );
       }) || [],
   }));
+
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (treatmentPhases.length > 0) {
+      const activeIdx = treatmentPhases.findIndex((p) => p.status === "active");
+      setExpandedIndex(activeIdx !== -1 ? activeIdx : 0);
+    }
+  }, [treatmentPhases.length]);
 
   // Logic to handle loading/fallback states correctly
   const displayPhases =
@@ -130,8 +142,15 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
 
       {/* Timeline Section */}
       <View style={styles.timelineContainer}>
-        {displayPhases.map((phase, index) => (
-          <View key={index} style={styles.timelineItem}>
+        {displayPhases.map((phase: any, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.timelineItem}
+            onPress={() =>
+              setExpandedIndex(index === expandedIndex ? null : index)
+            }
+            activeOpacity={0.7}
+          >
             {/* Connector Line */}
             {index < displayPhases.length - 1 && (
               <View style={styles.connector} />
@@ -142,7 +161,7 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
               style={[
                 styles.statusDot,
                 phase.status === "completed" && styles.dotCompleted,
-                phase.status === "active" && styles.dotActive,
+                index === expandedIndex && styles.dotActive,
               ]}
             />
 
@@ -158,18 +177,43 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
               </Text>
               <Text style={styles.phaseSubtitle}>{phase.subtitle}</Text>
 
-              {phase.status === "active" && (
+              {index === expandedIndex && (
                 <View style={styles.activePhaseCard}>
-                  {phase.tasks?.map((task, i) => (
+                  {phase.description && (
+                    <Text style={styles.phaseDescription} numberOfLines={2}>
+                      {phase.description}
+                    </Text>
+                  )}
+                  {phase.tasks?.map((task: string, i: number) => (
                     <View key={i} style={styles.taskItem}>
-                      <View style={styles.taskCheckCircle} />
-                      <Text style={styles.taskText}>{task}</Text>
+                      <View
+                        style={[
+                          styles.taskCheckCircle,
+                          phase.progress?.[i] && styles.taskCheckCircleDone,
+                        ]}
+                      >
+                        {phase.progress?.[i] && (
+                          <Ionicons
+                            name="checkmark"
+                            size={12}
+                            color="#0C4A6E"
+                          />
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          styles.taskText,
+                          phase.progress?.[i] && styles.taskTextDone,
+                        ]}
+                      >
+                        {task}
+                      </Text>
                     </View>
                   ))}
 
                   <View style={styles.progressRow}>
                     <View style={styles.dotsContainer}>
-                      {phase.progress?.map((done, i) => (
+                      {phase.progress?.map((done: boolean, i: number) => (
                         <View
                           key={i}
                           style={[
@@ -187,7 +231,15 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
                         </View>
                       ))}
                     </View>
-                    <TouchableOpacity style={styles.expandButton}>
+                    <TouchableOpacity
+                      style={styles.expandButton}
+                      onPress={() => {
+                        router.push({
+                          pathname: "/schedule",
+                          params: { expandWeekId: phase.weekPlanId },
+                        } as any);
+                      }}
+                    >
                       <Ionicons
                         name="arrow-up-outline"
                         size={20}
@@ -199,7 +251,7 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
                 </View>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -344,6 +396,12 @@ const styles = StyleSheet.create({
     color: "#A0B8C8",
     marginTop: 4,
   },
+  phaseDescription: {
+    fontSize: 14,
+    color: "#64748B",
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
   textMuted: { color: "#94A3B8" },
   activePhaseCard: {
     backgroundColor: "#F8FAFC",
@@ -367,11 +425,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#CBD5E1",
     backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  taskCheckCircleDone: {
+    backgroundColor: "#DBEAFE",
+    borderColor: "#DBEAFE",
   },
   taskText: {
     fontSize: 15,
     fontWeight: "600",
     color: "#0C4A6E",
+  },
+  taskTextDone: {
+    color: "#94A3B8",
+    textDecorationLine: "line-through",
   },
   progressRow: {
     flexDirection: "row",
