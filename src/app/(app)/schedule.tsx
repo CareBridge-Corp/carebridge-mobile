@@ -29,6 +29,16 @@ export default function ScheduleScreen() {
   const [showChildSelector, setShowChildSelector] = useState(false);
   const [expandedWeekId, setExpandedWeekId] = useState<string | null>(null);
 
+  const currentDate = new Date();
+  const formattedDate = currentDate.toLocaleDateString(
+    language === "ar" ? "ar-EG" : "en-US",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    },
+  );
+
   const isVerified = activeChild?.status === "VERIFIED";
   const { data: roadmapData, isLoading } = useRoadmaps(
     isVerified ? activeChild?.childId : undefined,
@@ -37,6 +47,15 @@ export default function ScheduleScreen() {
   // Get active week plan
   const activeRoadmap = roadmapData?.roadmaps?.[0];
   const weekPlans = activeRoadmap?.weekPlans || [];
+
+  // Generate week dates for the selector (7 days centered around today)
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - 3 + i);
+    return date;
+  });
+
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Find the current week (first one that is IN_PROGRESS or the first PENDING after a COMPLETED)
   const currentWeek =
@@ -100,6 +119,12 @@ export default function ScheduleScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Date Display */}
+        <View style={styles.dateContainer}>
+          <Ionicons name="calendar-outline" size={20} color="#0C4A6E" />
+          <Text style={styles.dateText}>{formattedDate}</Text>
+        </View>
+
         <VerificationRequiredView />
 
         <ChildSelectorModal
@@ -146,11 +171,42 @@ export default function ScheduleScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.calendarCard}>
+      <View style={styles.calendarCard}>
+        <View style={styles.weekContainer}>
+          {weekDates.map((date, index) => {
+            const isSelected =
+              date.toDateString() === selectedDate.toDateString();
+            const dayName = date.toLocaleDateString("en-US", {
+              weekday: "short",
+            });
+            const dayNum = date.getDate();
+
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[styles.dayItem, isSelected && styles.dayItemSelected]}
+                onPress={() => setSelectedDate(date)}
+              >
+                <Text
+                  style={[styles.dayNum, isSelected && styles.dayNumSelected]}
+                >
+                  {dayNum}
+                </Text>
+                <Text
+                  style={[styles.dayName, isSelected && styles.dayNameSelected]}
+                >
+                  {dayName}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
           {/* Week Plans Mapping */}
           {weekPlans.length > 0 ? (
             weekPlans.map((weekPlan, index) => {
@@ -323,9 +379,8 @@ export default function ScheduleScreen() {
               <Text style={styles.noPlanText}>No active schedule found.</Text>
             </View>
           )}
-        </View>
-        <View style={{ height: 100 }} />
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* Child Selector Modal */}
       <ChildSelectorModal
@@ -434,6 +489,23 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.white,
   },
+  dateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(12, 74, 110, 0.05)",
+    marginHorizontal: spacing.xxl,
+    marginBottom: spacing.xl,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    alignSelf: "flex-start",
+    gap: 8,
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0C4A6E",
+  },
   scrollView: {
     flex: 1,
   },
@@ -461,20 +533,21 @@ const styles = StyleSheet.create({
   dayItemSelected: {
     backgroundColor: "#0C4A6E",
   },
-  dateText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
+  dayNum: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#64748B",
     marginBottom: 4,
   },
-  dateTextSelected: {
+  dayNumSelected: {
     color: colors.white,
   },
-  dayText: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
+  dayName: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "500",
   },
-  dayTextSelected: {
+  dayNameSelected: {
     color: colors.white,
   },
   therapySection: {
