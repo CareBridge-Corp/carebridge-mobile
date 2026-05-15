@@ -53,9 +53,49 @@ export default function ScheduleScreen() {
     isVerified ? activeChild?.childId : undefined,
   );
 
-  // Get active week plan
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  // Get active roadmap and plans
   const activeRoadmap = roadmapData?.roadmaps?.[0];
   const weekPlans = activeRoadmap?.weekPlans || [];
+
+  // Determine current active week based on selection or current date
+  const [activeWeekPlanId, setActiveWeekPlanId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // If we have an override from navigation params, use it
+    if (params.expandWeekId) {
+      setActiveWeekPlanId(params.expandWeekId);
+    } else if (weekPlans.length > 0 && !activeWeekPlanId) {
+      // Default to in-progress or first week
+      const current =
+        weekPlans.find((wp) => wp.status === "IN_PROGRESS") || weekPlans[0];
+      if (current) setActiveWeekPlanId(current.weekPlanId);
+    }
+  }, [params.expandWeekId, weekPlans]);
+
+  const activeWeekPlan = weekPlans.find(
+    (wp) => wp.weekPlanId === activeWeekPlanId,
+  );
+
+  // Pagination logic for weeks
+  const handlePrevWeek = () => {
+    if (!activeWeekPlan) return;
+    const currentIndex = weekPlans.findIndex(
+      (wp) => wp.weekPlanId === activeWeekPlanId,
+    );
+    if (currentIndex > 0)
+      setActiveWeekPlanId(weekPlans[currentIndex - 1].weekPlanId);
+  };
+
+  const handleNextWeek = () => {
+    if (!activeWeekPlan) return;
+    const currentIndex = weekPlans.findIndex(
+      (wp) => wp.weekPlanId === activeWeekPlanId,
+    );
+    if (currentIndex < weekPlans.length - 1)
+      setActiveWeekPlanId(weekPlans[currentIndex + 1].weekPlanId);
+  };
 
   // Generate week dates for the selector (7 days centered around today)
   const weekDates = Array.from({ length: 7 }, (_, i) => {
@@ -63,25 +103,6 @@ export default function ScheduleScreen() {
     date.setDate(date.getDate() - 3 + i);
     return date;
   });
-
-  const [selectedDate, setSelectedDate] = useState(new Date());
-
-  // Find the current week (first one that is IN_PROGRESS or the first PENDING after a COMPLETED)
-  const currentWeek =
-    weekPlans.find((wp) => wp.status === "IN_PROGRESS") ||
-    weekPlans.find((wp) => wp.status === "PENDING") ||
-    weekPlans[0];
-
-  useEffect(() => {
-    if (currentWeek && !expandedWeekId) {
-      setExpandedWeekId(currentWeek.weekPlanId);
-    }
-  }, [currentWeek]);
-
-  // Handle accordion toggle
-  const toggleWeek = (id: string) => {
-    setExpandedWeekId(expandedWeekId === id ? null : id);
-  };
 
   const handleMChat = () => {
     router.push("/(app)/mchat-privacy" as Href);
@@ -181,34 +202,45 @@ export default function ScheduleScreen() {
       </View>
 
       <View style={styles.calendarCard}>
-        <View style={styles.weekContainer}>
-          {weekDates.map((date, index) => {
-            const isSelected =
-              date.toDateString() === selectedDate.toDateString();
-            const dayName = date.toLocaleDateString("en-US", {
-              weekday: "short",
-            });
-            const dayNum = date.getDate();
+        <View style={styles.weekPaginationContainer}>
+          <TouchableOpacity onPress={handlePrevWeek} style={styles.pageButton}>
+            <Ionicons name="chevron-back" size={24} color="#0C4A6E" />
+          </TouchableOpacity>
+          <View style={styles.weekContainer}>
+            {weekDates.map((date, index) => {
+              const isSelected =
+                date.toDateString() === selectedDate.toDateString();
+              const dayName = date.toLocaleDateString("en-US", {
+                weekday: "short",
+              });
+              const dayNum = date.getDate();
 
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[styles.dayItem, isSelected && styles.dayItemSelected]}
-                onPress={() => setSelectedDate(date)}
-              >
-                <Text
-                  style={[styles.dayNum, isSelected && styles.dayNumSelected]}
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.dayItem, isSelected && styles.dayItemSelected]}
+                  onPress={() => setSelectedDate(date)}
                 >
-                  {dayNum}
-                </Text>
-                <Text
-                  style={[styles.dayName, isSelected && styles.dayNameSelected]}
-                >
-                  {dayName}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text
+                    style={[styles.dayNum, isSelected && styles.dayNumSelected]}
+                  >
+                    {dayNum}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dayName,
+                      isSelected && styles.dayNameSelected,
+                    ]}
+                  >
+                    {dayName}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity onPress={handleNextWeek} style={styles.pageButton}>
+            <Ionicons name="chevron-forward" size={24} color="#0C4A6E" />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -216,19 +248,11 @@ export default function ScheduleScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {/* Week Plans Mapping */}
-          {weekPlans.length > 0 ? (
-            weekPlans.map((weekPlan, index) => {
-              // Only show if it's the current week, a completed week,
-              // or the very next pending week after a completed one.
+          {activeWeekPlan ? (
+            (() => {
+              const weekPlan = activeWeekPlan;
               const isCompleted = weekPlan.status === "COMPLETED";
-              const isCurrent = weekPlan.weekPlanId === currentWeek?.weekPlanId;
-              const prevWeek = index > 0 ? weekPlans[index - 1] : null;
-              const isNextAvailable =
-                prevWeek?.status === "COMPLETED" &&
-                weekPlan.status === "PENDING";
-
-              if (!isCompleted && !isCurrent && !isNextAvailable) return null;
+              const isCurrent = weekPlan.status === "IN_PROGRESS";
 
               const filteredActivities = weekPlan.activities || [];
 
@@ -245,184 +269,126 @@ export default function ScheduleScreen() {
                 totalActivities > 0
                   ? Math.round((completedCount / totalActivities) * 100)
                   : 0;
-              const isExpanded = expandedWeekId === weekPlan.weekPlanId;
               const clinician = weekPlan.clinician;
 
               return (
                 <View key={weekPlan.weekPlanId} style={styles.weekPlanSection}>
-                  {/* Week Header - Toggle for Accordion */}
-                  <TouchableOpacity
-                    style={styles.weekHeader}
-                    onPress={() => toggleWeek(weekPlan.weekPlanId)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.weekTitleContainer}>
-                      <View style={styles.weekBadgeRow}>
-                        <Text style={styles.therapyTitle}>
-                          Week {weekPlan.weekNumber}
-                        </Text>
-                        {isCompleted && (
-                          <View style={styles.completedBadge}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={14}
-                              color="#0C4A6E"
-                            />
-                            <Text style={styles.completedBadgeText}>Done</Text>
-                          </View>
-                        )}
-                        {isCurrent && (
-                          <View style={styles.currentBadge}>
-                            <Text style={styles.currentBadgeText}>Current</Text>
-                          </View>
-                        )}
-                      </View>
-                      {clinician && (
-                        <Text style={styles.clinicianName}>
-                          Curated by Dr. {clinician.firstName}{" "}
-                          {clinician.lastName}
-                        </Text>
-                      )}
-                    </View>
-                    <View style={styles.headerRight}>
-                      <View style={styles.progressStats}>
-                        <Text style={styles.progressPercentage}>
-                          {progressPercentage}%
-                        </Text>
-                        <Text style={styles.progressRatio}>
-                          {completedCount}/{totalActivities}
-                        </Text>
-                      </View>
-                      <View style={styles.expandIconContainer}>
-                        <Ionicons
-                          name={isExpanded ? "chevron-up" : "chevron-down"}
-                          size={20}
-                          color="#0C4A6E"
-                        />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-
-                  {isExpanded && (
-                    <View style={styles.expandedContent}>
-                      <Text style={styles.weekDescription}>
-                        {weekPlan.description}
+                  {/* Therapy Header/Pagination Integration */}
+                  <View style={styles.therapyHeader}>
+                    <View style={styles.therapyInfo}>
+                      <Text style={styles.therapyTitle} numberOfLines={1}>
+                        {weekPlan.description.split(" ").slice(0, 4).join(" ") +
+                          "..."}
                       </Text>
-
-                      {/* Activity Progress */}
-                      <View style={styles.progressContainer}>
-                        <View style={styles.progressLabelRow}>
-                          <Text style={styles.progressLabel}>
-                            Activity Progress
-                          </Text>
-                          <Text style={styles.progressCount}>
-                            {completedCount}/{totalActivities}
-                          </Text>
-                        </View>
-                        <View style={styles.progressCirclesContainer}>
-                          {filteredActivities.map((activity) => {
-                            const activityCompleted =
-                              weekPlan.activityStatuses?.find(
-                                (s) => s.activityId === activity.activityId,
-                              )?.completed;
-                            return (
-                              <View
-                                key={activity.activityId}
-                                style={[
-                                  styles.progressDot,
-                                  activityCompleted &&
-                                    styles.progressDotCompleted,
-                                ]}
-                              >
-                                {activityCompleted && (
-                                  <Ionicons
-                                    name="checkmark"
-                                    size={18}
-                                    color="#0C4A6E"
-                                  />
-                                )}
-                              </View>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      {/* Task Cards */}
-                      {filteredActivities.map((activity, index) => (
-                        <View key={activity.activityId} style={styles.taskCard}>
-                          <View style={styles.taskHeader}>
-                            <View style={styles.taskInfo}>
-                              <Text style={styles.taskTitle}>
-                                Activity {index + 1}: {activity.title}
-                              </Text>
-                              <Text style={styles.taskStatus}>
-                                {activity.riskCategory}
-                              </Text>
-                            </View>
-                            <View style={styles.taskIconCircle}>
-                              <Ionicons
-                                name="play-circle"
-                                size={32}
-                                color={colors.primary}
-                              />
-                            </View>
-                          </View>
-
-                          <Text
-                            style={styles.taskDescription}
-                            numberOfLines={3}
-                          >
-                            {activity.instruction}
-                          </Text>
-
-                          <TouchableOpacity
-                            style={[
-                              styles.continueButton,
-                              weekPlan.activityStatuses?.find(
-                                (s) => s.activityId === activity.activityId,
-                              )?.completed && styles.completedContinueButton,
-                            ]}
-                            onPress={() => {
-                              router.push({
-                                pathname: "/(app)/(doctor)/activity-detail",
-                                params: {
-                                  activityId: activity.activityId,
-                                  weekPlanId: weekPlan.weekPlanId,
-                                  title: activity.title,
-                                  description: activity.instruction,
-                                },
-                              } as any);
-                            }}
-                            activeOpacity={0.8}
-                          >
-                            <Text
+                      <Text style={styles.therapyStatus}>
+                        {isCompleted ? "Completed" : "In Progress"}
+                      </Text>
+                      <View style={styles.progressCirclesContainer}>
+                        {filteredActivities.slice(0, 5).map((activity) => {
+                          const isActivityCompleted =
+                            weekPlan.activityStatuses?.find(
+                              (s) => s.activityId === activity.activityId,
+                            )?.completed;
+                          return (
+                            <View
+                              key={activity.activityId}
                               style={[
-                                styles.continueButtonText,
-                                weekPlan.activityStatuses?.find(
-                                  (s) => s.activityId === activity.activityId,
-                                )?.completed &&
-                                  styles.completedContinueButtonText,
+                                styles.miniProgressDot,
+                                isActivityCompleted &&
+                                  styles.miniProgressDotCompleted,
                               ]}
                             >
-                              {weekPlan.activityStatuses?.find(
-                                (s) => s.activityId === activity.activityId,
-                              )?.completed
-                                ? "Completed"
-                                : "Continue"}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
+                              {isActivityCompleted && (
+                                <Ionicons
+                                  name="checkmark-done"
+                                  size={16}
+                                  color="#0C4A6E"
+                                />
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
                     </View>
-                  )}
+                    <View style={styles.circularProgressContainer}>
+                      <View style={styles.circularProgress}>
+                        <Text style={styles.progressText}>
+                          {progressPercentage}%
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
 
-                  <View style={styles.weekDivider} />
+                  <View style={styles.tasksDivider} />
+
+                  <View style={styles.expandedContent}>
+                    {/* Task Cards */}
+                    {filteredActivities.map((activity, index) => (
+                      <View key={activity.activityId} style={styles.taskCard}>
+                        <View style={styles.taskInfo}>
+                          <Text style={styles.taskTitle}>
+                            Task {index + 1}: {activity.title}
+                          </Text>
+                          <Text style={styles.taskStatus}>
+                            {weekPlan.activityStatuses?.find(
+                              (s) => s.activityId === activity.activityId,
+                            )?.completed
+                              ? "Completed"
+                              : "In Progress"}
+                          </Text>
+                        </View>
+
+                        <Text style={styles.taskDescription} numberOfLines={3}>
+                          {activity.instruction}
+                        </Text>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.continueButton,
+                            weekPlan.activityStatuses?.find(
+                              (s) => s.activityId === activity.activityId,
+                            )?.completed && styles.completedContinueButton,
+                          ]}
+                          onPress={() => {
+                            router.push({
+                              pathname: "/(app)/(doctor)/activity-detail",
+                              params: {
+                                activityId: activity.activityId,
+                                weekPlanId: weekPlan.weekPlanId,
+                                title: activity.title,
+                                description: activity.instruction,
+                              },
+                            } as any);
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <Text
+                            style={[
+                              styles.continueButtonText,
+                              weekPlan.activityStatuses?.find(
+                                (s) => s.activityId === activity.activityId,
+                              )?.completed &&
+                                styles.completedContinueButtonText,
+                            ]}
+                          >
+                            {weekPlan.activityStatuses?.find(
+                              (s) => s.activityId === activity.activityId,
+                            )?.completed
+                              ? "Completed"
+                              : "Continue"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               );
-            })
+            })()
           ) : (
             <View style={styles.noPlanContainer}>
-              <Text style={styles.noPlanText}>No active schedule found.</Text>
+              <Text style={styles.noPlanText}>
+                No activities found for this period.
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -557,41 +523,50 @@ const styles = StyleSheet.create({
   },
   calendarCard: {
     backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xxxl,
-    borderTopRightRadius: borderRadius.xxxl,
-    paddingTop: spacing.xxl,
-    paddingHorizontal: spacing.xxl,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xl,
     minHeight: "100%",
   },
   weekContainer: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: spacing.xxxl,
+    paddingVertical: 10,
+    marginHorizontal: 8,
   },
   dayItem: {
     alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.xxl,
-    minWidth: 50,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 24,
+    minWidth: 45,
   },
   dayItemSelected: {
     backgroundColor: "#0C4A6E",
+    // Premium shadow for selected date
+    shadowColor: "#0C4A6E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   dayNum: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#64748B",
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#94A3B8",
     marginBottom: 4,
   },
   dayNumSelected: {
     color: colors.white,
   },
   dayName: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#94A3B8",
-    fontWeight: "500",
+    fontWeight: "600",
+    textTransform: "uppercase",
   },
   dayNameSelected: {
     color: colors.white,
@@ -649,19 +624,76 @@ const styles = StyleSheet.create({
   progressDotCompleted: {
     backgroundColor: "#E0F2FE",
   },
-  taskCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xxl,
-    marginTop: spacing.lg,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
+  tasksDivider: {
+    height: 1,
+    backgroundColor: "#F1F5F9",
+    marginVertical: 24,
   },
-  taskHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.md,
+  circularProgressContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  circularProgress: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 1.5,
+    borderColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  miniProgressDot: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#E2E8F0",
+    opacity: 0.5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  miniProgressDotCompleted: {
+    backgroundColor: "#DBEAFE",
+    opacity: 1,
+  },
+  taskCard: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 32,
+    padding: 24,
+    marginBottom: 20,
+  },
+  taskInfo: {
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0C4A6E",
+    marginBottom: 4,
+  },
+  taskStatus: {
+    fontSize: 14,
+    color: "#94A3B8",
+    marginBottom: 12,
+  },
+  taskDescription: {
+    fontSize: 15,
+    color: "#64748B",
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  continueButton: {
+    backgroundColor: "#0C4A6E",
+    paddingVertical: 18,
+    borderRadius: 40,
+    alignItems: "center",
+  },
+  completedContinueButton: {
+    backgroundColor: "#DBEAFE",
+  },
+  continueButtonText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.white,
   },
   noPlanContainer: {
     padding: spacing.xl,
@@ -670,49 +702,6 @@ const styles = StyleSheet.create({
   noPlanText: {
     color: "#A0B8C8",
     fontSize: 16,
-  },
-  taskInfo: {
-    flex: 1,
-  },
-  taskTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.xs,
-  },
-  taskStatus: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
-    textTransform: "capitalize",
-  },
-  taskIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: spacing.md,
-  },
-  taskDescription: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-  continueButton: {
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xxxl,
-    alignItems: "center",
-  },
-  completedContinueButton: {
-    backgroundColor: "#DBEAFE",
-  },
-  continueButtonText: {
-    fontSize: 16,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
   },
   completedContinueButtonText: {
     color: "#0C4A6E",
@@ -764,6 +753,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
+  },
+  weekDisplayHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+  },
+  weekPaginationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    marginBottom: 16,
+  },
+  pageButton: {
+    padding: 8,
   },
   weekDivider: {
     display: "none",

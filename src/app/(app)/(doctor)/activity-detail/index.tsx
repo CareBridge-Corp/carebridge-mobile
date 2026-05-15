@@ -15,6 +15,7 @@ import { useRoadmaps } from "../../hooks/useRoadmaps";
 import { useChildrenStore } from "../../store/childrenStore";
 import { useRoadmapStore } from "../../store/roadmapStore";
 import { CompletionModal } from "./components/CompletionModal";
+import { NewWeekModal } from "./components/NewWeekModal";
 import { RecommendedGames } from "./components/RecommendedGames";
 import { SectionHeader } from "./components/SectionHeader";
 import { VerifiedBadge } from "./components/VerifiedBadge";
@@ -30,6 +31,7 @@ export default function ActivityDetailScreen() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showNewWeekModal, setShowNewWeekModal] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
 
   const { activeChild } = useChildrenStore();
@@ -83,17 +85,26 @@ export default function ActivityDetailScreen() {
     if (!isCompleted) {
       setShowCompletionModal(true);
     } else if (nextActivity) {
-      // If already completed, just move to next
-      router.setParams({
-        activityId: nextActivity.activityId,
-        weekPlanId: nextActivity.weekPlanId,
-        title: nextActivity.title,
-        description: nextActivity.instruction,
-      });
-      setIsCompleted(nextActivity.completed || false);
+      // Check if moving to a new week plan
+      if (nextActivity.weekPlanId !== params.weekPlanId) {
+        setShowNewWeekModal(true);
+      } else {
+        navigateToNext();
+      }
     } else {
       router.back();
     }
+  };
+
+  const navigateToNext = () => {
+    if (!nextActivity) return;
+    router.setParams({
+      activityId: nextActivity.activityId,
+      weekPlanId: nextActivity.weekPlanId,
+      title: nextActivity.title,
+      description: nextActivity.instruction,
+    });
+    setIsCompleted(nextActivity.completed || false);
   };
 
   const handleConfirmCompletion = async () => {
@@ -220,6 +231,16 @@ export default function ActivityDetailScreen() {
         title={activityData.title}
         onClose={() => setShowCompletionModal(false)}
         onConfirm={handleConfirmCompletion}
+      />
+
+      <NewWeekModal
+        visible={showNewWeekModal}
+        weekNumber={nextActivity?.weekNumber || 0}
+        onClose={() => setShowNewWeekModal(false)}
+        onContinue={() => {
+          setShowNewWeekModal(false);
+          navigateToNext();
+        }}
       />
     </View>
   );
