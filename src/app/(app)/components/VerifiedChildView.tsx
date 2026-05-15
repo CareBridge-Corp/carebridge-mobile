@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   ScrollView,
@@ -9,6 +10,8 @@ import {
   View,
 } from "react-native";
 import { colors, spacing } from "../../../shared/theme";
+import { useRoadmaps } from "../hooks/useRoadmaps";
+import { useChildrenStore } from "../store/childrenStore";
 import { Clinician } from "../store/clinicianStore";
 
 interface VerifiedChildViewProps {
@@ -17,22 +20,57 @@ interface VerifiedChildViewProps {
 
 export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { activeChild } = useChildrenStore();
+  const { data: roadmapData } = useRoadmaps(activeChild?.childId);
 
-  const treatmentPhases = [
-    {
-      title: "Phase 1 completed",
-      subtitle: "Neurology specialist",
-      status: "completed",
-    },
-    {
-      title: "Speech therapy Phase 1",
-      subtitle: "In Progress",
-      status: "active",
-      tasks: ["Playing games", "Walking and running", "Hearing exercise"],
-      progress: [true, true, false, false, false],
-    },
-    { title: "Phase 3", subtitle: "Neurology specialist", status: "pending" },
-  ];
+  const activeRoadmap = roadmapData?.roadmaps?.[0];
+  const weekPlans = activeRoadmap?.weekPlans || [];
+
+  const treatmentPhases = weekPlans.map((wp) => ({
+    title: `Week ${wp.weekNumber}`,
+    subtitle:
+      wp.status === "COMPLETED"
+        ? "Completed"
+        : wp.status === "PENDING"
+          ? "Pending"
+          : "In Progress",
+    status:
+      wp.status === "COMPLETED"
+        ? "completed"
+        : wp.status === "PENDING"
+          ? "pending"
+          : "active",
+    tasks: wp.activities.map((a) => a.title),
+    progress:
+      wp.activityStatuses?.length > 0
+        ? wp.activityStatuses.map((s) => s.completed)
+        : wp.activities.map(() => false),
+  }));
+
+  // Logic to handle loading/fallback states correctly
+  const displayPhases =
+    treatmentPhases.length > 0
+      ? treatmentPhases
+      : [
+          {
+            title: "Week 1 completed",
+            subtitle: "Neurology specialist",
+            status: "completed",
+          },
+          {
+            title: "Speech therapy Week 1",
+            subtitle: "In Progress",
+            status: "active",
+            tasks: ["Playing games", "Walking and running", "Hearing exercise"],
+            progress: [true, true, false, false, false],
+          },
+          {
+            title: "Week 3",
+            subtitle: "Neurology specialist",
+            status: "pending",
+          },
+        ];
 
   return (
     <View style={styles.container}>
@@ -89,10 +127,10 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
 
       {/* Timeline Section */}
       <View style={styles.timelineContainer}>
-        {treatmentPhases.map((phase, index) => (
+        {displayPhases.map((phase, index) => (
           <View key={index} style={styles.timelineItem}>
             {/* Connector Line */}
-            {index < treatmentPhases.length - 1 && (
+            {index < displayPhases.length - 1 && (
               <View style={styles.connector} />
             )}
 
@@ -164,9 +202,9 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
 
       {/* Resources Section */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Resources</Text>
+        <Text style={styles.sectionTitle}>{t("home.resources")}</Text>
         <TouchableOpacity style={styles.seeMore}>
-          <Text style={styles.seeMoreText}>See More</Text>
+          <Text style={styles.seeMoreText}>{t("home.seeMore")}</Text>
           <Ionicons name="chevron-forward" size={14} color="#A0B8C8" />
         </TouchableOpacity>
       </View>
@@ -198,7 +236,7 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
           { marginTop: spacing.xl, marginBottom: spacing.md },
         ]}
       >
-        Try this sensory Games
+        {t("home.trySensoryGames")}
       </Text>
       <View style={styles.gamesRow}>
         {[1, 2, 3, 4].map((i) => (

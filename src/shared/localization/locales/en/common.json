@@ -40,6 +40,12 @@
     "uploadVideo": "Upload Video",
     "curatedBy": "Curated by",
     "treatmentTimeline": "Treatment Timeline",
-    "phase": "Phase"
+    "phase": "Phase",
+    "completed": "Completed",
+    "active": "Active",
+    "pending": "Pending",
+    "resources": "Resources",
+    "trySensoryGames": "Try these sensory games",
+    "seeMore": "See More"
   }
 }
