@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import {
   Image,
   ScrollView,
@@ -11,14 +11,20 @@ import {
 } from "react-native";
 import { useLogout } from "../(auth)/hooks/useLogout";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
+import { useChildrenStore } from "./store/childrenStore";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const logoutMutation = useLogout();
+  const { activeChild } = useChildrenStore();
 
   // Use the profile from our new profile feature hook/store
   const { data: profile } = useProfile();
+  
+  // Fetch clinician for the active child if available
+  const { data: clinician } = useAssignedClinician(activeChild?.childId);
 
   console.log("Loaded profile:", profile);
   const handleLogout = () => {
@@ -85,6 +91,34 @@ export default function ProfileScreen() {
 
           <Text style={styles.userEmail}>{profile?.email}</Text>
         </View>
+
+        {/* Doctor Section (Conditional) */}
+        {clinician && (
+          <View style={styles.menuSection}>
+            <Text style={styles.sectionTitle}>Assigned Clinician</Text>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push({
+                pathname: "/(app)/(doctor)/doctor-details",
+                params: { childId: activeChild?.childId }
+              } as any)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuIconContainer}>
+                <Ionicons name="medical" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuText}>
+                  {clinician.surname} {clinician.firstName} {clinician.lastName}
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.textLight }}>
+                  {clinician.specializations[0]?.name || "Specialist"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.iconLight} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Menu Items */}
         <View style={styles.menuSection}>
