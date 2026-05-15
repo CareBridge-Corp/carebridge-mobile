@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from "../(auth)/store/authStore";
 import { colors, spacing, typography } from "../../shared/theme";
 
+import { useLanguageStore } from "../../shared/store/languageStore";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { DoctorsSection } from "./components/DoctorsSection";
 import { EmptyChildView } from "./components/EmptyChildView";
@@ -25,6 +26,7 @@ import { useChildrenStore } from "./store/childrenStore";
 export default function AppHomeScreen() {
   const user = useAuthStore((state) => state.user);
   const { activeChild, children } = useChildrenStore();
+  const { language, setLanguage } = useLanguageStore();
 
   // console.log(children);
   const [showChildSelector, setShowChildSelector] = useState(false);
@@ -49,31 +51,47 @@ export default function AppHomeScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Good Morning</Text>
           <Text style={styles.userName}>
             {activeChild ? activeChild.firstName : user?.firstName || "Guest"}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.avatar}
-          onPress={() => children.length > 0 && setShowChildSelector(true)}
-          activeOpacity={0.7}
-        >
-          {activeChild?.profilePictureUrl ? (
-            <Image
-              source={{ uri: activeChild.profilePictureUrl }}
-              style={styles.avatarImage}
-            />
-          ) : (
-            <Ionicons name="person" size={28} color={colors.text} />
-          )}
-          {children.length > 1 && (
-            <View style={styles.childCountBadge}>
-              <Text style={styles.childCountText}>{children.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+
+        {/* Small Language Toggle in Header */}
+        <View style={styles.headerLanguageActions}>
+          <TouchableOpacity
+            onPress={() =>
+              setLanguage(
+                language === "en" ? "am" : language === "am" ? "om" : "en",
+              )
+            }
+            style={styles.langHeaderToggle}
+          >
+            <Ionicons name="language" size={16} color={colors.primary} />
+            <Text style={styles.langHeaderText}>{language.toUpperCase()}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.avatar}
+            onPress={() => children.length > 0 && setShowChildSelector(true)}
+            activeOpacity={0.7}
+          >
+            {activeChild?.profilePictureUrl ? (
+              <Image
+                source={{ uri: activeChild.profilePictureUrl }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <Ionicons name="person" size={28} color={colors.text} />
+            )}
+            {children.length > 1 && (
+              <View style={styles.childCountBadge}>
+                <Text style={styles.childCountText}>{children.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -167,6 +185,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: typography.fontWeight.bold,
     color: colors.white,
+  },
+  headerLanguageActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  langHeaderToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
+  },
+  langHeaderText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: colors.primary,
   },
   scrollView: {
     flex: 1,

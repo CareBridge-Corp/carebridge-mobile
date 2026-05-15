@@ -1,20 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import {
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { useLanguageStore } from "../../shared/store/languageStore";
 import { colors, spacing, typography } from "../../shared/theme";
 import { SignupForm } from "./components/SignupForm";
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguageStore();
 
-  const handleSkipToHome = () => {
-    router.replace("/(app)" as Href);
+  const toggleLanguage = () => {
+    const nextLang = language === "en" ? "am" : language === "am" ? "om" : "en";
+    setLanguage(nextLang);
   };
 
   return (
@@ -24,18 +29,18 @@ export default function SignupScreen() {
         <Ionicons name="arrow-back" size={24} color={colors.text} />
       </TouchableOpacity>
 
-      {/* Skip Button */}
-      <TouchableOpacity style={styles.skipButton} onPress={handleSkipToHome}>
-        <Text style={styles.skipText}>Skip</Text>
-        <Ionicons name="arrow-forward" size={16} color={colors.textMedium} />
+      {/* Language Button replaced Skip Button */}
+      <TouchableOpacity style={styles.skipButton} onPress={toggleLanguage}>
+        <Ionicons name="language" size={18} color={colors.primary} />
+        <Text style={styles.skipText}>{language.toUpperCase()}</Text>
       </TouchableOpacity>
 
       <SignupForm />
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
+        <Text style={styles.footerText}>{t("auth.alreadyHaveAccount")} </Text>
         <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
-          <Text style={styles.footerLink}>Login</Text>
+          <Text style={styles.footerLink}>{t("auth.login")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -60,17 +65,24 @@ const styles = StyleSheet.create({
     right: spacing.xl,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.borderLight,
-    borderRadius: 16,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: colors.white,
+    borderRadius: 20,
     zIndex: 10,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   skipText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: colors.textMedium,
+    fontSize: 13,
+    fontWeight: "bold",
+    color: colors.primary,
   },
   footer: {
     flexDirection: "row",

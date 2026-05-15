@@ -1,0 +1,25 @@
+{
+  "common": {
+    "welcome": "እንኳን ወደ ኬርብሪጅ በደህና መጡ",
+    "back": "ተመለስ",
+    "next": "ቀጣይ",
+    "save": "አስቀምጥ",
+    "cancel": "ሰርዝ"
+  },
+  "auth": {
+    "login": "ግባ",
+    "signup": "ተመዝገብ",
+    "loginTitle": "ግባ",
+    "loginSubtitle": "ኦቲዝም በሽታ አይደለም፣ የዕድገት እክል ነው።",
+    "email": "ኢሜይል",
+    "password": "የይለፍ ቃል",
+    "skip": "ዝለል",
+    "noAccount": "መለያ የለዎትም?",
+    "alreadyHaveAccount": "መለያ አለዎት?",
+    "forgotPassword": "የይለፍ ቃል ረስተዋል?"
+  },
+  "home": {
+    "title": "መነሻ",
+    "screenings": "ምርመራዎች"
+  }
+}

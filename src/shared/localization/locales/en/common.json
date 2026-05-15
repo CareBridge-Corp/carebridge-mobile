@@ -1,0 +1,25 @@
+{
+  "common": {
+    "welcome": "Welcome to CareBridge",
+    "back": "Back",
+    "next": "Next",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "auth": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "loginTitle": "Login",
+    "loginSubtitle": "Autism is not a disease, it is a developmental disorder.",
+    "email": "Email",
+    "password": "Password",
+    "skip": "Skip",
+    "noAccount": "Didn't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "forgotPassword": "Forgot Password?"
+  },
+  "home": {
+    "title": "Home",
+    "screenings": "Screenings"
+  }
+}

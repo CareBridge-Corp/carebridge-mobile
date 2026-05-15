@@ -1,0 +1,25 @@
+{
+  "common": {
+    "welcome": "Baga gara CareBridge nagaan dhuftan",
+    "back": "Deebi'i",
+    "next": "Itti fufi",
+    "save": "Olkaayi",
+    "cancel": "Haqi"
+  },
+  "auth": {
+    "login": "Seeni",
+    "signup": "Galmaa'i",
+    "loginTitle": "Seeni",
+    "loginSubtitle": "Otizimiin dhukkuba miti, rakkoo guddinaati.",
+    "email": "Iimeeyilii",
+    "password": "Jecha icciitii",
+    "skip": "Utali",
+    "noAccount": "Akkaawuntii hin qabduu?",
+    "alreadyHaveAccount": "Duraan akkaawuntii qabduu?",
+    "forgotPassword": "Jecha icciitii dagattee?"
+  },
+  "home": {
+    "title": "Mana",
+    "screenings": "Madaalliiwwan"
+  }
+}

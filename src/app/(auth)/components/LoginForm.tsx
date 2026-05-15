@@ -1,18 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
 import { useLogin } from "../hooks/useLogin";
 
@@ -21,6 +22,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const loginMutation = useLogin();
+  const { t } = useTranslation();
 
   const handleLogin = () => {
     loginMutation.mutate({ email, password });
@@ -32,10 +34,8 @@ export function LoginForm() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-      <Text style={styles.subtitle}>
-        Autism is not a disease, it is a{"\n"}developmental disorder.
-      </Text>
+      <Text style={styles.title}>{t("auth.loginTitle")}</Text>
+      <Text style={styles.subtitle}>{t("auth.loginSubtitle")}</Text>
 
       {loginMutation.error && (
         <View style={styles.errorContainer}>
@@ -48,7 +48,7 @@ export function LoginForm() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t("auth.email")}
             placeholderTextColor={colors.textSecondary}
             value={email}
             onChangeText={setEmail}
@@ -64,7 +64,7 @@ export function LoginForm() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={t("auth.password")}
             placeholderTextColor={colors.textSecondary}
             value={password}
             onChangeText={setPassword}
@@ -97,7 +97,7 @@ export function LoginForm() {
         {loginMutation.isPending ? (
           <ActivityIndicator color={colors.white} />
         ) : (
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={styles.buttonText}>{t("auth.login")}</Text>
         )}
       </TouchableOpacity>
     </View>

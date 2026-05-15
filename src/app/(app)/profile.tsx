@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useLogout } from "../(auth)/hooks/useLogout";
+import { useLanguageStore } from "../../shared/store/languageStore";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
@@ -19,6 +20,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const logoutMutation = useLogout();
   const { activeChild } = useChildrenStore();
+  const { language, setLanguage } = useLanguageStore();
 
   // Use the profile from our new profile feature hook/store
   const { data: profile } = useProfile();
@@ -185,6 +187,74 @@ export default function ProfileScreen() {
 
         <View style={styles.menuSection}>
           <Text style={styles.sectionTitle}>General</Text>
+
+          <View style={styles.menuItem}>
+            <View
+              style={[
+                styles.menuIconContainer,
+                { backgroundColor: colors.cardLightBlue },
+              ]}
+            >
+              <Ionicons
+                name="language-outline"
+                size={20}
+                color={colors.primary}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuText}>Language</Text>
+              <View style={styles.languageSelectors}>
+                <TouchableOpacity
+                  onPress={() => setLanguage("en")}
+                  style={[
+                    styles.langBadge,
+                    language === "en" && styles.langBadgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.langText,
+                      language === "en" && styles.langTextActive,
+                    ]}
+                  >
+                    English
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setLanguage("am")}
+                  style={[
+                    styles.langBadge,
+                    language === "am" && styles.langBadgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.langText,
+                      language === "am" && styles.langTextActive,
+                    ]}
+                  >
+                    አማርኛ
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setLanguage("om")}
+                  style={[
+                    styles.langBadge,
+                    language === "om" && styles.langBadgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.langText,
+                      language === "om" && styles.langTextActive,
+                    ]}
+                  >
+                    Oromiffa
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
 
           <TouchableOpacity style={styles.menuItem}>
             <View
@@ -409,6 +479,32 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
     color: colors.text,
+  },
+  languageSelectors: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  langBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.backgroundBlue,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  langBadgeActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  langText: {
+    fontSize: 12,
+    color: colors.textMedium,
+    fontWeight: "500",
+  },
+  langTextActive: {
+    color: colors.white,
+    fontWeight: "600",
   },
   logoutButton: {
     flexDirection: "row",

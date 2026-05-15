@@ -3,19 +3,19 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 // Import translations
-// We'll create these files next
+import commonAm from "./locales/am/common.json";
+import commonEn from "./locales/en/common.json";
+import commonOm from "./locales/om/common.json";
+
 const resources = {
   en: {
-    translation: {
-      welcome: "Welcome to CareBridge",
-      // Add more English translations here
-    },
+    translation: commonEn,
   },
   am: {
-    translation: {
-      welcome: "እንኳን ወደ ኬርብሪጅ በደህና መጡ",
-      // Add more Amharic translations here
-    },
+    translation: commonAm,
+  },
+  om: {
+    translation: commonOm,
   },
 };
 
@@ -24,7 +24,7 @@ i18n.use(initReactI18next).init({
   lng: Localization.getLocales()[0].languageCode ?? "en",
   fallbackLng: "en",
   interpolation: {
-    escapeValue: false, // react already safes from xss
+    escapeValue: false,
   },
 });
 
