@@ -9,9 +9,13 @@
   "auth": {
     "login": "Login",
     "signup": "Sign Up",
+    "signupTitle": "Sign up",
     "loginTitle": "Login",
     "loginSubtitle": "Autism is not a disease, it is a developmental disorder.",
+    "firstName": "First name",
+    "lastName": "Last name",
     "email": "Email",
+    "phone": "Phone number",
     "password": "Password",
     "skip": "Skip",
     "noAccount": "Didn't have an account?",

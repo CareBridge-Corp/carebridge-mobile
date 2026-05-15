@@ -2,6 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -23,7 +26,10 @@ export default function SignupScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
@@ -35,15 +41,21 @@ export default function SignupScreen() {
         <Text style={styles.skipText}>{language.toUpperCase()}</Text>
       </TouchableOpacity>
 
-      <SignupForm />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <SignupForm />
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>{t("auth.alreadyHaveAccount")} </Text>
-        <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
-          <Text style={styles.footerLink}>{t("auth.login")}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>{t("auth.alreadyHaveAccount")} </Text>
+          <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
+            <Text style={styles.footerLink}>{t("auth.login")}</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -51,6 +63,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingTop: 80,
+    justifyContent: "center",
   },
   backButton: {
     position: "absolute",
@@ -88,11 +105,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingBottom: spacing.huge,
-    position: "absolute",
-    bottom: 100,
-    left: 0,
-    right: 0,
+    paddingVertical: spacing.xl,
+    marginTop: spacing.md,
   },
   footerText: {
     fontSize: typography.fontSize.sm,

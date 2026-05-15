@@ -9,9 +9,13 @@
   "auth": {
     "login": "Seeni",
     "signup": "Galmaa'i",
+    "signupTitle": "Galmaa'i",
     "loginTitle": "Seeni",
     "loginSubtitle": "Otizimiin dhukkuba miti, rakkoo guddinaati.",
+    "firstName": "Maqaa",
+    "lastName": "Maqaa abbaa",
     "email": "Iimeeyilii",
+    "phone": "Lakkoofsa bilbilaa",
     "password": "Jecha icciitii",
     "skip": "Utali",
     "noAccount": "Akkaawuntii hin qabduu?",

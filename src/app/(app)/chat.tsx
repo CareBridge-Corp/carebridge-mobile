@@ -30,7 +30,6 @@ export default function ChatScreen() {
   // Connect socket FIRST before fetching conversations
   useEffect(() => {
     socketService.connect();
-    // Give socket a moment to connect
     const timer = setTimeout(() => {
       setSocketConnected(true);
     }, 500);

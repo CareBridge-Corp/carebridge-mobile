@@ -1,19 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
+  borderRadius,
+  colors,
+  spacing,
+  typography,
 } from "../../../shared/theme";
 import { useSignup } from "../hooks/useSignup";
 
@@ -25,20 +26,10 @@ export function SignupForm() {
   const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const signupMutation = useSignup();
+  const { t } = useTranslation();
 
   const handleSignup = () => {
-    // Only prepend +251 if phone is provided
-    const formattedPhone = phone.trim() ? `+251${phone}` : undefined;
-
-    signupMutation.mutate({
-      email,
-      password,
-      firstName,
-      lastName,
-      surname: null,
-      role: "PARENT",
-      phone: formattedPhone,
-    });
+    // ...existing code...
   };
 
   const togglePasswordVisibility = () => {
@@ -51,10 +42,8 @@ export function SignupForm() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.contentContainer}
     >
-      <Text style={styles.title}>Sign up</Text>
-      <Text style={styles.subtitle}>
-        Autism is not a disease, it is a{"\n"}developmental disorder.
-      </Text>
+      <Text style={styles.title}>{t("auth.signupTitle")}</Text>
+      <Text style={styles.subtitle}>{t("auth.loginSubtitle")}</Text>
 
       {signupMutation.error && (
         <View style={styles.errorContainer}>
@@ -67,7 +56,7 @@ export function SignupForm() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="First name"
+            placeholder={t("auth.firstName")}
             placeholderTextColor={colors.textSecondary}
             value={firstName}
             onChangeText={setFirstName}
@@ -81,7 +70,7 @@ export function SignupForm() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Last name"
+            placeholder={t("auth.lastName")}
             placeholderTextColor={colors.textSecondary}
             value={lastName}
             onChangeText={setLastName}
@@ -95,7 +84,7 @@ export function SignupForm() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder={t("auth.email")}
             placeholderTextColor={colors.textSecondary}
             value={email}
             onChangeText={setEmail}
@@ -134,7 +123,7 @@ export function SignupForm() {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={t("auth.password")}
             placeholderTextColor={colors.textSecondary}
             value={password}
             onChangeText={setPassword}
@@ -167,7 +156,7 @@ export function SignupForm() {
         {signupMutation.isPending ? (
           <ActivityIndicator color={colors.white} />
         ) : (
-          <Text style={styles.buttonText}>Sign up</Text>
+          <Text style={styles.buttonText}>{t("auth.signup")}</Text>
         )}
       </TouchableOpacity>
     </ScrollView>

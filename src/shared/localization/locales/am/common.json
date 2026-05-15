@@ -9,9 +9,13 @@
   "auth": {
     "login": "ግባ",
     "signup": "ተመዝገብ",
+    "signupTitle": "ተመዝገብ",
     "loginTitle": "ግባ",
     "loginSubtitle": "ኦቲዝም በሽታ አይደለም፣ የዕድገት እክል ነው።",
+    "firstName": "የመጀመሪያ ስም",
+    "lastName": "የአያት ስም",
     "email": "ኢሜይል",
+    "phone": "ስልክ ቁጥር",
     "password": "የይለፍ ቃል",
     "skip": "ዝለል",
     "noAccount": "መለያ የለዎትም?",
