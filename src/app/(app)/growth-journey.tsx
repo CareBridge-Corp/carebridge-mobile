@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { spacing } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { useRoadmaps } from "./hooks/useRoadmaps";
@@ -23,6 +24,7 @@ export default function GrowthJourneyScreen() {
   const { activeChild, children } = useChildrenStore();
   const { data: roadmapData } = useRoadmaps(activeChild?.childId);
   const [showChildSelector, setShowChildSelector] = useState(false);
+  const [pathHeight, setPathHeight] = useState(0);
 
   const activeRoadmap = roadmapData?.roadmaps?.[0];
   const weekPlans = activeRoadmap?.weekPlans || [];
@@ -59,6 +61,34 @@ export default function GrowthJourneyScreen() {
   // Reverse path for bottom-to-top progression
   const pathNodes = [...rawNodes].reverse();
 
+  const pathShape = useMemo(() => {
+    const segmentHeight = 140;
+    const nodesCount = Math.max(pathNodes.length, 4);
+    const totalHeight = nodesCount * segmentHeight + segmentHeight; // Add extra for the bottom curve
+    const centerX = width / 2;
+    const leftX = width * 0.25;
+    const rightX = width * 0.75;
+
+    // Start slightly above the top
+    let d = `M ${centerX} -50`;
+
+    for (let i = 0; i < nodesCount; i += 1) {
+      const y = i * segmentHeight;
+      const nextY = y + segmentHeight;
+      const targetX = i % 2 === 0 ? rightX : leftX;
+      const controlX = i % 2 === 0 ? centerX + 60 : centerX - 60;
+      d += ` C ${controlX} ${y + segmentHeight * 0.3}, ${targetX} ${y + segmentHeight * 0.7}, ${targetX} ${nextY}`;
+    }
+
+    // Curve back to the center bottom so it looks like it originates from the bottom center
+    const lastY = nodesCount * segmentHeight;
+    const lastControlX =
+      (nodesCount - 1) % 2 === 0 ? centerX + 60 : centerX - 60;
+    d += ` C ${lastControlX} ${lastY + segmentHeight * 0.3}, ${centerX} ${lastY + segmentHeight * 0.7}, ${centerX} ${lastY + segmentHeight + 600}`;
+
+    return { d, totalHeight: totalHeight + 500 };
+  }, [pathNodes.length, width]);
+
   const totalProgress = activeRoadmap
     ? Math.round(
         (weekPlans.reduce(
@@ -87,36 +117,43 @@ export default function GrowthJourneyScreen() {
           <Ionicons name="chevron-back" size={24} color="#0C4A6E" />
         </TouchableOpacity>
 
-        <View style={styles.headerInfo}>
+        <View style={styles.headerCenter}>
           <TouchableOpacity
             style={styles.childAvatarContainer}
             onPress={() => children.length > 0 && setShowChildSelector(true)}
           >
-            {activeChild?.profilePictureUrl ? (
-              <Image
-                source={{ uri: activeChild.profilePictureUrl }}
-                style={styles.childAvatar}
-              />
-            ) : (
-              <View style={styles.childAvatarFallback}>
-                <Ionicons name="person" size={20} color="#0C4A6E" />
-              </View>
-            )}
-            {children.length > 1 && (
-              <View style={styles.childCountBadge}>
-                <Text style={styles.childCountText}>{children.length}</Text>
-              </View>
-            )}
+            <View style={styles.childAvatarInner}>
+              {activeChild?.profilePictureUrl ? (
+                <Image
+                  source={{ uri: activeChild.profilePictureUrl }}
+                  style={styles.childAvatar}
+                />
+              ) : (
+                <View style={styles.childAvatarFallback}>
+                  <Ionicons name="person" size={20} color="#0C4A6E" />
+                </View>
+              )}
+            </View>
+            <View style={styles.profileEditBadge}>
+              <Ionicons name="swap-horizontal" size={12} color="#0C4A6E" />
+            </View>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {activeChild?.firstName || "Child"}'s Journey
-          </Text>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.headerTitle}>
+              {`${activeChild?.firstName || "Child"}’s Journey`}
+            </Text>
+            <View style={styles.progressRow}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[styles.progressFill, { width: `${totalProgress}%` }]}
+                />
+              </View>
+              <Text style={styles.progressValue}>{totalProgress}%</Text>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.progressBadge}>
-          <Ionicons name="star" size={16} color="#0C4A6E" />
-          <Text style={styles.progressText}>{totalProgress}%</Text>
-        </View>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -124,43 +161,82 @@ export default function GrowthJourneyScreen() {
         showsVerticalScrollIndicator={false}
         ref={(ref) => ref?.scrollToEnd({ animated: false })}
       >
-        <View style={styles.pathContainer}>
+        <View
+          style={styles.pathContainer}
+          onLayout={(event) => setPathHeight(event.nativeEvent.layout.height)}
+        >
+          {/* SVG Road Path Background */}
+          <View style={styles.svgBackgroundContainer}>
+            <Svg
+              width={width}
+              height={Math.max(pathHeight, pathShape.totalHeight)}
+              style={styles.journeySvg}
+            >
+              <Path
+                d={pathShape.d}
+                stroke="#93C5FD"
+                strokeWidth={18}
+                strokeOpacity={0.35}
+                fill="none"
+                strokeLinecap="round"
+              />
+              <Path
+                d={pathShape.d}
+                stroke="#0C4A6E"
+                strokeWidth={8}
+                strokeOpacity={0.55}
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray="18 12"
+              />
+            </Svg>
+          </View>
+
           {pathNodes.map((node, index) => {
-            // Adjust left/right based on reversed index to maintain alternating look
             const isLeft = index % 2 === 1;
-            const isVertical = node.type === "week-header";
             const activityNode = node as any;
 
             return (
               <View
                 key={node.id}
-                style={[
-                  styles.nodeRow,
-                  isLeft ? styles.nodeRowLeft : styles.nodeRowRight,
-                ]}
+                style={
+                  node.type === "week-header"
+                    ? styles.weekRow
+                    : [
+                        styles.nodeRow,
+                        isLeft ? styles.nodeRowLeft : styles.nodeRowRight,
+                      ]
+                }
               >
-                {index < pathNodes.length - 1 && (
-                  <View
+                {/* Visual Path Connection between nodes - Now handled by SVG background but kept for specific spacing if needed */}
+                {/* {index < pathNodes.length - 1 && (
+                  <View 
                     style={[
                       styles.pathLine,
-                      isVertical
-                        ? styles.pathLineVertical
-                        : isLeft
-                          ? styles.pathLineLeft
-                          : styles.pathLineRight,
-                      { top: isVertical ? -110 : -90 },
-                    ]}
+                      isVertical ? styles.pathLineVertical : (isLeft ? styles.pathLineLeft : styles.pathLineRight),
+                      { top: isVertical ? -110 : -90 }
+                    ]} 
                   />
-                )}
+                )} */}
 
                 {node.type === "week-header" ? (
-                  <View style={styles.weekHeaderContainer}>
+                  <>
+                    <View style={styles.weekSeparator} />
                     <View
                       style={[
                         styles.weekLabel,
                         node.status === "PENDING" && styles.weekLabelLocked,
                       ]}
                     >
+                      {node.status === "PENDING" && (
+                        <View style={styles.weekLockBadge}>
+                          <Ionicons
+                            name="lock-closed"
+                            size={14}
+                            color="#94A3B8"
+                          />
+                        </View>
+                      )}
                       <Text
                         style={[
                           styles.weekLabelText,
@@ -171,7 +247,7 @@ export default function GrowthJourneyScreen() {
                         {node.title}
                       </Text>
                     </View>
-                  </View>
+                  </>
                 ) : (
                   <>
                     {activityNode.isActive && (
@@ -269,6 +345,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
+  headerCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    paddingHorizontal: spacing.md,
+  },
+  headerTextBlock: {
+    flex: 1,
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    gap: 8,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: "#E2E8F0",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#0C4A6E",
+  },
+  progressValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#0C4A6E",
+  },
+  headerSpacer: {
+    width: 36,
+    height: 36,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -283,12 +395,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   childAvatarContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    overflow: "hidden",
-    marginRight: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    overflow: "visible",
+    marginRight: 12,
     backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  childAvatarInner: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    overflow: "hidden",
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileEditBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#E0F2FE",
+    borderWidth: 1,
+    borderColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
   },
   childAvatar: {
     width: "100%",
@@ -298,25 +434,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  childCountBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#10B981",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: "white",
-  },
-  childCountText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "white",
   },
   headerTitle: {
     fontSize: 18,
@@ -345,22 +462,64 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     alignItems: "center",
     width: "100%",
+    position: "relative",
   },
-  weekHeaderContainer: {
+  svgBackgroundContainer: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 0,
+    alignItems: "center",
+    pointerEvents: "none",
+  },
+  journeySvg: {
+    width: "100%",
+    height: "100%",
+    opacity: 0.5,
+  },
+  weekRow: {
     width: "100%",
     alignItems: "center",
     marginVertical: 40,
+    justifyContent: "center",
+    position: "relative",
+    zIndex: 1,
+  },
+  weekSeparator: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    right: 0,
+    borderBottomWidth: 2,
+    borderBottomColor: "#CBD5E1",
+    borderStyle: "dashed",
+    zIndex: -1,
   },
   weekLabel: {
     backgroundColor: "white",
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 40,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 3,
+  },
+  weekLockBadge: {
+    position: "absolute",
+    left: 12,
+    top: 12,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
   weekLabelLocked: {
     backgroundColor: "#F1F5F9",
@@ -382,6 +541,7 @@ const styles = StyleSheet.create({
     marginVertical: 30,
     alignItems: "center",
     position: "relative",
+    zIndex: 1,
   },
   nodeRowLeft: {
     alignItems: "flex-start",
@@ -402,9 +562,9 @@ const styles = StyleSheet.create({
     borderColor: "white",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 5,
   },
   nodeCircleCompleted: {
     backgroundColor: "#0C4A6E",
