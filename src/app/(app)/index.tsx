@@ -114,17 +114,20 @@ export default function AppHomeScreen() {
           <HomeSkeletonView />
         ) : (
           <View style={styles.contentContainer}>
-            {/* Doctors Section - Always visible */}
-            <View style={styles.doctorsWrapper}>
-              <DoctorsSection />
-            </View>
-
             {/* Child-specific content */}
+            <DoctorsSection />
             {hasChildren ? (
               isVerified ? (
-                <VerifiedChildView clinician={clinician} />
+                <>
+                  <VerifiedChildView clinician={clinician} />
+                </>
               ) : (
-                <HasChildView />
+                <View>
+                  {/* <View style={styles.doctorsWrapper}> */}
+
+                  {/* </View> */}
+                  <HasChildView />
+                </View>
               )
             ) : (
               <EmptyChildView />

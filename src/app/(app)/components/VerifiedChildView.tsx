@@ -14,6 +14,7 @@ import { colors, spacing } from "../../../shared/theme";
 import { useRoadmaps } from "../hooks/useRoadmaps";
 import { useChildrenStore } from "../store/childrenStore";
 import { Clinician } from "../store/clinicianStore";
+import { GrowthJourneyCard } from "./GrowthJourneyCard";
 
 interface VerifiedChildViewProps {
   clinician?: Clinician | null;
@@ -91,7 +92,7 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
     <View style={styles.container}>
       {/* Wave Section */}
       <View style={styles.waveContainer}>
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: 45 }).map((_, i) => (
           <View
             key={i}
             style={[
@@ -99,10 +100,16 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
               {
                 height: Math.random() * 30 + 10,
                 backgroundColor: i % 2 === 0 ? "#BFDBFE" : "#94A3B8",
+                flex: 1,
+                marginHorizontal: 1,
               },
             ]}
           />
         ))}
+      </View>
+
+      <View style={styles.journeyWrapper}>
+        <GrowthJourneyCard />
       </View>
 
       {/* Curator Section */}
@@ -310,15 +317,20 @@ const styles = StyleSheet.create({
   waveContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     gap: 4,
     height: 40,
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
+    marginHorizontal: -spacing.xxl,
   },
   waveBar: {
     width: 2,
     borderRadius: 1,
+  },
+  journeyWrapper: {
+    marginHorizontal: -spacing.xxl,
+    marginBottom: spacing.xxl,
   },
   curatorCard: {
     flexDirection: "row",
