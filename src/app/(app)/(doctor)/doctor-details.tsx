@@ -83,6 +83,19 @@ export default function DoctorDetailsScreen() {
               />
               <Text style={styles.actionButtonText}>Message</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.consultButton]}
+              onPress={() =>
+                router.push({
+                  pathname: "/(app)/(doctor)/doctor-consultation",
+                  params: { childId },
+                } as any)
+              }
+            >
+              <Ionicons name="calendar" size={20} color={colors.primary} />
+              <Text style={styles.consultButtonText}>Consult</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -168,6 +181,12 @@ const styles = StyleSheet.create({
   },
   chatButton: { backgroundColor: colors.primary },
   actionButtonText: { color: colors.white, fontWeight: "600" },
+  consultButton: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  consultButtonText: { color: colors.primary, fontWeight: "600" },
   section: { paddingHorizontal: spacing.xl, marginTop: spacing.lg },
   sectionTitle: {
     fontSize: 16,

@@ -114,7 +114,6 @@ export default function AppHomeScreen() {
           <HomeSkeletonView />
         ) : (
           <View style={styles.contentContainer}>
-            {/* Child-specific content */}
             <DoctorsSection />
             {hasChildren ? (
               isVerified ? (
@@ -123,9 +122,6 @@ export default function AppHomeScreen() {
                 </>
               ) : (
                 <View>
-                  {/* <View style={styles.doctorsWrapper}> */}
-
-                  {/* </View> */}
                   <HasChildView />
                 </View>
               )

@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Href, useRouter } from "expo-router";
+import { Href, useLocalSearchParams, useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StatusBar,
@@ -9,33 +12,140 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import {
+  borderRadius,
+  colors,
+  spacing,
+  typography,
+} from "../../../shared/theme";
+import {
+  useCreateAppointment,
+  useDoctorAppointments,
+} from "../hooks/useAppointments";
+import { useProfile } from "../hooks/useProfile";
+import { useClinicianStore } from "../store/clinicianStore";
+
+// Mock data for dates and times
+const generateDates = () => {
+  const dates = [];
+  const today = new Date();
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    dates.push({
+      id: d.toISOString().split("T")[0],
+      dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
+      dayNumber: d.getDate(),
+      fullDate: d,
+    });
+  }
+  return dates;
+};
+
+const TIME_SLOTS = [
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+];
 
 export default function DoctorConsultationScreen() {
   const router = useRouter();
+  const { childId } = useLocalSearchParams<{ childId: string }>();
 
-  const handleScheduleMeeting = () => {
-    // TODO: Navigate to scheduling
-    console.log("Schedule meeting pressed");
-  };
+  const clinician = useClinicianStore((state) =>
+    childId ? state.cliniciansByChild[childId] : null,
+  );
 
-  const handleVideoCall = () => {
-    // TODO: Start video call
-    console.log("Video call pressed");
-  };
+  const { data: profile } = useProfile();
+  const createAppointment = useCreateAppointment();
+  const { data: appointments, isLoading: isAppointmentsLoading } =
+    useDoctorAppointments(clinician?.userId);
 
-  const handlePhoneCall = () => {
-    // TODO: Start phone call
-    console.log("Phone call pressed");
+  const dates = useState(generateDates())[0];
+  const [selectedDate, setSelectedDate] = useState(dates[0].id);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [meetingType, setMeetingType] = useState<"in_person" | "video">(
+    "in_person",
+  );
+
+  const bookedSlots = useMemo(() => {
+    if (!appointments) return [];
+    return appointments
+      .filter(
+        (app) =>
+          app.appointmentDate === selectedDate && app.status !== "cancelled",
+      )
+      .map((app) => app.startTime);
+  }, [appointments, selectedDate]);
+
+  const handleBookMeeting = () => {
+    if (!selectedDate || !selectedTime || !clinician || !profile?.id) {
+      Alert.alert(
+        "Missing Information",
+        "Please ensure all details are selected.",
+      );
+      return;
+    }
+
+    const payload = {
+      appointment_date: selectedDate,
+      start_time: selectedTime,
+      meeting_type: meetingType,
+      parent_id: profile.id,
+      child_id: childId,
+      schedule_id: "schedule-uuid-placeholder", // In a real flow, you'll pick this from doctor's schedules
+    };
+
+    createAppointment.mutate(
+      { doctorId: clinician.userId, payload },
+      {
+        onSuccess: (data) => {
+          Alert.alert("Success", "Appointment successfully booked!", [
+            { text: "OK", onPress: () => router.back() },
+          ]);
+        },
+        onError: (err: any) => {
+          Alert.alert(
+            "Error",
+            err.response?.data?.message ||
+              err.message ||
+              "Failed to book appointment",
+          );
+        },
+      },
+    );
   };
 
   const handleChat = () => {
     router.push("/(app)/doctor-chat" as Href);
   };
 
-  const handleBookMeeting = () => {
-    router.push("/(app)/booking-select-doctor" as Href);
-  };
+  if (!clinician) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <Text style={{ color: "#0C4A6E" }}>Doctor information not found</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ marginTop: 20 }}
+        >
+          <Text style={{ color: "#4A9FD8" }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -60,60 +170,214 @@ export default function DoctorConsultationScreen() {
         {/* Doctor Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.doctorImageContainer}>
-            <Image
-              source={require("../../../../assets/docs/doc1.png")}
-              style={styles.doctorImage}
-              resizeMode="cover"
-            />
+            {clinician.profilePictureUrl ? (
+              <Image
+                source={{ uri: clinician.profilePictureUrl }}
+                style={styles.doctorImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={[
+                  styles.doctorImage,
+                  {
+                    backgroundColor: colors.primary,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                ]}
+              >
+                <Ionicons name="person" size={60} color={colors.white} />
+              </View>
+            )}
           </View>
 
-          <Text style={styles.doctorName}>Dr. Walter White</Text>
-          <Text style={styles.doctorSpecialty}>Neurology specialist</Text>
+          <Text style={styles.doctorName}>
+            {clinician.surname} {clinician.firstName} {clinician.lastName}
+          </Text>
+          <Text style={styles.doctorSpecialty}>
+            {clinician.specializations[0]?.name || "Specialist"}
+          </Text>
 
           <View style={styles.statusBadge}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Offline</Text>
+            <View
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor:
+                    clinician.status === "ACTIVE" ? "#10B981" : "#9E9E9E",
+                },
+              ]}
+            />
+            <Text style={styles.statusText}>{clinician.status}</Text>
           </View>
         </View>
 
-        {/* Schedule Meeting Card */}
-        <View style={styles.meetingCard}>
-          <View style={styles.meetingInfo}>
-            <Ionicons name="calendar-outline" size={24} color="#0C4A6E" />
-            <View style={styles.meetingTextContainer}>
-              <Text style={styles.meetingTitle}>Schedule Meeting</Text>
-              <Text style={styles.meetingDays}>Mon, Tue, Wed, Thu</Text>
-            </View>
+        {/* Consultation Types */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Consultation Type</Text>
+          <View style={styles.typeSelector}>
+            <TouchableOpacity
+              style={[
+                styles.typeOption,
+                meetingType === "in_person" && styles.typeOptionActive,
+              ]}
+              onPress={() => setMeetingType("in_person")}
+            >
+              <Ionicons
+                name="business"
+                size={24}
+                color={meetingType === "in_person" ? colors.white : "#0C4A6E"}
+              />
+              <Text
+                style={[
+                  styles.typeOptionText,
+                  meetingType === "in_person" && styles.typeOptionTextActive,
+                ]}
+              >
+                In Person
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.typeOption,
+                meetingType === "video" && styles.typeOptionActive,
+              ]}
+              onPress={() => setMeetingType("video")}
+            >
+              <Ionicons
+                name="videocam"
+                size={24}
+                color={meetingType === "video" ? colors.white : "#0C4A6E"}
+              />
+              <Text
+                style={[
+                  styles.typeOptionText,
+                  meetingType === "video" && styles.typeOptionTextActive,
+                ]}
+              >
+                Video Call
+              </Text>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          <View style={styles.meetingActions}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleVideoCall}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="videocam-outline" size={24} color="#0C4A6E" />
-            </TouchableOpacity>
+        {/* Date Selection */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Select Date</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.datesScrollContent}
+          >
+            {dates.map((date) => {
+              const isActive = selectedDate === date.id;
+              return (
+                <TouchableOpacity
+                  key={date.id}
+                  style={[styles.dateCard, isActive && styles.dateCardActive]}
+                  onPress={() => setSelectedDate(date.id)}
+                >
+                  <Text
+                    style={[styles.dayName, isActive && styles.dateTextActive]}
+                  >
+                    {date.dayName}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dayNumber,
+                      isActive && styles.dateTextActive,
+                    ]}
+                  >
+                    {date.dayNumber}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handlePhoneCall}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="call-outline" size={24} color="#0C4A6E" />
-            </TouchableOpacity>
+        {/* Time Selection */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Select Time</Text>
+          <View style={styles.timeGrid}>
+            {isAppointmentsLoading ? (
+              <View
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing.xl,
+                  alignItems: "center",
+                }}
+              >
+                <ActivityIndicator color={colors.primary} size="small" />
+                <Text
+                  style={{ marginTop: spacing.sm, color: colors.textLight }}
+                >
+                  Fetching available slots...
+                </Text>
+              </View>
+            ) : (
+              TIME_SLOTS.map((time) => {
+                const isActive = selectedTime === time;
+                const isBooked = bookedSlots.includes(time);
+
+                return (
+                  <TouchableOpacity
+                    key={time}
+                    style={[
+                      styles.timeSlot,
+                      isActive && styles.timeSlotActive,
+                      isBooked && styles.timeSlotBooked,
+                    ]}
+                    onPress={() => setSelectedTime(time)}
+                    disabled={isBooked}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.timeSlotText,
+                        isActive && styles.timeSlotTextActive,
+                        isBooked && styles.timeSlotTextBooked,
+                      ]}
+                    >
+                      {time}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity
-            style={styles.primaryActionButton}
+            style={[
+              styles.primaryActionButton,
+              (!selectedDate || !selectedTime || createAppointment.isPending) &&
+                styles.buttonDisabled,
+            ]}
             onPress={handleBookMeeting}
             activeOpacity={0.8}
+            disabled={
+              !selectedDate || !selectedTime || createAppointment.isPending
+            }
           >
-            <Ionicons name="calendar" size={20} color={colors.white} />
-            <Text style={styles.primaryActionButtonText}>Book Meeting</Text>
+            {createAppointment.isPending ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.white}
+              />
+            )}
+            <Text style={styles.primaryActionButtonText}>
+              {createAppointment.isPending
+                ? "Confirming..."
+                : "Confirm Appointment"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -122,73 +386,7 @@ export default function DoctorConsultationScreen() {
             activeOpacity={0.8}
           >
             <Ionicons name="chatbubble-outline" size={20} color="#0C4A6E" />
-            <Text style={styles.secondaryActionButtonText}>
-              Chat with Doctor
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recommended Doctors/Hospitals */}
-        <View style={styles.recommendationsSection}>
-          <Text style={styles.sectionTitle}>Recommended</Text>
-
-          {/* Ethio Tibeb */}
-          <TouchableOpacity
-            style={styles.recommendationCard}
-            activeOpacity={0.7}
-          >
-            <View style={styles.recommendationIcon}>
-              <Ionicons name="medical" size={28} color="#4A9FD8" />
-            </View>
-            <View style={styles.recommendationInfo}>
-              <Text style={styles.recommendationName}>Ethio Tibeb</Text>
-              <Text style={styles.recommendationRole}>Expert Pediatrician</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#A0B8C8" />
-          </TouchableOpacity>
-
-          {/* Alert Comprehensive Specialized hospital 1 */}
-          <TouchableOpacity
-            style={styles.recommendationCard}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.recommendationIcon,
-                { backgroundColor: "#E0F2F1" },
-              ]}
-            >
-              <Ionicons name="business" size={28} color="#26A69A" />
-            </View>
-            <View style={styles.recommendationInfo}>
-              <Text style={styles.recommendationName}>
-                Alert Comprehensive Specialized hospital
-              </Text>
-              <Text style={styles.recommendationRole}>MCH Director</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#A0B8C8" />
-          </TouchableOpacity>
-
-          {/* Alert Comprehensive Specialized hospital 2 */}
-          <TouchableOpacity
-            style={styles.recommendationCard}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.recommendationIcon,
-                { backgroundColor: "#FFF9C4" },
-              ]}
-            >
-              <Ionicons name="business" size={28} color="#F9A825" />
-            </View>
-            <View style={styles.recommendationInfo}>
-              <Text style={styles.recommendationName}>
-                Alert Comprehensive Specialized hospital
-              </Text>
-              <Text style={styles.recommendationRole}>MCH Director</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#A0B8C8" />
+            <Text style={styles.secondaryActionButtonText}>Message Doctor</Text>
           </TouchableOpacity>
         </View>
 
@@ -270,44 +468,106 @@ const styles = StyleSheet.create({
     color: "#757575",
     fontWeight: typography.fontWeight.medium,
   },
-  meetingCard: {
-    backgroundColor: "#E8F0F5",
-    marginHorizontal: spacing.xxl,
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
+  sectionContainer: {
+    paddingHorizontal: spacing.xxl,
     marginBottom: spacing.xl,
   },
-  meetingInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  meetingTextContainer: {
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  meetingTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: 4,
-  },
-  meetingDays: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-  },
-  meetingActions: {
+  typeSelector: {
     flexDirection: "row",
     gap: spacing.md,
-    justifyContent: "flex-end",
   },
-  actionButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.white,
-    justifyContent: "center",
+  typeOption: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: spacing.sm,
+  },
+  typeOptionActive: {
+    backgroundColor: "#0C4A6E",
+    borderColor: "#0C4A6E",
+  },
+  typeOptionText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
+    color: "#0C4A6E",
+  },
+  typeOptionTextActive: {
+    color: colors.white,
+  },
+  datesScrollContent: {
+    paddingRight: spacing.xxl,
+    gap: spacing.sm,
+  },
+  dateCard: {
+    width: 64,
+    height: 80,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dateCardActive: {
+    backgroundColor: "#0C4A6E",
+    borderColor: "#0C4A6E",
+  },
+  dayName: {
+    fontSize: typography.fontSize.sm,
+    color: "#64748B",
+    marginBottom: 4,
+  },
+  dayNumber: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: "#0C4A6E",
+  },
+  dateTextActive: {
+    color: colors.white,
+  },
+  timeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+  },
+  timeSlot: {
+    width: "30%",
+    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+  },
+  timeSlotActive: {
+    backgroundColor: "#0C4A6E",
+    borderColor: "#0C4A6E",
+  },
+  timeSlotText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.medium,
+    color: "#0C4A6E",
+  },
+  timeSlotTextActive: {
+    color: colors.white,
+  },
+  timeSlotBooked: {
+    backgroundColor: "#F1F5F9",
+    borderColor: "#E2E8F0",
+    opacity: 0.6,
+  },
+  timeSlotTextBooked: {
+    color: "#94A3B8",
+    textDecorationLine: "line-through",
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   actionButtonsContainer: {
     paddingHorizontal: spacing.xxl,

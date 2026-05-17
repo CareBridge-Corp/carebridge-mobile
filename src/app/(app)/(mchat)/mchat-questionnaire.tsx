@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
+  Animated,
+  PanResponder,
   StatusBar,
   StyleSheet,
   Text,
@@ -149,6 +151,33 @@ export default function MChatQuestionnaireScreen() {
   const question = MCHAT_QUESTIONS[currentQuestion];
   const totalQuestions = MCHAT_QUESTIONS.length;
 
+  const shakeAnimation = useRef(new Animated.Value(0)).current;
+
+  const startShake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const handleAnswer = (answer: boolean) => {
     setAnswer(question.question, answer);
 
@@ -174,16 +203,39 @@ export default function MChatQuestionnaireScreen() {
   };
 
   const handleNext = () => {
+    if (answers[question.question] === undefined) {
+      startShake();
+      return;
+    }
+
     if (currentQuestion < MCHAT_QUESTIONS.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
+    } else if (currentQuestion === MCHAT_QUESTIONS.length - 1) {
+      router.push("/(app)/(mchat)/mchat-supporting-info" as Href);
     }
   };
+
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // Detect meaningful horizontal swipes
+      return Math.abs(gestureState.dx) > 30;
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      if (gestureState.dx > 50) {
+        // Swiped right -> go back
+        handleBack();
+      } else if (gestureState.dx < -50) {
+        // Swiped left -> go to next
+        handleNext();
+      }
+    },
+  });
 
   const prevQuestion =
     currentQuestion > 0 ? MCHAT_QUESTIONS[currentQuestion - 1] : null;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       <StatusBar barStyle="dark-content" backgroundColor="#E8F0F5" />
 
       {/* Header with Navigation */}
@@ -289,7 +341,12 @@ export default function MChatQuestionnaireScreen() {
       </View>
 
       {/* Answer Buttons at Bottom */}
-      <View style={styles.answerContainer}>
+      <Animated.View
+        style={[
+          styles.answerContainer,
+          { transform: [{ translateX: shakeAnimation }] },
+        ]}
+      >
         <TouchableOpacity
           style={[
             styles.answerButton,
@@ -325,7 +382,7 @@ export default function MChatQuestionnaireScreen() {
             Yes
           </Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     </View>
   );
 }

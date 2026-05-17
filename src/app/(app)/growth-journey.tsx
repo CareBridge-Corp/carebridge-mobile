@@ -222,30 +222,8 @@ export default function GrowthJourneyScreen() {
                 {node.type === "week-header" ? (
                   <>
                     <View style={styles.weekSeparator} />
-                    <View
-                      style={[
-                        styles.weekLabel,
-                        node.status === "PENDING" && styles.weekLabelLocked,
-                      ]}
-                    >
-                      {node.status === "PENDING" && (
-                        <View style={styles.weekLockBadge}>
-                          <Ionicons
-                            name="lock-closed"
-                            size={14}
-                            color="#94A3B8"
-                          />
-                        </View>
-                      )}
-                      <Text
-                        style={[
-                          styles.weekLabelText,
-                          node.status === "PENDING" &&
-                            styles.weekLabelTextLocked,
-                        ]}
-                      >
-                        {node.title}
-                      </Text>
+                    <View style={styles.weekLabel}>
+                      <Text style={styles.weekLabelText}>{node.title}</Text>
                     </View>
                   </>
                 ) : (
@@ -278,20 +256,16 @@ export default function GrowthJourneyScreen() {
                       style={[
                         styles.nodeCircle,
                         activityNode.completed && styles.nodeCircleCompleted,
-                        activityNode.weekStatus === "PENDING" &&
-                          styles.nodeCircleLocked,
                         activityNode.isActive && styles.nodeCircleActive,
                       ]}
                       onPress={() => {
-                        if (activityNode.weekStatus !== "PENDING") {
-                          router.push({
-                            pathname: "/(app)/(doctor)/activity-detail",
-                            params: {
-                              activityId: activityNode.activityId,
-                              weekPlanId: activityNode.weekPlanId,
-                            },
-                          } as any);
-                        }
+                        router.push({
+                          pathname: "/(app)/(doctor)/activity-detail",
+                          params: {
+                            activityId: activityNode.activityId,
+                            weekPlanId: activityNode.weekPlanId,
+                          },
+                        } as any);
                       }}
                     >
                       {activityNode.completed ? (
@@ -299,12 +273,6 @@ export default function GrowthJourneyScreen() {
                           name="checkmark-circle"
                           size={32}
                           color="white"
-                        />
-                      ) : activityNode.weekStatus === "PENDING" ? (
-                        <Ionicons
-                          name="lock-closed"
-                          size={24}
-                          color="#94A3B8"
                         />
                       ) : activityNode.isActive ? (
                         <Ionicons name="happy" size={32} color="white" />
@@ -510,30 +478,11 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  weekLockBadge: {
-    position: "absolute",
-    left: 12,
-    top: 12,
-    backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  weekLabelLocked: {
-    backgroundColor: "#F1F5F9",
-    elevation: 0,
-    shadowOpacity: 0,
-  },
   weekLabelText: {
     fontSize: 18,
     fontWeight: "700",
     color: "#0C4A6E",
     fontFamily: "Plus Jakarta Sans",
-  },
-  weekLabelTextLocked: {
-    color: "#94A3B8",
   },
   nodeRow: {
     width: "100%",
@@ -572,11 +521,6 @@ const styles = StyleSheet.create({
   nodeCircleActive: {
     backgroundColor: "#0C4A6E",
     transform: [{ scale: 1.1 }],
-  },
-  nodeCircleLocked: {
-    backgroundColor: "#E2E2E6",
-    shadowOpacity: 0,
-    elevation: 0,
   },
   nodeStandardInner: {
     width: 20,

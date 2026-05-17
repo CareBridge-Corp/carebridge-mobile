@@ -36,7 +36,13 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow CareBridge to access your microphone to record voice notes."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

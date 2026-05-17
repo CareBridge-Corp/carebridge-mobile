@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
+import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { Href, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -33,6 +34,7 @@ export default function MChatSupportingInfoScreen() {
     answers,
     parentDescription,
     childPictures,
+    audioRecording: storedAudioRecording,
     setSupportingInfo,
     clearStore,
   } = useMChatStore();
@@ -40,6 +42,12 @@ export default function MChatSupportingInfoScreen() {
 
   const [description, setDescription] = useState(parentDescription);
   const [pictures, setPictures] = useState<string[]>(childPictures);
+
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [audioUri, setAudioUri] = useState<string | null>(
+    storedAudioRecording || null,
+  );
+  const [isRecording, setIsRecording] = useState(false);
 
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
@@ -75,7 +83,7 @@ export default function MChatSupportingInfoScreen() {
       }
 
       // 2. Submit Supporting Info via Multipart
-      if (description.trim() || pictures.length > 0) {
+      if (description.trim() || pictures.length > 0 || audioUri) {
         const formData = new FormData();
         if (description.trim()) {
           formData.append("parentDescription", description.trim());
@@ -88,6 +96,14 @@ export default function MChatSupportingInfoScreen() {
             type: "image/jpeg",
           } as any);
         });
+
+        if (audioUri) {
+          formData.append("audioRecording", {
+            uri: audioUri,
+            name: "audio_note.m4a",
+            type: "audio/m4a",
+          } as any);
+        }
 
         await multipartApiClient.post(
           `/screenings/${screeningId}/supporting-info`,
@@ -149,9 +165,61 @@ export default function MChatSupportingInfoScreen() {
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status === "granted") {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        );
+
+        setRecording(recording);
+        setIsRecording(true);
+      } else {
+        setStatusConfig({
+          type: "error",
+          title: "Permission Required",
+          message: "Please grant microphone permissions to record audio.",
+        });
+        setStatusModalVisible(true);
+      }
+    } catch (err) {
+      console.error("Failed to start recording", err);
+    }
+  };
+
+  const stopRecording = async () => {
+    setRecording(null);
+    setIsRecording(false);
+    if (!recording) return;
+
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setAudioUri(uri);
+  };
+
+  const playAudio = async () => {
+    if (!audioUri) return;
+    try {
+      const { sound } = await Audio.Sound.createAsync({ uri: audioUri });
+      await sound.playAsync();
+    } catch (error) {
+      console.error("Failed to play audio", error);
+    }
+  };
+
+  const removeAudio = () => {
+    setAudioUri(null);
+  };
+
   const handleNext = () => {
     // Save to store to persist state if going back
-    setSupportingInfo(description, pictures);
+    setSupportingInfo(description, pictures, audioUri);
 
     // Check if 20 questions are answered (basic check)
     if (Object.keys(answers).length < 20) {
@@ -168,9 +236,17 @@ export default function MChatSupportingInfoScreen() {
   };
 
   const handleBack = () => {
-    setSupportingInfo(description, pictures);
+    setSupportingInfo(description, pictures, audioUri);
     router.back();
   };
+
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+    };
+  }, [recording]);
 
   return (
     <KeyboardAvoidingView
@@ -215,6 +291,44 @@ export default function MChatSupportingInfoScreen() {
           onChangeText={setDescription}
           textAlignVertical="top"
         />
+
+        {/* Audio Recording */}
+        <Text style={styles.label}>Voice Note (Optional)</Text>
+        <View style={styles.audioContainer}>
+          {!audioUri ? (
+            <TouchableOpacity
+              style={[styles.recordBtn, isRecording && styles.recordingActive]}
+              onPress={isRecording ? stopRecording : startRecording}
+            >
+              <Ionicons
+                name={isRecording ? "stop" : "mic"}
+                size={24}
+                color={isRecording ? colors.white : "#0C4A6E"}
+              />
+              <Text
+                style={[
+                  styles.recordBtnText,
+                  isRecording && { color: colors.white },
+                ]}
+              >
+                {isRecording ? "Stop Recording" : "Tap to Record"}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.audioPlayer}>
+              <TouchableOpacity style={styles.playBtn} onPress={playAudio}>
+                <Ionicons name="play" size={24} color="#0C4A6E" />
+                <Text style={styles.playBtnText}>Play Recording</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.removeAudioBtn}
+                onPress={removeAudio}
+              >
+                <Ionicons name="trash-outline" size={24} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         {/* Pictures List */}
         <Text style={styles.label}>Child Pictures (Up to 5)</Text>
@@ -417,5 +531,46 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.white,
+  },
+  audioContainer: {
+    marginVertical: spacing.sm,
+  },
+  recordBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#E8F0F5",
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.xl,
+    gap: spacing.sm,
+  },
+  recordingActive: {
+    backgroundColor: "#EF4444",
+  },
+  recordBtnText: {
+    fontSize: typography.fontSize.md,
+    color: "#0C4A6E",
+    fontWeight: typography.fontWeight.semibold,
+  },
+  audioPlayer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#E8F0F5",
+    padding: spacing.md,
+    borderRadius: borderRadius.xl,
+  },
+  playBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  playBtnText: {
+    fontSize: typography.fontSize.md,
+    color: "#0C4A6E",
+    fontWeight: typography.fontWeight.semibold,
+  },
+  removeAudioBtn: {
+    padding: spacing.xs,
   },
 });

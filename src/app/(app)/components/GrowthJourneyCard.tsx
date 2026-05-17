@@ -25,7 +25,6 @@ export function GrowthJourneyCard() {
         </View>
       </View>
 
-      {/* Visual progress bar as a hint of the game-like UI */}
       <View style={styles.progressTrack}>
         <View style={[styles.progressBar, { width: "45%" }]} />
       </View>

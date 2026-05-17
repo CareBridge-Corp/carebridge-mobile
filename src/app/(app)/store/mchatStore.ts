@@ -4,9 +4,14 @@ interface MChatState {
   answers: Record<string, boolean>;
   parentDescription: string;
   childPictures: string[]; // array of local file URIs
+  audioRecording: string | null;
   setAnswer: (questionId: string, answer: boolean) => void;
   setAllAnswers: (answers: Record<string, boolean>) => void;
-  setSupportingInfo: (description: string, pictures: string[]) => void;
+  setSupportingInfo: (
+    description: string,
+    pictures: string[],
+    audioRecording?: string | null,
+  ) => void;
   clearStore: () => void;
 }
 
@@ -14,6 +19,7 @@ export const useMChatStore = create<MChatState>((set) => ({
   answers: {},
   parentDescription: "",
   childPictures: [],
+  audioRecording: null,
 
   setAnswer: (questionId, answer) =>
     set((state) => ({
@@ -28,10 +34,11 @@ export const useMChatStore = create<MChatState>((set) => ({
       answers,
     })),
 
-  setSupportingInfo: (description, pictures) =>
+  setSupportingInfo: (description, pictures, audioRecording = null) =>
     set(() => ({
       parentDescription: description,
       childPictures: pictures,
+      audioRecording,
     })),
 
   clearStore: () =>
@@ -39,5 +46,6 @@ export const useMChatStore = create<MChatState>((set) => ({
       answers: {},
       parentDescription: "",
       childPictures: [],
+      audioRecording: null,
     })),
 }));

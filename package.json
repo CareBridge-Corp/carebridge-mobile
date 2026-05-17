@@ -21,6 +21,7 @@
     "emoji-mart-native": "^0.6.5-beta",
     "expo": "~55.0.8",
     "expo-asset": "^55.0.17",
+    "expo-av": "^16.0.8",
     "expo-constants": "~55.0.9",
     "expo-dev-client": "~55.0.28",
     "expo-device": "~55.0.10",
