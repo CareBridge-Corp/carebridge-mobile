@@ -51,7 +51,6 @@ export const useChildrenStore = create<ChildrenStore>()(
 
       setChildren: (children) =>
         set((state) => {
-          // If there's no active child and we have children, set the first one as active
           const newActiveChild =
             state.activeChild || (children.length > 0 ? children[0] : null);
           return {

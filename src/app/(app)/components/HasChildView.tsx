@@ -12,7 +12,6 @@ import { useProfile } from "../hooks/useProfile";
 import { useChildScreenings } from "../hooks/useScreenings";
 import { useChildrenStore } from "../store/childrenStore";
 import { useScreeningStore } from "../store/screeningStore";
-import { ScreeningResultCard } from "./ScreeningResultCard";
 import { VerificationAlert } from "./VerificationAlert";
 
 export function HasChildView() {
@@ -33,9 +32,11 @@ export function HasChildView() {
 
   const latestScreening = childScreenings[0];
 
+  console.log("latestScreening", childScreenings[0]);
+
   const status = activeChild?.status || "UNVERIFIED";
   const parentStatus = profile?.status || "PENDING";
-  // The alert should be shown if either the child is explicitly unverified OR the parent/profile is still pending/unverified
+
   const needsVerification =
     status === "UNVERIFIED" ||
     status === "PENDING" ||
@@ -57,9 +58,9 @@ export function HasChildView() {
 
       {needsVerification && <VerificationAlert status={status} />}
 
-      {latestScreening && <ScreeningResultCard screening={latestScreening} />}
+      {/* {latestScreening && <ScreeningResultCard screening={latestScreening} />} */}
 
-      {!latestScreening && (
+      {!latestScreening && !needsVerification && (
         <TouchableOpacity
           style={styles.actionCard}
           onPress={handleMChat}
@@ -87,55 +88,6 @@ export function HasChildView() {
           </View>
         </TouchableOpacity>
       )}
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        onPress={handleUploadVideo}
-        activeOpacity={0.7}
-      >
-        <View style={styles.actionCardContent}>
-          <Text style={styles.actionCardTitle}>{t("home.uploadVideo")}</Text>
-          <Text style={styles.actionCardSubtitle}>{t("home.infoSafe")}</Text>
-
-          <View style={styles.watchGuideButton}>
-            <View style={styles.playIconCircle}>
-              <Ionicons name="play" size={20} color={colors.white} />
-            </View>
-            <Text style={styles.watchGuideText}>Watch Guide</Text>
-          </View>
-        </View>
-
-        <View style={styles.arrowCircle}>
-          <Ionicons name="arrow-forward" size={20} color="#0C4A6E" />
-        </View>
-      </TouchableOpacity>
-
-      {/* Feature Cards */}
-      <View style={styles.placeholderRow}>
-        <TouchableOpacity
-          style={styles.featureCard}
-          activeOpacity={0.7}
-          onPress={() => router.push("/(app)/schedule" as Href)}
-        >
-          <View style={styles.featureIconContainer}>
-            <Ionicons name="calendar" size={32} color="#0C4A6E" />
-          </View>
-          <Text style={styles.featureCardTitle}>My Schedule</Text>
-          <Text style={styles.featureCardSubtitle}>View appointments</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.featureCard}
-          activeOpacity={0.7}
-          onPress={() => router.push("/(app)/chat" as Href)}
-        >
-          <View style={styles.featureIconContainer}>
-            <Ionicons name="chatbubbles" size={32} color="#0C4A6E" />
-          </View>
-          <Text style={styles.featureCardTitle}>Messages</Text>
-          <Text style={styles.featureCardSubtitle}>Chat with doctors</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }

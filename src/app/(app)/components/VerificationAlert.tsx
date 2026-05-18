@@ -16,44 +16,51 @@ export function VerificationAlert({ status }: VerificationAlertProps) {
   const isPending = status === "PENDING";
   const isRejected = status === "REJECTED";
 
-  const bgColor = isRejected ? "#FEE2E2" : isPending ? "#FEF3C7" : "#E0E7FF";
-  const iconColor = isRejected ? "#EF4444" : isPending ? "#D97706" : "#4338CA";
+  // Use light orange for unverified, stark red for rejected
+  const bgColor = isRejected ? "#FEF2F2" : isPending ? "#FFFBEB" : "#FFEDD5";
+  const iconColor = isRejected ? "#DC2626" : isPending ? "#D97706" : "#EA580C";
   const iconName = isRejected
-    ? "close-circle"
+    ? "alert-circle"
     : isPending
-      ? "time"
-      : "shield-half";
+      ? "time-outline"
+      : "warning";
+
   const title = isRejected
     ? "Verification Rejected"
     : isPending
-      ? "Verification in Progress"
+      ? "Verification Pending"
       : "Action Required";
+
   const subtitle = isRejected
-    ? "Tap to update your document."
+    ? "Your document was denied. Please upload a valid ID immediately."
     : isPending
-      ? "Our clinical team is reviewing your profile."
-      : "Verify your child's profile to access treatments.";
+      ? "We are currently reviewing your documents."
+      : "You must verify your identity to access treatments.";
 
   return (
     <TouchableOpacity
-      style={[styles.container, { backgroundColor: bgColor }]}
+      style={[
+        styles.container,
+        { backgroundColor: bgColor, borderLeftColor: iconColor },
+      ]}
       disabled={isPending}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
       onPress={() => router.push("/(app)/(verification)/verify" as Href)}
     >
-      <View style={styles.iconContainer}>
-        <Ionicons name={iconName} size={28} color={iconColor} />
-      </View>
+      <Ionicons
+        name={iconName}
+        size={24}
+        color={iconColor}
+        style={styles.icon}
+      />
       <View style={styles.textContainer}>
         <Text style={[styles.title, { color: iconColor }]}>{title}</Text>
-        <Text style={[styles.subtitle, { color: iconColor, opacity: 0.8 }]}>
+        <Text style={[styles.subtitle, { color: iconColor, opacity: 0.85 }]}>
           {subtitle}
         </Text>
       </View>
       {!isPending && (
-        <View style={styles.arrowContainer}>
-          <Ionicons name="chevron-forward" size={20} color={iconColor} />
-        </View>
+        <Ionicons name="chevron-forward" size={20} color={iconColor} />
       )}
     </TouchableOpacity>
   );
@@ -63,26 +70,26 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.lg,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.xl,
+    padding: spacing.xl,
+    paddingVertical: spacing.xxl,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.xxl,
+    borderLeftWidth: 6,
   },
-  iconContainer: {
+  icon: {
     marginRight: spacing.md,
   },
   textContainer: {
     flex: 1,
+    paddingRight: spacing.md,
   },
   title: {
-    fontSize: typography.fontSize.md,
+    fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.bold,
-    marginBottom: 2,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: typography.fontSize.sm,
-    lineHeight: 18,
-  },
-  arrowContainer: {
-    marginLeft: spacing.sm,
+    fontSize: typography.fontSize.md,
+    lineHeight: 22,
   },
 });
