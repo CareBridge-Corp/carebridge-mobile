@@ -56,7 +56,6 @@ export default function ProfileScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarWrapper}>
             <View style={styles.avatarLarge}>
@@ -92,6 +91,32 @@ export default function ProfileScreen() {
           </View>
 
           <Text style={styles.userEmail}>{profile?.email}</Text>
+        </View>
+
+        {/* Screening Profile Highlight Card */}
+        <View style={styles.screeningCardContainer}>
+          <TouchableOpacity
+            style={styles.screeningCard}
+            activeOpacity={0.85}
+            onPress={() => router.push("/(app)/(mchat)/mchat-profile" as any)}
+          >
+            <View style={styles.screeningIconWrapper}>
+              <Ionicons name="clipboard" size={24} color={colors.white} />
+            </View>
+            <View style={styles.screeningTextWrapper}>
+              <Text style={styles.screeningTitle}>M-CHAT-R/F Screening</Text>
+              <Text style={styles.screeningSubtitle}>
+                View child screening history
+              </Text>
+            </View>
+            <View style={styles.screeningArrow}>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={colors.primary}
+              />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Doctor Section (Conditional) */}
@@ -523,5 +548,52 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.bold,
     color: colors.error,
+  },
+  screeningCardContainer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    backgroundColor: colors.white,
+  },
+  screeningCard: {
+    backgroundColor: "#F0F7FB", // Light blue matching the theme
+    borderWidth: 1,
+    borderColor: "#E8F0F5",
+    borderRadius: borderRadius.xxl,
+    padding: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  screeningIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.md,
+  },
+  screeningTextWrapper: {
+    flex: 1,
+  },
+  screeningTitle: {
+    color: "#0C4A6E", // Theme dark text
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    marginBottom: 4,
+  },
+  screeningSubtitle: {
+    color: "#5A7A8F", // Theme subtle text
+    fontSize: typography.fontSize.xs,
+  },
+  screeningArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: spacing.sm,
+    borderWidth: 1,
+    borderColor: "#E8F0F5",
   },
 });

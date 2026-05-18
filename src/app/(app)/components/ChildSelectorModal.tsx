@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Modal,
   ScrollView,
@@ -9,12 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import StatusModal from "../../../shared/components/StatusModal";
 import {
   borderRadius,
   colors,
   spacing,
   typography,
 } from "../../../shared/theme";
+import { useDeleteChild } from "../hooks/useChildren";
 import { Child, useChildrenStore } from "../store/childrenStore";
 
 interface ChildSelectorModalProps {
@@ -28,6 +32,13 @@ export function ChildSelectorModal({
 }: ChildSelectorModalProps) {
   const router = useRouter();
   const { children, activeChild, setActiveChild } = useChildrenStore();
+  const deleteMutation = useDeleteChild();
+
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [childToDelete, setChildToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handleSelectChild = (child: Child) => {
     setActiveChild(child);
@@ -37,6 +48,25 @@ export function ChildSelectorModal({
   const handleAddChild = () => {
     onClose();
     router.push("/(app)/create-child" as Href);
+  };
+
+  const handleDeleteChild = (childId: string, childName: string) => {
+    setChildToDelete({ id: childId, name: childName });
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = () => {
+    if (!childToDelete) return;
+
+    deleteMutation.mutate(childToDelete.id, {
+      onSuccess: () => {
+        if (activeChild?.childId === childToDelete.id) {
+          setActiveChild(null);
+        }
+        setDeleteModalVisible(false);
+        setChildToDelete(null);
+      },
+    });
   };
 
   return (
@@ -68,40 +98,63 @@ export function ChildSelectorModal({
                 showsVerticalScrollIndicator={false}
               >
                 {children.map((child) => (
-                  <TouchableOpacity
-                    key={child.childId}
-                    style={[
-                      styles.childItem,
-                      activeChild?.childId === child.childId &&
-                        styles.childItemActive,
-                    ]}
-                    onPress={() => handleSelectChild(child)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.childAvatar}>
-                      {child.profilePictureUrl ? (
-                        <Image
-                          source={{ uri: child.profilePictureUrl }}
-                          style={styles.childAvatarImage}
+                  <View key={child.childId} style={styles.childItemContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.childItem,
+                        activeChild?.childId === child.childId &&
+                          styles.childItemActive,
+                      ]}
+                      onPress={() => handleSelectChild(child)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.childAvatar}>
+                        {child.profilePictureUrl ? (
+                          <Image
+                            source={{ uri: child.profilePictureUrl }}
+                            style={styles.childAvatarImage}
+                          />
+                        ) : (
+                          <Ionicons name="person" size={24} color="#0C4A6E" />
+                        )}
+                      </View>
+                      <View style={styles.childInfo}>
+                        <Text style={styles.childName}>{child.firstName}</Text>
+                        <Text style={styles.childDetails}>
+                          {child.gender} • {calculateAge(child.dob)}
+                        </Text>
+                      </View>
+                      {activeChild?.childId === child.childId && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={24}
+                          color="#10B981"
                         />
-                      ) : (
-                        <Ionicons name="person" size={24} color="#0C4A6E" />
                       )}
-                    </View>
-                    <View style={styles.childInfo}>
-                      <Text style={styles.childName}>{child.firstName}</Text>
-                      <Text style={styles.childDetails}>
-                        {child.gender} • {calculateAge(child.dob)}
-                      </Text>
-                    </View>
-                    {activeChild?.childId === child.childId && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={24}
-                        color="#10B981"
-                      />
-                    )}
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() =>
+                        handleDeleteChild(child.childId, child.firstName)
+                      }
+                      disabled={
+                        deleteMutation.isPending &&
+                        deleteMutation.variables === child.childId
+                      }
+                    >
+                      {deleteMutation.isPending &&
+                      deleteMutation.variables === child.childId ? (
+                        <ActivityIndicator size="small" color="#EF4444" />
+                      ) : (
+                        <Ionicons
+                          name="trash-outline"
+                          size={20}
+                          color="#EF4444"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 ))}
 
                 {/* Add Child Button */}
@@ -120,6 +173,23 @@ export function ChildSelectorModal({
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
+
+      {/* Delete Confirmation Modal */}
+      <StatusModal
+        visible={deleteModalVisible}
+        type="error"
+        title="Delete Child Profile"
+        message={`Are you sure you want to remove ${childToDelete?.name}? This action cannot be undone.`}
+        primaryButtonText={
+          deleteMutation.isPending ? "Deleting..." : "Yes, Delete"
+        }
+        onPrimaryPress={confirmDelete}
+        secondaryButtonText="Cancel"
+        onSecondaryPress={() => {
+          setDeleteModalVisible(false);
+          setChildToDelete(null);
+        }}
+      />
     </Modal>
   );
 }
@@ -174,15 +244,25 @@ const styles = StyleSheet.create({
   childrenList: {
     maxHeight: 400,
   },
+  childItemContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F5F5F5",
+  },
   childItem: {
     flexDirection: "row",
     alignItems: "center",
     padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
+    flex: 1,
   },
   childItemActive: {
     backgroundColor: "#F0F7FB",
+  },
+  deleteButton: {
+    padding: spacing.md,
+    justifyContent: "center",
+    alignItems: "center",
   },
   childAvatar: {
     width: 48,
