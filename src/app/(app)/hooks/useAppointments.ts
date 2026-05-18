@@ -6,7 +6,6 @@ import {
   UpdateAppointmentStatusPayload,
 } from "../types/appointment";
 
-// GET /api/doctors/:doctorId/appointments
 export function useDoctorAppointments(
   doctorId: string | undefined,
   filters?: { status?: string; from?: string; to?: string },

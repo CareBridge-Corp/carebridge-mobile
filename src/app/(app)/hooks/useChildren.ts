@@ -23,6 +23,8 @@ export function useChildren() {
       try {
         const response: any = await apiClient.get("/users/children");
         const children = response.children || [];
+
+        console.log("Fetched children data:", children);
         setChildren(children);
         setLoading(false);
         return response;
@@ -112,6 +114,26 @@ export function useCreateChild() {
     },
     onError: (error: any) => {
       setError(error.message || "Failed to create child profile");
+    },
+  });
+}
+
+export function useDeleteChild() {
+  const queryClient = useQueryClient();
+  const { removeChild, setError } = useChildrenStore();
+
+  return useMutation({
+    mutationFn: async (childId: string) => {
+      const response = await apiClient.delete(`/users/children/${childId}`);
+      return response;
+    },
+    onSuccess: (_, childId) => {
+      removeChild(childId);
+      queryClient.invalidateQueries({ queryKey: ["children"] });
+      setError(null);
+    },
+    onError: (error: any) => {
+      setError(error.message || "Failed to delete child profile");
     },
   });
 }

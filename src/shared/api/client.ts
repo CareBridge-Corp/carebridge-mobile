@@ -86,9 +86,10 @@ class ApiClient {
   private handleError(error: AxiosError): Error {
     if (error.response) {
       // Server responded with error, the API documentation usually returns a message
+      const data = error.response.data as any;
       const message =
-        (error.response.data as any)?.message ||
-        (error.response.data as any)?.error?.message ||
+        data?.message ||
+        (typeof data?.error === "string" ? data.error : data?.error?.message) ||
         "Server error";
       return new Error(message);
     } else if (error.request) {

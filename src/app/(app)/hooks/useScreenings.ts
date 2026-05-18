@@ -35,3 +35,16 @@ export function useChildScreenings(childId: string | undefined) {
     enabled: !!childId,
   });
 }
+
+export function useScreeningDetail(screeningId: string | undefined) {
+  return useQuery({
+    queryKey: ["screening-detail", screeningId],
+    queryFn: async () => {
+      if (!screeningId) return null;
+
+      const response = await apiClient.get(`/screenings/${screeningId}`);
+      return response.screening;
+    },
+    enabled: !!screeningId,
+  });
+}
