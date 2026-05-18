@@ -57,7 +57,10 @@ export default function VerifyParentScreen({
       const type = match ? `image/${match[1]}` : "image/jpeg";
 
       formData.append("image", {
-        uri: documentImage,
+        uri:
+          Platform.OS === "android"
+            ? documentImage
+            : documentImage.replace("file://", ""),
         name: filename,
         type,
       } as any);

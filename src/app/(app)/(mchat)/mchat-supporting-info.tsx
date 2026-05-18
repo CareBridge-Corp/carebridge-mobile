@@ -48,6 +48,9 @@ export default function MChatSupportingInfoScreen() {
     storedAudioRecording || null,
   );
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
@@ -85,30 +88,47 @@ export default function MChatSupportingInfoScreen() {
       // 2. Submit Supporting Info via Multipart
       if (description.trim() || pictures.length > 0 || audioUri) {
         const formData = new FormData();
+
         if (description.trim()) {
           formData.append("parentDescription", description.trim());
         }
 
         pictures.forEach((uri, index) => {
+          const filename = uri.split("/").pop() || `child_image_${index}.jpg`;
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : "image/jpeg";
+
           formData.append("childPictures", {
-            uri,
-            name: `child_image_${index}.jpg`,
-            type: "image/jpeg",
+            uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
+            name: filename,
+            type,
           } as any);
         });
 
         if (audioUri) {
-          formData.append("audioRecording", {
-            uri: audioUri,
-            name: "audio_note.m4a",
+          const audioFilename = audioUri.split("/").pop() || "audio_note.m4a";
+          formData.append("audioNote", {
+            uri:
+              Platform.OS === "android"
+                ? audioUri
+                : audioUri.replace("file://", ""),
+            name: audioFilename,
             type: "audio/m4a",
           } as any);
         }
 
-        await multipartApiClient.post(
-          `/screenings/${screeningId}/supporting-info`,
-          formData,
-        );
+        try {
+          await multipartApiClient.post(
+            `/screenings/${screeningId}/supporting-info`,
+            formData,
+          );
+        } catch (uploadError: any) {
+          // If supporting info fails, still consider screening submitted
+          // but log the error for debugging
+          throw new Error(
+            uploadError.message || "Failed to upload supporting information",
+          );
+        }
       }
 
       return true;
@@ -174,12 +194,19 @@ export default function MChatSupportingInfoScreen() {
           playsInSilentModeIOS: true,
         });
 
-        const { recording } = await Audio.Recording.createAsync(
+        const { recording: newRecording } = await Audio.Recording.createAsync(
           Audio.RecordingOptionsPresets.HIGH_QUALITY,
         );
 
-        setRecording(recording);
+        setRecording(newRecording);
         setIsRecording(true);
+        setRecordingDuration(0);
+
+        newRecording.setOnRecordingStatusUpdate((status) => {
+          if (status.isRecording) {
+            setRecordingDuration(Math.floor(status.durationMillis / 1000));
+          }
+        });
       } else {
         setStatusConfig({
           type: "error",
@@ -189,32 +216,84 @@ export default function MChatSupportingInfoScreen() {
         setStatusModalVisible(true);
       }
     } catch (err) {
-      console.error("Failed to start recording", err);
+      console.error("Recording error", err);
     }
   };
 
   const stopRecording = async () => {
-    setRecording(null);
-    setIsRecording(false);
     if (!recording) return;
 
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setAudioUri(uri);
+    try {
+      setIsRecording(false);
+
+      const status = await recording.getStatusAsync();
+      if (status.canRecord) {
+        await recording.stopAndUnloadAsync();
+      }
+
+      const uri = recording.getURI();
+      setAudioUri(uri);
+      setRecording(null);
+    } catch (error) {
+      console.error("Stop recording error", error);
+      setIsRecording(false);
+      setRecording(null);
+    }
   };
 
   const playAudio = async () => {
     if (!audioUri) return;
+
     try {
-      const { sound } = await Audio.Sound.createAsync({ uri: audioUri });
-      await sound.playAsync();
+      // If already playing, stop it
+      if (sound && isPlaying) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+        setIsPlaying(false);
+        return;
+      }
+
+      // Create and play new sound
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true },
+      );
+
+      setSound(newSound);
+      setIsPlaying(true);
+
+      // Listen for playback status
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+          newSound.unloadAsync();
+          setSound(null);
+        }
+      });
     } catch (error) {
-      console.error("Failed to play audio", error);
+      // Silent error handling
+      setIsPlaying(false);
+      setSound(null);
     }
   };
 
   const removeAudio = () => {
+    // Stop and unload sound if playing
+    if (sound) {
+      sound.stopAsync().catch(() => {});
+      sound.unloadAsync().catch(() => {});
+      setSound(null);
+    }
+    setIsPlaying(false);
     setAudioUri(null);
+    setRecordingDuration(0);
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleNext = () => {
@@ -242,11 +321,23 @@ export default function MChatSupportingInfoScreen() {
 
   useEffect(() => {
     return () => {
-      if (recording) {
-        recording.stopAndUnloadAsync();
+      async function cleanup() {
+        if (recording) {
+          try {
+            const status = await recording.getStatusAsync();
+            if (status.canRecord) {
+              await recording.stopAndUnloadAsync();
+            }
+          } catch (e) {}
+        }
+        if (sound) {
+          sound.stopAsync().catch(() => {});
+          sound.unloadAsync().catch(() => {});
+        }
       }
+      cleanup();
     };
-  }, [recording]);
+  }, [recording, sound]);
 
   return (
     <KeyboardAvoidingView
@@ -311,14 +402,27 @@ export default function MChatSupportingInfoScreen() {
                   isRecording && { color: colors.white },
                 ]}
               >
-                {isRecording ? "Stop Recording" : "Tap to Record"}
+                {isRecording
+                  ? `Recording... ${formatDuration(recordingDuration)}`
+                  : "Tap to Record"}
               </Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.audioPlayer}>
               <TouchableOpacity style={styles.playBtn} onPress={playAudio}>
-                <Ionicons name="play" size={24} color="#0C4A6E" />
-                <Text style={styles.playBtnText}>Play Recording</Text>
+                <Ionicons
+                  name={isPlaying ? "pause" : "play"}
+                  size={24}
+                  color="#0C4A6E"
+                />
+                <View>
+                  <Text style={styles.playBtnText}>
+                    {isPlaying ? "Pause Recording" : "Play Recording"}
+                  </Text>
+                  <Text style={styles.durationText}>
+                    {formatDuration(recordingDuration)}
+                  </Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.removeAudioBtn}
@@ -569,6 +673,11 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.md,
     color: "#0C4A6E",
     fontWeight: typography.fontWeight.semibold,
+  },
+  durationText: {
+    fontSize: typography.fontSize.sm,
+    color: "#5A7A8F",
+    marginTop: 2,
   },
   removeAudioBtn: {
     padding: spacing.xs,
