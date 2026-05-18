@@ -29,7 +29,16 @@ export function SignupForm() {
   const { t } = useTranslation();
 
   const handleSignup = () => {
-    // ...existing code...
+    const formattedPhone = phone ? `+251${phone}` : "";
+    signupMutation.mutate({
+      firstName,
+      lastName,
+      surname: null,
+      email,
+      password,
+      role: "PARENT",
+      phone: formattedPhone,
+    });
   };
 
   const togglePasswordVisibility = () => {

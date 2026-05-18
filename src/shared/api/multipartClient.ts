@@ -15,11 +15,14 @@ class MultipartApiClient {
   constructor() {
     this.client = axios.create({
       baseURL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api",
-      timeout: 60000, // Longer timeout for file uploads
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      timeout: 120000, // 2 minutes timeout for file uploads
       withCredentials: true,
+      headers: {
+        Accept: "application/json",
+        // DO NOT set Content-Type here - let axios set it with the boundary
+      },
+      // Essential for React Native FormData to prevent Axios from messing with the payload
+      transformRequest: (data) => data,
     });
 
     this.setupInterceptors();
@@ -41,6 +44,14 @@ class MultipartApiClient {
         } catch (error) {
           console.log("Error reading token", error);
         }
+
+        // Let axios automatically set Content-Type for FormData
+        // Remove any Content-Type header if data is FormData
+        if (config.data instanceof FormData && config.headers) {
+          config.headers["Content-Type"] = "multipart/form-data";
+          delete config.headers["content-type"];
+        }
+
         return config;
       },
       (error) => Promise.reject(error),
@@ -55,14 +66,32 @@ class MultipartApiClient {
         return response.data;
       },
       async (error: AxiosError) => {
-        console.log(
-          `[Multipart API Error] ${error.config?.method?.toUpperCase()} ${error.config?.baseURL || ""}${error.config?.url} - Status: ${error.response?.status || "UNKNOWN"}`,
-        );
+        const status = error.response?.status || "UNKNOWN";
+        const url = `${error.config?.baseURL || ""}${error.config?.url}`;
 
+        console.log("[Multipart API Error Details]", {
+          message: error.message,
+          code: error.code,
+          status,
+          url,
+        });
+
+        // Log more details about the error
         if (error.response?.data) {
           console.log(
             `[Multipart API Error Data]`,
             JSON.stringify(error.response.data, null, 2),
+          );
+        } else if (error.request) {
+          console.log(
+            `[Multipart API Error] No response received. This could be a network error, timeout, or CORS issue.`,
+          );
+          console.log(`[Multipart API Error] Error message:`, error.message);
+          console.log(`[Multipart API Error] Error code:`, error.code);
+        } else {
+          console.log(
+            `[Multipart API Error] Request setup error:`,
+            error.message,
           );
         }
 
@@ -79,9 +108,10 @@ class MultipartApiClient {
 
   private handleError(error: AxiosError): Error {
     if (error.response) {
+      const data = error.response.data as any;
       const message =
-        (error.response.data as any)?.message ||
-        (error.response.data as any)?.error?.message ||
+        data?.message ||
+        (typeof data?.error === "string" ? data.error : data?.error?.message) ||
         "Server error";
       return new Error(message);
     } else if (error.request) {
@@ -97,7 +127,13 @@ class MultipartApiClient {
     data?: any,
     config?: AxiosRequestConfig,
   ): Promise<T> {
-    return this.client.post(url, data, config) as unknown as Promise<T>;
+    try {
+      const response = await this.client.post(url, data, config);
+      return response as unknown as Promise<T>;
+    } catch (error) {
+      console.log("[Multipart API] Post request failed:", error);
+      throw error;
+    }
   }
 
   async put<T = any>(

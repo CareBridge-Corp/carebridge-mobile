@@ -38,6 +38,7 @@ export default function LoginScreen() {
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
       </TouchableOpacity>
+
       {/* Language Button replaced Skip Button */}
       <TouchableOpacity style={styles.skipButton} onPress={toggleLanguage}>
         <Ionicons name="language" size={18} color={colors.primary} />
