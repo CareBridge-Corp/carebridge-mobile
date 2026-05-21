@@ -15,52 +15,68 @@ export function EmptyChildView() {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Info Card */}
-      <View style={styles.infoCard}>
-        <View style={styles.infoCardHeader}>
-          <View style={styles.infoCardTitleContainer}>
-            <Text style={styles.infoCardTitle}>
-              {t("home.provideChildInfo")}
-            </Text>
-            <Text style={styles.infoCardSubtitle}>{t("home.infoSafe")}</Text>
-          </View>
-          <View style={styles.infoCardCircle} />
-        </View>
+      <View style={styles.cardWrapper}>
+        <View style={styles.infoCard}>
+          <View style={styles.infoCardHeaderRow}>
+            <View style={styles.infoCardTitleContainer}>
+              <Text style={styles.infoCardTitle}>
+                {t("home.provideChildInfo")}
+              </Text>
+              <Text style={styles.infoCardSubtitle}>{t("home.infoSafe")}</Text>
+            </View>
 
-        <View style={styles.safetySection}>
-          <View style={styles.safetyIconContainer}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={24}
-              color="#0C4A6E"
+            <View
+              style={styles.iconContainer}
+              accessible
+              accessibilityRole="image"
+            >
+              <MaterialCommunityIcons
+                name="baby-face-outline"
+                size={28}
+                color={colors.primary || "#0C4A6E"}
+              />
+            </View>
+          </View>
+
+          <View style={styles.safetySection}>
+            <View style={styles.safetyIconContainer}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color={colors.primary || "#0C4A6E"}
+              />
+            </View>
+            <View style={styles.safetyTexts}>
+              <Text style={styles.safetyTitle}>
+                {t("home.safetyRegulations")}
+              </Text>
+              <Text style={styles.safetySubtitle}>{t("home.infoSafe")}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={() => router.push("/(app)/(child)/create-child" as Href)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={t("home.registerChildren")}
+          >
+            <View style={styles.continueLeft}>
+              <View style={styles.continueIconCircle}>
+                <View style={styles.continueIconInner} />
+              </View>
+              <Text style={styles.continueButtonText}>
+                {t("home.registerChildren")}
+              </Text>
+            </View>
+
+            <MaterialCommunityIcons
+              name="arrow-right"
+              size={22}
+              color={colors.primary || "#0C4A6E"}
             />
-          </View>
-          <View style={styles.safetyTexts}>
-            <Text style={styles.safetyTitle}>
-              {t("home.safetyRegulations")}
-            </Text>
-            <Text style={styles.safetySubtitle}>{t("home.infoSafe")}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={() => router.push("/(app)/create-child" as Href)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.continueIconCircle}>
-            <View style={styles.continueIconInner} />
-          </View>
-          <Text style={styles.continueButtonText}>
-            {t("home.registerChildren")}
-          </Text>
-
-          <MaterialCommunityIcons
-            name="forwardburger"
-            size={24}
-            color="#0C4A6E"
-          />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -69,18 +85,32 @@ export function EmptyChildView() {
 const styles = StyleSheet.create({
   mainContainer: {
     paddingBottom: spacing.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardWrapper: {
+    width: "100%",
+    paddingHorizontal: spacing.lg,
   },
   infoCard: {
-    backgroundColor: "#E8F0F5",
-    marginHorizontal: spacing.xxl,
+    backgroundColor: colors.cardLightBlue || "#E8F0F5",
     borderRadius: borderRadius.xxl,
     padding: spacing.xxl,
+    // subtle shadow
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
   },
   infoCardHeader: {
+    // legacy
+  },
+  infoCardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: spacing.xxxl,
+    alignItems: "center",
+    marginBottom: spacing.lg,
   },
   infoCardTitleContainer: {
     flex: 1,
@@ -89,27 +119,22 @@ const styles = StyleSheet.create({
   infoCardTitle: {
     fontSize: typography.fontSize.xxl,
     fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
+    color: colors.primary || "#0C4A6E",
     lineHeight: typography.lineHeight.tight * typography.fontSize.xxl,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   infoCardCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.white,
-    opacity: 0.5,
+    // legacy placeholder
   },
   infoCardSubtitle: {
     fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
+    color: colors.textLight || "#5A7A8F",
     lineHeight: typography.lineHeight.relaxed * typography.fontSize.sm,
   },
   safetySection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   safetyIconContainer: {
     width: 40,
@@ -123,21 +148,27 @@ const styles = StyleSheet.create({
   safetyTitle: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
+    color: colors.primary || "#0C4A6E",
     marginBottom: 2,
   },
   safetySubtitle: {
     fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
+    color: colors.textLight || "#5A7A8F",
   },
   continueButton: {
     backgroundColor: colors.white,
     borderRadius: borderRadius.xxl,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    justifyContent: "space-between",
+    // subtle button shadow
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
   },
   continueIconCircle: {
     width: 48,
@@ -154,9 +185,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#0A3A54",
   },
   continueButtonText: {
-    flex: 1,
     fontSize: typography.fontSize.lg,
-    color: "#0C4A6E",
+    color: colors.primary || "#0C4A6E",
     fontWeight: typography.fontWeight.medium,
+  },
+  continueLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
   },
 });

@@ -355,13 +355,13 @@ export default function DoctorChatScreen() {
           maxLength={1000}
         />
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.emojiButton}
           onPress={handleEmojiPress}
           activeOpacity={0.7}
         >
           <Ionicons name="happy-outline" size={24} color="#5A7A8F" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <TouchableOpacity
           style={[
