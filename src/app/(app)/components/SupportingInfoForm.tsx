@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
+import * as SecureStore from "expo-secure-store";
 import React, { useEffect, useState } from "react";
 import {
   Animated,
@@ -16,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import multipartApiClient from "../../../shared/api/multipartClient";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
   borderRadius,
@@ -94,14 +94,32 @@ export function SupportingInfoForm({
         } as any);
       }
 
-      const a = await multipartApiClient.post(
-        `/screenings/${screeningId}/supporting-info`,
-        formData,
+      // Get auth token
+      const token = await SecureStore.getItemAsync("authToken");
+
+      // Use fetch instead of axios for better React Native FormData support
+      const apiUrl =
+        process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+      const response = await fetch(
+        `${apiUrl}/screenings/${screeningId}/supporting-info`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        },
       );
 
-      console.log(a);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message ||
+            `HTTP ${response.status}: ${response.statusText}`,
+        );
+      }
 
-      return true;
+      return response.json();
     },
     onSuccess: () => {
       setStatusConfig({

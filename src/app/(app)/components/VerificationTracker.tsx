@@ -17,173 +17,382 @@ export default function VerificationTracker({
   childStatus: string;
 }) {
   const router = useRouter();
+
   const getStatusProps = (status: string) => {
     switch (status) {
       case "VERIFIED":
         return {
-          color: "#10B981",
+          color: colors.success,
           bg: "#D1FAE5",
           icon: "checkmark-circle",
           text: "Verified",
         };
       case "PENDING":
         return {
-          color: "#F59E0B",
+          color: colors.warning,
           bg: "#FEF3C7",
-          icon: "time",
+          icon: "time-outline",
           text: "In Review",
         };
       case "REJECTED":
         return {
-          color: "#DC2626",
+          color: colors.error,
           bg: "#FEE2E2",
-          icon: "alert-circle",
+          icon: "close-circle-outline",
           text: "Rejected",
         };
       default:
         return {
-          color: "#EA580C",
-          bg: "#FFEDD5",
-          icon: "warning",
-          text: "Required",
+          color: colors.primary,
+          bg: colors.cardLightBlue,
+          icon: "alert-circle-outline",
+          text: "Action Required",
         };
     }
   };
+
   const parentProps = getStatusProps(parentStatus);
   const childProps = getStatusProps(childStatus);
+
+  const allVerified = parentStatus === "VERIFIED" && childStatus === "VERIFIED";
+  const hasRejected = parentStatus === "REJECTED" || childStatus === "REJECTED";
+  const completedCount =
+    (parentStatus === "VERIFIED" ? 1 : 0) +
+    (childStatus === "VERIFIED" ? 1 : 0);
+  const progressPercentage = (completedCount / 2) * 100;
+
   return (
-    <View style={styles.trackerContainer}>
-      <Text style={styles.trackerTitle}>Profile Verification</Text>
-      <Text style={styles.trackerSubtitle}>
-        Please complete the following verifications to unlock full clinical
-        access and treatments.
-      </Text>
-
-      <TouchableOpacity
-        style={[styles.trackerItem, { borderLeftColor: parentProps.color }]}
-        onPress={() => router.push("/(app)/(parent)/verify-parent" as Href)}
-        disabled={parentStatus === "VERIFIED" || parentStatus === "PENDING"}
-        activeOpacity={0.7}
-      >
-        <View
-          style={[styles.trackerIconBg, { backgroundColor: parentProps.bg }]}
-        >
+    <View style={styles.container}>
+      {/* Header Section */}
+      <View style={styles.header}>
+        <View style={styles.headerIcon}>
           <Ionicons
-            name={parentProps.icon as any}
-            size={20}
-            color={parentProps.color}
+            name={allVerified ? "shield-checkmark" : "shield-outline"}
+            size={24}
+            color={allVerified ? colors.success : colors.primary}
           />
         </View>
-        <View style={styles.trackerItemTexts}>
-          <Text style={styles.trackerItemTitle}>Parent Identity</Text>
-          <Text style={styles.trackerItemSubtitle}>Verify using Fayda ID</Text>
-        </View>
-        <View
-          style={[
-            styles.trackerStatusBadge,
-            { backgroundColor: parentProps.color },
-          ]}
-        >
-          <Text style={styles.trackerStatusText}>{parentProps.text}</Text>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.trackerItem, { borderLeftColor: childProps.color }]}
-        onPress={() => router.push("/(app)/(verification)/verify" as Href)}
-        disabled={childStatus === "VERIFIED" || childStatus === "PENDING"}
-        activeOpacity={0.7}
-      >
-        <View
-          style={[styles.trackerIconBg, { backgroundColor: childProps.bg }]}
-        >
-          <Ionicons
-            name={childProps.icon as any}
-            size={20}
-            color={childProps.color}
-          />
-        </View>
-        <View style={styles.trackerItemTexts}>
-          <Text style={styles.trackerItemTitle}>Child Profile</Text>
-          <Text style={styles.trackerItemSubtitle}>
-            Verify identity documents
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Identity Verification</Text>
+          <Text style={styles.subtitle}>
+            {allVerified
+              ? "All verifications completed"
+              : "Complete both verifications to unlock full access"}
           </Text>
         </View>
+      </View>
+
+      {/* Progress Indicator */}
+      {!allVerified && (
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View
+              style={[styles.progressFill, { width: `${progressPercentage}%` }]}
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {completedCount} of 2 completed
+          </Text>
+        </View>
+      )}
+
+      {/* Verification Items */}
+      <View style={styles.itemsContainer}>
+        {/* Parent Identity Verification */}
         <View
           style={[
-            styles.trackerStatusBadge,
-            { backgroundColor: childProps.color },
+            styles.item,
+            parentStatus === "VERIFIED" && styles.itemVerified,
+            parentStatus === "REJECTED" && styles.itemRejected,
           ]}
         >
-          <Text style={styles.trackerStatusText}>{childProps.text}</Text>
+          <View style={styles.itemLeft}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: parentProps.bg },
+              ]}
+            >
+              <Ionicons
+                name={parentProps.icon as any}
+                size={24}
+                color={parentProps.color}
+              />
+            </View>
+            <View style={styles.itemContent}>
+              <View style={styles.itemHeader}>
+                <Text style={styles.itemTitle}>Parent Identity</Text>
+                {parentStatus !== "VERIFIED" && parentStatus !== "PENDING" && (
+                  <View style={styles.requiredBadge}>
+                    <Text style={styles.requiredText}>Required</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.itemSubtitle}>Verify using Fayda ID</Text>
+            </View>
+          </View>
+          <View
+            style={[styles.statusBadge, { backgroundColor: parentProps.bg }]}
+          >
+            <Text style={[styles.statusText, { color: parentProps.color }]}>
+              {parentProps.text}
+            </Text>
+          </View>
         </View>
-      </TouchableOpacity>
+
+        {/* Child Profile Verification */}
+        <View
+          style={[
+            styles.item,
+            childStatus === "VERIFIED" && styles.itemVerified,
+            childStatus === "REJECTED" && styles.itemRejected,
+          ]}
+        >
+          <View style={styles.itemLeft}>
+            <View
+              style={[styles.iconContainer, { backgroundColor: childProps.bg }]}
+            >
+              <Ionicons
+                name={childProps.icon as any}
+                size={24}
+                color={childProps.color}
+              />
+            </View>
+            <View style={styles.itemContent}>
+              <View style={styles.itemHeader}>
+                <Text style={styles.itemTitle}>Child Profile</Text>
+                {childStatus !== "VERIFIED" && childStatus !== "PENDING" && (
+                  <View style={styles.requiredBadge}>
+                    <Text style={styles.requiredText}>Required</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.itemSubtitle}>Verify identity documents</Text>
+            </View>
+          </View>
+          <View
+            style={[styles.statusBadge, { backgroundColor: childProps.bg }]}
+          >
+            <Text style={[styles.statusText, { color: childProps.color }]}>
+              {childProps.text}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Info Banner */}
+      {!allVerified && (
+        <View
+          style={[styles.infoBanner, hasRejected && styles.infoBannerError]}
+        >
+          <Ionicons
+            name={
+              hasRejected ? "information-circle" : "information-circle-outline"
+            }
+            size={20}
+            color={hasRejected ? colors.error : colors.primary}
+          />
+          <Text style={[styles.infoText, hasRejected && styles.infoTextError]}>
+            {hasRejected
+              ? "Please review and resubmit rejected verifications"
+              : "Both verifications must be completed to access clinical services"}
+          </Text>
+        </View>
+      )}
+
+      {/* Single Action Button */}
+      {!allVerified && (
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => router.push("/(app)/(verification)/verify" as Href)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionButtonText}>
+            {hasRejected ? "Resubmit Verification" : "Start Verification"}
+          </Text>
+          <Ionicons name="arrow-forward" size={20} color={colors.white} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  trackerContainer: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: borderRadius.xl,
+  container: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xxl,
     padding: spacing.xl,
     marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  trackerTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0F172A",
-    marginBottom: spacing.xs,
-  },
-  trackerSubtitle: {
-    fontSize: typography.fontSize.sm,
-    color: "#64748B",
-    marginBottom: spacing.lg,
-    lineHeight: typography.lineHeight.relaxed * typography.fontSize.sm,
-  },
-  trackerItem: {
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-    borderLeftWidth: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    marginBottom: spacing.lg,
   },
-  trackerIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.cardLightBlue,
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.md,
   },
-  trackerItemTexts: { flex: 1 },
-  trackerItemTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#1E293B",
-    marginBottom: 2,
+  headerContent: {
+    flex: 1,
   },
-  trackerItemSubtitle: { fontSize: typography.fontSize.sm, color: "#64748B" },
-  trackerStatusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+  title: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textLight,
+    lineHeight: typography.lineHeight.relaxed * typography.fontSize.sm,
+  },
+  progressContainer: {
+    marginBottom: spacing.xl,
+  },
+  progressBar: {
+    height: 8,
+    backgroundColor: colors.cardLightBlue,
+    borderRadius: borderRadius.full,
+    overflow: "hidden",
+    marginBottom: spacing.sm,
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: colors.primary,
     borderRadius: borderRadius.full,
   },
-  trackerStatusText: {
+  progressText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.primary,
+    textAlign: "center",
+  },
+  itemsContainer: {
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.background,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+  },
+  itemVerified: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#BBF7D0",
+  },
+  itemRejected: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+  },
+  itemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.md,
+  },
+  itemContent: {
+    flex: 1,
+  },
+  itemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  itemTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+  },
+  requiredBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  requiredText: {
     fontSize: 10,
     fontWeight: typography.fontWeight.bold,
-    color: colors.white,
+    color: colors.warning,
     textTransform: "uppercase",
+  },
+  itemSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textLight,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    marginLeft: spacing.sm,
+  },
+  statusText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    textTransform: "uppercase",
+  },
+  infoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.cardLightBlue,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  infoBannerError: {
+    backgroundColor: "#FEE2E2",
+  },
+  infoText: {
+    flex: 1,
+    fontSize: typography.fontSize.sm,
+    color: colors.primary,
+    lineHeight: typography.lineHeight.relaxed * typography.fontSize.sm,
+  },
+  infoTextError: {
+    color: colors.error,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.xxl,
+    gap: spacing.sm,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  actionButtonText: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.white,
   },
 });

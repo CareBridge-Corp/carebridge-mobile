@@ -13,6 +13,7 @@
   "dependencies": {
     "@iqorlobanov/react-native-toast": "^0.5.1",
     "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-community/datetimepicker": "8.6.0",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/elements": "^2.9.10",
     "@react-navigation/native": "^7.1.33",
@@ -43,6 +44,7 @@
     "react-dom": "19.2.0",
     "react-i18next": "^17.0.6",
     "react-native": "0.83.2",
+    "react-native-date-picker": "^5.0.13",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-pager-view": "^8.0.1",
     "react-native-reanimated": "4.2.1",

@@ -12,122 +12,7 @@ import { useProfile } from "../hooks/useProfile";
 import { useChildScreenings } from "../hooks/useScreenings";
 import { useChildrenStore } from "../store/childrenStore";
 import { useScreeningStore } from "../store/screeningStore";
-
-const getStatusProps = (status: string) => {
-  switch (status) {
-    case "VERIFIED":
-      return {
-        color: "#10B981",
-        bg: "#D1FAE5",
-        icon: "checkmark-circle",
-        text: "Verified",
-      };
-    case "PENDING":
-      return {
-        color: "#F59E0B",
-        bg: "#FEF3C7",
-        icon: "time",
-        text: "In Review",
-      };
-    case "REJECTED":
-      return {
-        color: "#DC2626",
-        bg: "#FEE2E2",
-        icon: "alert-circle",
-        text: "Rejected",
-      };
-    default:
-      return {
-        color: "#EA580C",
-        bg: "#FFEDD5",
-        icon: "warning",
-        text: "Required",
-      };
-  }
-};
-
-export function VerificationTracker({
-  parentStatus,
-  childStatus,
-}: {
-  parentStatus: string;
-  childStatus: string;
-}) {
-  const router = useRouter();
-
-  const parentProps = getStatusProps(parentStatus);
-  const childProps = getStatusProps(childStatus);
-
-  return (
-    <View style={styles.trackerContainer}>
-      <Text style={styles.trackerTitle}>Profile Verification</Text>
-      <Text style={styles.trackerSubtitle}>
-        Please complete the following verifications to unlock full clinical
-        access and treatments.
-      </Text>
-
-      <TouchableOpacity
-        style={[styles.trackerItem, { borderLeftColor: parentProps.color }]}
-        onPress={() => router.push("/(app)/(parent)/verify-parent" as any)}
-        disabled={parentStatus === "VERIFIED" || parentStatus === "PENDING"}
-        activeOpacity={0.7}
-      >
-        <View
-          style={[styles.trackerIconBg, { backgroundColor: parentProps.bg }]}
-        >
-          <Ionicons
-            name={parentProps.icon as any}
-            size={20}
-            color={parentProps.color}
-          />
-        </View>
-        <View style={styles.trackerItemTexts}>
-          <Text style={styles.trackerItemTitle}>Parent Identity</Text>
-          <Text style={styles.trackerItemSubtitle}>Verify using Fayda ID</Text>
-        </View>
-        <View
-          style={[
-            styles.trackerStatusBadge,
-            { backgroundColor: parentProps.color },
-          ]}
-        >
-          <Text style={styles.trackerStatusText}>{parentProps.text}</Text>
-        </View>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.trackerItem, { borderLeftColor: childProps.color }]}
-        onPress={() => router.push("/(app)/(verification)/verify" as Href)}
-        disabled={childStatus === "VERIFIED" || childStatus === "PENDING"}
-        activeOpacity={0.7}
-      >
-        <View
-          style={[styles.trackerIconBg, { backgroundColor: childProps.bg }]}
-        >
-          <Ionicons
-            name={childProps.icon as any}
-            size={20}
-            color={childProps.color}
-          />
-        </View>
-        <View style={styles.trackerItemTexts}>
-          <Text style={styles.trackerItemTitle}>Child Profile</Text>
-          <Text style={styles.trackerItemSubtitle}>
-            Verify identity documents
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.trackerStatusBadge,
-            { backgroundColor: childProps.color },
-          ]}
-        >
-          <Text style={styles.trackerStatusText}>{childProps.text}</Text>
-        </View>
-      </TouchableOpacity>
-    </View>
-  );
-}
+import VerificationTracker from "./VerificationTracker";
 
 export function HasChildView() {
   const router = useRouter();
@@ -174,7 +59,7 @@ export function HasChildView() {
 
       {/* {latestScreening && <ScreeningResultCard screening={latestScreening} />} */}
 
-      {!latestScreening && (
+      {!latestScreening && bothVerified && (
         <TouchableOpacity
           style={styles.actionCard}
           onPress={handleMChat}
@@ -207,70 +92,6 @@ export function HasChildView() {
 }
 
 const styles = StyleSheet.create({
-  trackerContainer: {
-    backgroundColor: "#F4F8FA",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
-    marginBottom: spacing.xl,
-  },
-  trackerTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: 4,
-  },
-  trackerSubtitle: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    lineHeight: 18,
-    marginBottom: spacing.lg,
-  },
-  trackerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: borderRadius.xl,
-    marginBottom: spacing.md,
-    borderLeftWidth: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  trackerIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  trackerItemTexts: {
-    flex: 1,
-  },
-  trackerItemTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: 2,
-  },
-  trackerItemSubtitle: {
-    fontSize: typography.fontSize.xs,
-    color: "#5A7A8F",
-  },
-  trackerStatusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  trackerStatusText: {
-    color: colors.white,
-    fontSize: typography.fontSize.xs,
-    fontWeight: "bold",
-    textTransform: "uppercase",
-  },
   mainCard: {
     backgroundColor: colors.white,
     borderTopLeftRadius: borderRadius.xxxl,

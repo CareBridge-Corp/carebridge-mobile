@@ -42,7 +42,8 @@
         {
           "microphonePermission": "Allow CareBridge to access your microphone to record voice notes."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

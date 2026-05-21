@@ -142,9 +142,9 @@ export default function AppHomeScreen() {
               <EmptyChildView /> //checked
             ) : !bothVerified ? (
               <View>
-                <View>
+                {/* <View>
                   <Text>Please Complete the Verification Process</Text>
-                </View>
+                </View> */}
                 <HasChildView />
               </View>
             ) : (

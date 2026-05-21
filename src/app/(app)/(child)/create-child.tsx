@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { Href, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -23,14 +24,14 @@ import {
   typography,
 } from "../../../shared/theme";
 import { useCreateChild } from "../hooks/useChildren";
-
 export default function CreateChildScreen() {
   const router = useRouter();
   const createChildMutation = useCreateChild();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [dob, setDob] = useState("");
+  const [dob, setDob] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [gender, setGender] = useState<"Male" | "Female" | "">("");
   const [region, setRegion] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -62,6 +63,51 @@ export default function CreateChildScreen() {
     "South West Ethiopia Peoples",
     "Tigray",
   ];
+
+  const calculateAge = (birthDate: Date): string => {
+    const today = new Date();
+    const years = today.getFullYear() - birthDate.getFullYear();
+    const months = today.getMonth() - birthDate.getMonth();
+    const days = today.getDate() - birthDate.getDate();
+
+    let ageYears = years;
+    let ageMonths = months;
+
+    if (months < 0 || (months === 0 && days < 0)) {
+      ageYears--;
+      ageMonths = months + 12;
+    }
+
+    if (days < 0) {
+      ageMonths--;
+    }
+
+    if (ageYears > 0) {
+      return ageYears === 1 ? `${ageYears} year old` : `${ageYears} years old`;
+    } else if (ageMonths > 0) {
+      return ageMonths === 1
+        ? `${ageMonths} month old`
+        : `${ageMonths} months old`;
+    } else {
+      return "Less than a month old";
+    }
+  };
+
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (event.type === "set" && selectedDate) {
+      setDob(selectedDate);
+    }
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+  };
 
   const handleImageUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -136,11 +182,11 @@ export default function CreateChildScreen() {
       return;
     }
 
-    if (!dob.trim()) {
+    if (!dob) {
       setStatusModalConfig({
         type: "error",
         title: "Validation Error",
-        message: "Please enter date of birth",
+        message: "Please select date of birth",
         onPrimaryPress: () => setStatusModalVisible(false),
       });
       setStatusModalVisible(true);
@@ -174,7 +220,7 @@ export default function CreateChildScreen() {
       {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        dob: dob.trim(),
+        dob: formatDate(dob),
         gender: gender,
         region: region,
         profilePicture: profileImage || undefined,
@@ -269,14 +315,45 @@ export default function CreateChildScreen() {
           onChangeText={setLastName}
         />
 
-        {/* Date of Birth Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Date of Birth (YYYY-MM-DD)"
-          placeholderTextColor="#A0B8C8"
-          value={dob}
-          onChangeText={setDob}
-        />
+        {/* Date of Birth Picker */}
+        <TouchableOpacity
+          style={styles.datePickerButton}
+          onPress={() => setShowDatePicker(true)}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.datePickerText,
+              !dob && styles.datePickerPlaceholder,
+            ]}
+          >
+            {dob ? formatDate(dob) : "Select Date of Birth"}
+          </Text>
+          <Ionicons name="calendar-outline" size={24} color="#A0B8C8" />
+        </TouchableOpacity>
+
+        {/* Age Display */}
+        {dob && (
+          <View style={styles.ageInfoContainer}>
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color="#0C4A6E"
+            />
+            <Text style={styles.ageInfoText}>{calculateAge(dob)}</Text>
+          </View>
+        )}
+
+        {/* Date Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={dob || new Date()}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={handleDateChange}
+            maximumDate={new Date()}
+          />
+        )}
 
         {/* Gender Selection */}
         <View style={styles.genderContainer}>
@@ -370,26 +447,27 @@ export default function CreateChildScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Region Modal */}
+      {/* Region Bottom Sheet */}
       <Modal
         visible={showRegionDropdown}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowRegionDropdown(false)}
       >
         <TouchableOpacity
-          style={styles.modalOverlay}
+          style={styles.bottomSheetOverlay}
           activeOpacity={1}
           onPress={() => setShowRegionDropdown(false)}
         >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Region</Text>
-              <TouchableOpacity onPress={() => setShowRegionDropdown(false)}>
-                <Ionicons name="close" size={24} color="#0C4A6E" />
-              </TouchableOpacity>
+          <View style={styles.bottomSheetContent}>
+            <View style={styles.bottomSheetHandle} />
+            <View style={styles.bottomSheetHeader}>
+              <Text style={styles.bottomSheetTitle}>Select Region</Text>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.regionScrollView}
+            >
               {regions.map((item) => (
                 <TouchableOpacity
                   key={item}
@@ -401,6 +479,7 @@ export default function CreateChildScreen() {
                     setRegion(item);
                     setShowRegionDropdown(false);
                   }}
+                  activeOpacity={0.7}
                 >
                   <Text
                     style={[
@@ -411,7 +490,11 @@ export default function CreateChildScreen() {
                     {item}
                   </Text>
                   {region === item && (
-                    <Ionicons name="checkmark" size={24} color="#0C4A6E" />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={24}
+                      color="#0C4A6E"
+                    />
                   )}
                 </TouchableOpacity>
               ))}
@@ -572,45 +655,55 @@ const styles = StyleSheet.create({
   dropdownPlaceholderText: {
     color: "#A0B8C8",
   },
-  modalOverlay: {
+  bottomSheetOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "flex-end",
   },
-  modalContent: {
+  bottomSheetContent: {
     backgroundColor: colors.white,
     borderTopLeftRadius: borderRadius.xxxl,
     borderTopRightRadius: borderRadius.xxxl,
-    paddingHorizontal: spacing.xl,
     paddingBottom: Platform.OS === "ios" ? 40 : 20,
     maxHeight: "70%",
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E8F0F5",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  bottomSheetHeader: {
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: "#E8F0F5",
-    marginBottom: spacing.sm,
   },
-  modalTitle: {
-    fontSize: typography.fontSize.lg,
+  bottomSheetTitle: {
+    fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: "#0C4A6E",
+    textAlign: "center",
+  },
+  regionScrollView: {
+    paddingHorizontal: spacing.xl,
   },
   regionOption: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: "#F4F8FA",
   },
   regionOptionSelected: {
     backgroundColor: "#F0F7FB",
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.lg,
+    marginVertical: spacing.xs,
     borderBottomWidth: 0,
   },
   regionOptionText: {
@@ -643,5 +736,37 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: colors.white,
+  },
+  datePickerButton: {
+    backgroundColor: "#E8F0F5",
+    borderRadius: borderRadius.xxl,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  datePickerText: {
+    fontSize: typography.fontSize.md,
+    color: "#0C4A6E",
+  },
+  datePickerPlaceholder: {
+    color: "#A0B8C8",
+  },
+  ageInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E8F0F5",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.xl,
+    gap: spacing.sm,
+  },
+  ageInfoText: {
+    fontSize: typography.fontSize.md,
+    color: "#0C4A6E",
+    fontWeight: typography.fontWeight.medium,
   },
 });
