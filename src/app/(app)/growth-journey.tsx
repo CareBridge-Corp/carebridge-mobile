@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import {
   Dimensions,
   Image,
@@ -14,6 +14,8 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { spacing } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
+import VerificationTracker from "./components/VerificationTracker";
+import { useProfile } from "./hooks/useProfile";
 import { useRoadmaps } from "./hooks/useRoadmaps";
 import { useChildrenStore } from "./store/childrenStore";
 
@@ -22,9 +24,15 @@ const { width } = Dimensions.get("window");
 export default function GrowthJourneyScreen() {
   const router = useRouter();
   const { activeChild, children } = useChildrenStore();
-  const { data: roadmapData } = useRoadmaps(activeChild?.childId);
+  const { data: roadmapData, refetch } = useRoadmaps(activeChild?.childId);
   const [showChildSelector, setShowChildSelector] = useState(false);
   const [pathHeight, setPathHeight] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const activeRoadmap = roadmapData?.roadmaps?.[0];
   const weekPlans = activeRoadmap?.weekPlans || [];
@@ -35,7 +43,11 @@ export default function GrowthJourneyScreen() {
     const headerNode = {
       type: "week-header" as const,
       id: wp.weekPlanId,
-      title: `Week ${wp.weekNumber}: ${wp.description.split(" ").slice(0, 2).join(" ")}`,
+      title: `Week ${wp.weekNumber}: ${wp.description
+        .replace(/<[^>]*>?/gm, "")
+        .split(" ")
+        .slice(0, 2)
+        .join(" ")}`,
       status: wp.status,
     };
 
@@ -103,6 +115,43 @@ export default function GrowthJourneyScreen() {
           100,
       ) || 0
     : 0;
+
+  // Verification Logic Check
+  const { data: profile } = useProfile();
+  const parentStatus = profile?.status || "UNVERIFIED";
+  const childStatus = activeChild?.status || "UNVERIFIED";
+
+  const parentVerified = parentStatus === "VERIFIED";
+  const childVerified = childStatus === "VERIFIED";
+  const bothVerified = parentVerified && childVerified;
+
+  if (!bothVerified) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="chevron-back" size={24} color="#0C4A6E" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Journey Blocked</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <View
+          style={{ flex: 1, padding: spacing.xl, justifyContent: "center" }}
+        >
+          <VerificationTracker
+            parentStatus={parentStatus}
+            childStatus={childStatus}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -217,7 +266,7 @@ export default function GrowthJourneyScreen() {
                       { top: isVertical ? -110 : -90 }
                     ]} 
                   />
-                )} */}
+                ) */}
 
                 {node.type === "week-header" ? (
                   <>

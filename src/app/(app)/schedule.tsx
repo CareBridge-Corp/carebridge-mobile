@@ -277,8 +277,11 @@ export default function ScheduleScreen() {
                   <View style={styles.therapyHeader}>
                     <View style={styles.therapyInfo}>
                       <Text style={styles.therapyTitle} numberOfLines={1}>
-                        {weekPlan.description.split(" ").slice(0, 4).join(" ") +
-                          "..."}
+                        {weekPlan.description
+                          .replace(/<[^>]*>?/gm, "")
+                          .split(" ")
+                          .slice(0, 4)
+                          .join(" ") + "..."}
                       </Text>
                       <Text style={styles.therapyStatus}>
                         {isCompleted ? "Completed" : "In Progress"}
