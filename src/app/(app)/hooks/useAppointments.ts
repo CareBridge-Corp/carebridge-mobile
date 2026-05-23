@@ -1,10 +1,37 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import apiClient from "../../../shared/api/client";
 import {
   Appointment,
+  AvailableSlot,
   CreateAppointmentPayload,
   UpdateAppointmentStatusPayload,
 } from "../types/appointment";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+export function useAvailableSlots(
+  doctorId: string | undefined,
+  date: string | undefined,
+  meetingType: "in_person" | "online" = "in_person",
+) {
+  return useQuery({
+    queryKey: ["available-slots", doctorId, date, meetingType],
+    queryFn: async () => {
+      if (!doctorId || !date) return [] as AvailableSlot[];
+
+      const response = await apiClient.get<{
+        date: string;
+        meeting_type: string;
+        appointment_duration_min: number;
+        slots: AvailableSlot[];
+      }>(
+        `/doctors/${doctorId}/available-slots?date=${date}&meeting_type=${meetingType}`,
+      );
+
+      return (response.slots ?? []).filter((slot) => slot.is_available);
+    },
+    enabled: !!doctorId && !!date,
+  });
+}
 
 export function useDoctorAppointments(
   doctorId: string | undefined,
@@ -13,7 +40,7 @@ export function useDoctorAppointments(
   return useQuery({
     queryKey: ["doctor-appointments", doctorId, filters],
     queryFn: async () => {
-      if (!doctorId) return [];
+      if (!doctorId) return [] as Appointment[];
 
       const queryParams = new URLSearchParams();
       if (filters?.status) queryParams.append("status", filters.status);
@@ -21,34 +48,29 @@ export function useDoctorAppointments(
       if (filters?.to) queryParams.append("to", filters.to);
 
       const qs = queryParams.toString();
-      const endpoint = `/appointments/doctors/${doctorId}${qs ? `?${qs}` : ""}`;
-
-      // The markdown says GET /api/doctors/:doctorId/appointments
-      // Adjusting endpoint:
-      const correctedEndpoint = `/doctors/${doctorId}/appointments${qs ? `?${qs}` : ""}`;
-
-      console.log("Fetching doctor appointments with endpoint:", doctorId);
-      const response = await apiClient.get(correctedEndpoint);
-      return response as Appointment[];
+      const response = await apiClient.get<{ appointments: Appointment[] }>(
+        `/doctors/${doctorId}/appointments${qs ? `?${qs}` : ""}`,
+      );
+      return response.appointments ?? [];
     },
     enabled: !!doctorId,
   });
 }
 
-// GET /api/appointments/:appointmentId
 export function useAppointment(appointmentId: string | undefined) {
   return useQuery({
     queryKey: ["appointment", appointmentId],
     queryFn: async () => {
       if (!appointmentId) return null;
-      const response = await apiClient.get(`/appointments/${appointmentId}`);
-      return response as Appointment;
+      const response = await apiClient.get<{ appointment: Appointment }>(
+        `/appointments/${appointmentId}`,
+      );
+      return response.appointment;
     },
     enabled: !!appointmentId,
   });
 }
 
-// PATCH /api/appointments/:appointmentId
 export function useUpdateAppointmentStatus() {
   const queryClient = useQueryClient();
 
@@ -59,24 +81,16 @@ export function useUpdateAppointmentStatus() {
     }: {
       appointmentId: string;
       payload: UpdateAppointmentStatusPayload;
-    }) => {
-      const response = await apiClient.patch(
-        `/appointments/${appointmentId}`,
-        payload,
-      );
-      return response;
-    },
+    }) => apiClient.patch(`/appointments/${appointmentId}`, payload),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["appointment", variables.appointmentId],
       });
       queryClient.invalidateQueries({ queryKey: ["doctor-appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["my-appointments"] }); // In case we add this later
     },
   });
 }
 
-// POST /api/doctors/:doctorId/appointments
 export function useCreateAppointment() {
   const queryClient = useQueryClient();
 
@@ -88,17 +102,17 @@ export function useCreateAppointment() {
       doctorId: string;
       payload: CreateAppointmentPayload;
     }) => {
-      const response = await apiClient.post(
+      const response = await apiClient.post<{ appointment: Appointment }>(
         `/doctors/${doctorId}/appointments`,
         payload,
       );
-      return response as Appointment;
+      return response.appointment;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["doctor-appointments", variables.doctorId],
       });
-      queryClient.invalidateQueries({ queryKey: ["my-appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["available-slots"] });
     },
   });
 }

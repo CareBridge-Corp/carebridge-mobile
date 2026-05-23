@@ -13,6 +13,13 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { spacing } from "../../shared/theme";
+import {
+  calculateRoadmapProgress,
+  canStartActivity,
+  getActivityStatus,
+  isRoadmapCycleComplete,
+  resolveActiveRoadmap,
+} from "../../shared/utils/roadmapProgress";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import VerificationTracker from "./components/VerificationTracker";
 import { useProfile } from "./hooks/useProfile";
@@ -34,8 +41,12 @@ export default function GrowthJourneyScreen() {
     }, [refetch]),
   );
 
-  const activeRoadmap = roadmapData?.roadmaps?.[0];
-  const weekPlans = activeRoadmap?.weekPlans || [];
+  const weekPlans = roadmapData?.weekPlans ?? [];
+  const activeRoadmap = resolveActiveRoadmap(
+    activeChild?.childId,
+    roadmapData?.roadmap ?? null,
+    weekPlans,
+  );
 
   // Flatten activities with metadata for path rendering
   const rawNodes = weekPlans.flatMap((wp, weekIdx) => {
@@ -52,17 +63,18 @@ export default function GrowthJourneyScreen() {
     };
 
     const activityNodes = (wp.activities || []).map((activity, actIdx) => {
-      const status = wp.activityStatuses?.find(
-        (s) => s.activityId === activity.activityId,
-      );
+      const status = getActivityStatus(wp, activity.activityId);
+      const access = canStartActivity(wp, activity.activityId, weekPlans);
       return {
         type: "activity" as const,
         id: `${wp.weekPlanId}-${activity.activityId}`,
         activityId: activity.activityId,
         title: activity.title,
         weekPlanId: wp.weekPlanId,
-        completed: status?.completed || false,
-        isActive: wp.status === "IN_PROGRESS" && !status?.completed,
+        completed: status.completed,
+        started: status.started,
+        locked: !access.allowed && !status.completed,
+        isActive: access.allowed && !status.completed,
         weekStatus: wp.status,
       };
     });
@@ -102,19 +114,13 @@ export default function GrowthJourneyScreen() {
   }, [pathNodes.length, width]);
 
   const totalProgress = activeRoadmap
-    ? Math.round(
-        (weekPlans.reduce(
-          (acc, wp) =>
-            acc + (wp.activityStatuses?.filter((s) => s.completed).length || 0),
-          0,
-        ) /
-          weekPlans.reduce(
-            (acc, wp) => acc + (wp.activities?.length || 0),
-            0,
-          )) *
-          100,
-      ) || 0
+    ? calculateRoadmapProgress(weekPlans)
     : 0;
+
+  const roadmapCycleComplete = isRoadmapCycleComplete(
+    weekPlans,
+    activeRoadmap,
+  );
 
   // Verification Logic Check
   const { data: profile } = useProfile();
@@ -199,12 +205,25 @@ export default function GrowthJourneyScreen() {
               </View>
               <Text style={styles.progressValue}>{totalProgress}%</Text>
             </View>
+            {roadmapCycleComplete ? (
+              <Text style={styles.cycleCompleteText}>
+                4-week roadmap complete. Next cycle available after the one-month review period.
+              </Text>
+            ) : null}
           </View>
         </View>
 
         <View style={styles.headerSpacer} />
       </View>
 
+      {weekPlans.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No published roadmap yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Once your clinician publishes an active roadmap, the step-by-step journey will appear here.
+          </Text>
+        </View>
+      ) : (
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -306,8 +325,11 @@ export default function GrowthJourneyScreen() {
                         styles.nodeCircle,
                         activityNode.completed && styles.nodeCircleCompleted,
                         activityNode.isActive && styles.nodeCircleActive,
+                        activityNode.locked && styles.nodeCircleLocked,
                       ]}
+                      disabled={activityNode.locked}
                       onPress={() => {
+                        if (activityNode.locked) return;
                         router.push({
                           pathname: "/(app)/(doctor)/activity-detail",
                           params: {
@@ -336,6 +358,7 @@ export default function GrowthJourneyScreen() {
           })}
         </View>
       </ScrollView>
+      )}
 
       {/* Child Selector Modal */}
       <ChildSelectorModal
@@ -393,6 +416,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#0C4A6E",
+  },
+  cycleCompleteText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#64748B",
+    lineHeight: 18,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: spacing.xxl,
+    paddingBottom: 120,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0C4A6E",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: "#64748B",
+    lineHeight: 22,
   },
   headerSpacer: {
     width: 36,
@@ -570,6 +616,10 @@ const styles = StyleSheet.create({
   nodeCircleActive: {
     backgroundColor: "#0C4A6E",
     transform: [{ scale: 1.1 }],
+  },
+  nodeCircleLocked: {
+    backgroundColor: "#CBD5E1",
+    opacity: 0.7,
   },
   nodeStandardInner: {
     width: 20,

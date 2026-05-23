@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import { useState } from "react";
 import {
-  Image,
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,162 +11,110 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "../../../shared/theme";
+import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import { useCreateAppointment } from "../hooks/useAppointments";
+import { useProfile } from "../hooks/useProfile";
+import { useBookingStore } from "../store/bookingStore";
 
 export default function BookingConfirmationScreen() {
   const router = useRouter();
+  const { doctor, slot, meetingType, childId, reset } = useBookingStore();
+  const { data: profile } = useProfile();
+  const createAppointment = useCreateAppointment();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleConfirm = () => {
-    // TODO: Submit booking
-    router.replace("/(app)/schedule" as Href);
+  const handleConfirm = async () => {
+    if (!doctor || !slot || !profile?.userId) {
+      Alert.alert("Missing details", "Please complete the booking steps first.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await createAppointment.mutateAsync({
+        doctorId: doctor.userId,
+        payload: {
+          schedule_id: slot.scheduleId,
+          parent_id: profile.userId,
+          child_id: childId ?? undefined,
+          appointment_date: slot.date,
+          start_time: slot.startTime,
+          meeting_type: meetingType,
+        },
+      });
+
+      reset();
+      Alert.alert("Success", "Appointment booked successfully.", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/(app)/schedule" as Href),
+        },
+      ]);
+    } catch (error: any) {
+      Alert.alert("Booking failed", error?.message ?? "Unable to create appointment.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Confirmation</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Progress Indicator */}
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressStep, styles.progressStepCompleted]}>
-          <Ionicons name="checkmark" size={20} color={colors.white} />
-        </View>
-        <View style={[styles.progressLine, styles.progressLineActive]} />
-        <View style={[styles.progressStep, styles.progressStepCompleted]}>
-          <Ionicons name="checkmark" size={20} color={colors.white} />
-        </View>
-        <View style={[styles.progressLine, styles.progressLineActive]} />
-        <View style={[styles.progressStep, styles.progressStepActive]}>
-          <Text style={styles.progressStepTextActive}>3</Text>
-        </View>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>Review your appointment details</Text>
 
-        {/* Doctor Info Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Doctor</Text>
-          <View style={styles.doctorInfo}>
-            <Image
-              source={require("../../../../assets/docs/doc1.png")}
-              style={styles.doctorImage}
-            />
-            <View style={styles.doctorDetails}>
-              <Text style={styles.doctorName}>Dr. Walter White</Text>
-              <Text style={styles.doctorSpecialty}>Neurology specialist</Text>
-              <View style={styles.ratingContainer}>
-                <Ionicons name="star" size={16} color="#F59E0B" />
-                <Text style={styles.ratingText}>4.8</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Date & Time Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Date & Time</Text>
-          <View style={styles.infoRow}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="calendar-outline" size={24} color="#0C4A6E" />
-            </View>
-            <View>
-              <Text style={styles.infoLabel}>Date</Text>
-              <Text style={styles.infoValue}>Wednesday, Dec 17, 2024</Text>
-            </View>
-          </View>
-          <View style={styles.infoRow}>
-            <View style={styles.iconContainer}>
-              <Ionicons name="time-outline" size={24} color="#0C4A6E" />
-            </View>
-            <View>
-              <Text style={styles.infoLabel}>Time</Text>
-              <Text style={styles.infoValue}>10:00 AM - 10:30 AM</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Consultation Type Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Consultation Type</Text>
-          <View style={styles.consultationOptions}>
-            <TouchableOpacity
-              style={styles.consultationOption}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="videocam" size={24} color="#0C4A6E" />
-              <Text style={styles.consultationOptionText}>Video Call</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.consultationOption,
-                styles.consultationOptionSelected,
-              ]}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="location" size={24} color={colors.white} />
-              <Text
-                style={[
-                  styles.consultationOptionText,
-                  styles.consultationOptionTextSelected,
-                ]}
-              >
-                In-Person
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Notes Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Additional Notes (Optional)</Text>
-          <View style={styles.notesInput}>
-            <Text style={styles.notesPlaceholder}>
-              Add any specific concerns or questions...
-            </Text>
-          </View>
-        </View>
-
-        {/* Important Info */}
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={24} color="#0C4A6E" />
-          <Text style={styles.infoBoxText}>
-            Please arrive 10 minutes early for your appointment. Bring any
-            relevant medical records or test results.
+          <Text style={styles.valueText}>
+            {doctor
+              ? `${doctor.surname ?? ""} ${doctor.firstName} ${doctor.lastName}`.trim()
+              : "Not selected"}
           </Text>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Date & Time</Text>
+          <Text style={styles.valueText}>
+            {slot
+              ? `${slot.date} at ${slot.startTime}`
+              : "Not selected"}
+          </Text>
+          <Text style={styles.helperText}>
+            Meeting type: {meetingType === "online" ? "Online" : "In person"}
+          </Text>
+        </View>
+
+        <View style={styles.infoBox}>
+          <Ionicons name="information-circle" size={24} color="#0C4A6E" />
+          <Text style={styles.infoBoxText}>
+            Your clinician will confirm the appointment. You will receive a notification when it is updated.
+          </Text>
+        </View>
       </ScrollView>
 
-      {/* Confirm Button */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.confirmButton}
           onPress={handleConfirm}
-          activeOpacity={0.8}
+          disabled={isSubmitting}
         >
-          <Ionicons name="checkmark-circle" size={24} color={colors.white} />
-          <Text style={styles.confirmButtonText}>Confirm Appointment</Text>
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={24} color={colors.white} />
+              <Text style={styles.confirmButtonText}>Confirm Appointment</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -172,10 +122,7 @@ export default function BookingConfirmationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -184,52 +131,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: spacing.lg,
   },
-  backButton: {
-    padding: spacing.sm,
-  },
+  backButton: { padding: spacing.sm },
   headerTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.semibold,
     color: "#0C4A6E",
   },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
-  },
-  progressStep: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E8F0F5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  progressStepActive: {
-    backgroundColor: "#0C4A6E",
-  },
-  progressStepCompleted: {
-    backgroundColor: "#10B981",
-  },
-  progressStepTextActive: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
-  },
-  progressLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: "#E8F0F5",
-    marginHorizontal: spacing.sm,
-  },
-  progressLineActive: {
-    backgroundColor: "#10B981",
-  },
-  scrollView: {
-    flex: 1,
-  },
+  scrollView: { flex: 1 },
   subtitle: {
     fontSize: typography.fontSize.lg,
     color: "#5A7A8F",
@@ -247,101 +155,10 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
     color: "#0C4A6E",
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
-  doctorInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  doctorImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginRight: spacing.md,
-  },
-  doctorDetails: {
-    flex: 1,
-  },
-  doctorName: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: 4,
-  },
-  doctorSpecialty: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    marginBottom: spacing.xs,
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  ratingText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E8F0F5",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  infoLabel: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
-  },
-  consultationOptions: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  consultationOption: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#E8F0F5",
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    gap: spacing.sm,
-  },
-  consultationOptionSelected: {
-    backgroundColor: "#0C4A6E",
-  },
-  consultationOptionText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
-  },
-  consultationOptionTextSelected: {
-    color: colors.white,
-  },
-  notesInput: {
-    backgroundColor: "#F5F5F5",
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    minHeight: 80,
-  },
-  notesPlaceholder: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
-  },
+  valueText: { fontSize: 16, color: "#0C4A6E", fontWeight: "600" },
+  helperText: { fontSize: 14, color: "#94A3B8", marginTop: 6 },
   infoBox: {
     flexDirection: "row",
     backgroundColor: "#E8F0F5",
@@ -349,18 +166,13 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderRadius: borderRadius.lg,
     gap: spacing.md,
+    marginTop: spacing.lg,
   },
-  infoBoxText: {
-    flex: 1,
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    lineHeight: typography.lineHeight.relaxed * typography.fontSize.sm,
-  },
+  infoBoxText: { flex: 1, fontSize: 14, color: "#5A7A8F", lineHeight: 22 },
   buttonContainer: {
     paddingHorizontal: spacing.xxl,
     paddingBottom: 50,
     paddingTop: spacing.lg,
-    backgroundColor: colors.background,
   },
   confirmButton: {
     flexDirection: "row",
@@ -368,7 +180,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#10B981",
     paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxl,
+    borderRadius: borderRadius.xxxl,
     gap: spacing.sm,
   },
   confirmButtonText: {

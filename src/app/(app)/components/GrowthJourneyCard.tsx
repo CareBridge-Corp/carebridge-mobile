@@ -1,10 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { calculateRoadmapProgress } from "../../../shared/utils/roadmapProgress";
 import { colors, spacing } from "../../../shared/theme";
+import { WeekPlan } from "../types/roadmap";
 
-export function GrowthJourneyCard() {
+interface GrowthJourneyCardProps {
+  weekPlans?: WeekPlan[];
+}
+
+export function GrowthJourneyCard({ weekPlans = [] }: GrowthJourneyCardProps) {
   const router = useRouter();
+  const progress = calculateRoadmapProgress(weekPlans);
 
   return (
     <TouchableOpacity
@@ -18,7 +25,11 @@ export function GrowthJourneyCard() {
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.title}>Growth Journey</Text>
-          <Text style={styles.subtitle}>View your progress path</Text>
+          <Text style={styles.subtitle}>
+            {weekPlans.length > 0
+              ? `${weekPlans.length} week plan${weekPlans.length === 1 ? "" : "s"} • ${progress}% complete`
+              : "View your progress path"}
+          </Text>
         </View>
         <View style={styles.badge}>
           <Ionicons name="chevron-forward" size={20} color="#0C4A6E" />
@@ -26,7 +37,7 @@ export function GrowthJourneyCard() {
       </View>
 
       <View style={styles.progressTrack}>
-        <View style={[styles.progressBar, { width: "45%" }]} />
+        <View style={[styles.progressBar, { width: `${Math.max(progress, 4)}%` }]} />
       </View>
     </TouchableOpacity>
   );

@@ -6,7 +6,13 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { StatusBar, Text } from "react-native";
 import { queryClient } from "../shared/api/queryClient";
-import "../shared/localization/i18n"; // Import i18n configuration
+import { socketService } from "../shared/api/socket";
+import "../shared/localization/i18n";
+import {
+  addNotificationListeners,
+  initializePushNotifications,
+  showLocalNotification,
+} from "../shared/services/pushNotifications";
 import { typography } from "../shared/theme/typography";
 
 // Keep the splash screen visible while we fetch resources
@@ -70,6 +76,19 @@ export default function RootLayout() {
     }
 
     prepare();
+  }, []);
+
+  useEffect(() => {
+    socketService.setQueryClient(queryClient);
+    initializePushNotifications();
+
+    const cleanupNotifications = addNotificationListeners(
+      (notification) => {
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      },
+    );
+
+    return cleanupNotifications;
   }, []);
 
   useEffect(() => {

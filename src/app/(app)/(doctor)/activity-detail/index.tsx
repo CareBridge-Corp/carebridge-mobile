@@ -11,9 +11,15 @@ import {
   View,
 } from "react-native";
 import { borderRadius, colors, spacing } from "../../../../shared/theme";
+import {
+  canCompleteActivity,
+  canStartActivity,
+  getActivityStatus,
+  isWeekFullyCompleted,
+} from "../../../../shared/utils/roadmapProgress";
 import { useRoadmaps } from "../../hooks/useRoadmaps";
+import { useWeekPlanActions } from "../../hooks/useWeekPlanActions";
 import { useChildrenStore } from "../../store/childrenStore";
-import { useRoadmapStore } from "../../store/roadmapStore";
 import { CompletionModal } from "./components/CompletionModal";
 import { NewWeekModal } from "./components/NewWeekModal";
 import { RecommendedGames } from "./components/RecommendedGames";
@@ -35,14 +41,23 @@ export default function ActivityDetailScreen() {
   const [isCompleting, setIsCompleting] = useState(false);
 
   const { activeChild } = useChildrenStore();
-  const { data: roadmapData } = useRoadmaps(activeChild?.childId);
-  const completeActivityApi = useRoadmapStore(
-    (state) => state.completeActivity,
-  );
+  const { data: roadmapData, refetch } = useRoadmaps(activeChild?.childId);
+  const { startActivity, completeActivity, completeWeekPlan } =
+    useWeekPlanActions(activeChild?.childId);
 
-  // Find current activity and the next one
-  const activeRoadmap = roadmapData?.roadmaps?.[0];
-  const weekPlans = activeRoadmap?.weekPlans || [];
+  const weekPlans = roadmapData?.weekPlans ?? [];
+  const currentWeekPlan = weekPlans.find(
+    (wp) => wp.weekPlanId === params.weekPlanId,
+  );
+  const currentActivityStatus = currentWeekPlan
+    ? getActivityStatus(currentWeekPlan, params.activityId)
+    : null;
+  const canStart = currentWeekPlan
+    ? canStartActivity(currentWeekPlan, params.activityId, weekPlans)
+    : { allowed: false };
+  const canComplete = currentWeekPlan
+    ? canCompleteActivity(currentWeekPlan, params.activityId, weekPlans)
+    : { allowed: false };
 
   // Flatten all activities in order across week plans
   const allActivitiesWithContext = weekPlans.flatMap((wp) =>
@@ -68,18 +83,30 @@ export default function ActivityDetailScreen() {
   const nextActivity = allActivitiesWithContext[currentIndex + 1];
 
   const [isCompleted, setIsCompleted] = useState(
-    currentActivity?.completed || false,
+    currentActivityStatus?.completed || false,
+  );
+  const [isStarted, setIsStarted] = useState(
+    currentActivityStatus?.started || false,
   );
 
-  // Sync state if currentActivity changes (due to setParams or data reload)
   useEffect(() => {
-    const activity = allActivitiesWithContext.find(
-      (a) => a.activityId === params.activityId,
-    );
-    if (activity) {
-      setIsCompleted(activity.completed || false);
+    if (!currentWeekPlan || !params.activityId || isStarted || isCompleted) {
+      return;
     }
-  }, [params.activityId, roadmapData]);
+
+    if (canStart.allowed) {
+      startActivity
+        .mutateAsync({
+          weekPlanId: currentWeekPlan.weekPlanId,
+          activityId: params.activityId,
+        })
+        .then(() => {
+          setIsStarted(true);
+          refetch();
+        })
+        .catch(() => {});
+    }
+  }, [currentWeekPlan?.weekPlanId, params.activityId]);
 
   const handleNext = () => {
     if (!isCompleted) {
@@ -108,15 +135,31 @@ export default function ActivityDetailScreen() {
   };
 
   const handleConfirmCompletion = async () => {
-    if (!params.weekPlanId || !params.activityId) return;
+    if (!params.weekPlanId || !params.activityId || !currentWeekPlan) return;
+    if (!canComplete.allowed) return;
 
     try {
       setIsCompleting(true);
-      await completeActivityApi(params.weekPlanId, params.activityId);
+      await completeActivity.mutateAsync({
+        weekPlanId: params.weekPlanId,
+        activityId: params.activityId,
+      });
       setIsCompleted(true);
       setShowCompletionModal(false);
+      await refetch();
+
+      const latestWeekPlans = (await refetch()).data?.weekPlans ?? weekPlans;
+      const refreshedWeek = latestWeekPlans.find(
+        (wp) => wp.weekPlanId === params.weekPlanId,
+      );
+      if (refreshedWeek && isWeekFullyCompleted(refreshedWeek)) {
+        await completeWeekPlan.mutateAsync({
+          weekPlanId: params.weekPlanId,
+        });
+      }
     } catch (error: any) {
-      if (error.response?.data?.error === "Activity is already completed") {
+      const message = error?.message ?? "";
+      if (message.includes("already completed")) {
         setIsCompleted(true);
         setShowCompletionModal(false);
       } else {
@@ -193,10 +236,14 @@ export default function ActivityDetailScreen() {
       {/* Sticky Bottom Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.nextButton, isCompleted && styles.completedNextButton]}
+          style={[
+            styles.nextButton,
+            isCompleted && styles.completedNextButton,
+            !canComplete.allowed && !isCompleted && styles.disabledNextButton,
+          ]}
           activeOpacity={0.8}
           onPress={handleNext}
-          disabled={isCompleting}
+          disabled={isCompleting || (!canComplete.allowed && !isCompleted)}
         >
           {isCompleting ? (
             <ActivityIndicator color={isCompleted ? "#0C4A6E" : colors.white} />
@@ -345,5 +392,8 @@ const styles = StyleSheet.create({
   },
   completedNextButtonText: {
     color: "#0C4A6E",
+  },
+  disabledNextButton: {
+    backgroundColor: "#CBD5E1",
   },
 });

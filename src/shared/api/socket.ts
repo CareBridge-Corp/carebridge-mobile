@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "../../app/(auth)/store/authStore";
+import { showLocalNotification } from "../services/pushNotifications";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -45,7 +46,10 @@ class SocketService {
 
     this.socket.on("chat:newMessage", (message: any) => {
       console.log("New message received:", message);
-      // Invalidate queries to refetch messages immediately
+      const currentUserId = useAuthStore.getState().user?.userId;
+      if (message.senderId && message.senderId !== currentUserId) {
+        showLocalNotification("New chat message", message.content ?? "You received a new message");
+      }
       if (this.queryClient) {
         this.queryClient.invalidateQueries({
           queryKey: ["chat-messages", message.childId],
@@ -56,6 +60,7 @@ class SocketService {
         this.queryClient.invalidateQueries({
           queryKey: ["chat-conversations"],
         });
+        this.queryClient.invalidateQueries({ queryKey: ["notifications"] });
       }
     });
 
