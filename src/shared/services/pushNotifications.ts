@@ -1,13 +1,38 @@
 import * as SecureStore from "expo-secure-store";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { registerPushToken } from "../../app/(app)/hooks/useNotifications";
 
-let handlerConfigured = false;
+type NotificationsModule = typeof import("expo-notifications");
 
-function ensureNotificationHandler() {
+let notificationsModule: NotificationsModule | null = null;
+let handlerConfigured = false;
+let notificationsUnavailable = false;
+
+async function getNotificationsModule(): Promise<NotificationsModule | null> {
+  if (notificationsUnavailable) {
+    return null;
+  }
+
+  if (!notificationsModule) {
+    try {
+      notificationsModule = await import("expo-notifications");
+    } catch (error) {
+      notificationsUnavailable = true;
+      console.warn("expo-notifications is unavailable in this build:", error);
+      return null;
+    }
+  }
+
+  return notificationsModule;
+}
+
+async function ensureNotificationHandler() {
   if (handlerConfigured) return;
+
+  const Notifications = await getNotificationsModule();
+  if (!Notifications) return;
+
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
@@ -22,7 +47,12 @@ function ensureNotificationHandler() {
 
 export async function initializePushNotifications(): Promise<string | null> {
   try {
-    ensureNotificationHandler();
+    await ensureNotificationHandler();
+
+    const Notifications = await getNotificationsModule();
+    if (!Notifications) {
+      return null;
+    }
 
     if (!Device.isDevice) {
       console.warn("Push notifications require a physical device.");
@@ -71,28 +101,46 @@ export async function initializePushNotifications(): Promise<string | null> {
   }
 }
 
-export function addNotificationListeners(
-  onReceived?: (notification: Notifications.Notification) => void,
-  onResponse?: (response: Notifications.NotificationResponse) => void,
+export async function addNotificationListeners(
+  onReceived?: (
+    notification: import("expo-notifications").Notification,
+  ) => void,
+  onResponse?: (
+    response: import("expo-notifications").NotificationResponse,
+  ) => void,
 ) {
-  ensureNotificationHandler();
+  try {
+    await ensureNotificationHandler();
 
-  const receivedSub = Notifications.addNotificationReceivedListener(
-    (notification) => onReceived?.(notification),
-  );
-  const responseSub = Notifications.addNotificationResponseReceivedListener(
-    (response) => onResponse?.(response),
-  );
+    const Notifications = await getNotificationsModule();
+    if (!Notifications) {
+      return () => {};
+    }
 
-  return () => {
-    receivedSub.remove();
-    responseSub.remove();
-  };
+    const receivedSub = Notifications.addNotificationReceivedListener(
+      (notification) => onReceived?.(notification),
+    );
+    const responseSub = Notifications.addNotificationResponseReceivedListener(
+      (response) => onResponse?.(response),
+    );
+
+    return () => {
+      receivedSub.remove();
+      responseSub.remove();
+    };
+  } catch (error) {
+    console.warn("Failed to attach notification listeners:", error);
+    return () => {};
+  }
 }
 
 export async function showLocalNotification(title: string, body: string) {
   try {
-    ensureNotificationHandler();
+    await ensureNotificationHandler();
+
+    const Notifications = await getNotificationsModule();
+    if (!Notifications) return;
+
     await Notifications.scheduleNotificationAsync({
       content: { title, body },
       trigger: null,
