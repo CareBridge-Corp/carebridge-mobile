@@ -12,7 +12,6 @@ import { useProfile } from "../hooks/useProfile";
 import { useChildScreenings } from "../hooks/useScreenings";
 import { useChildrenStore } from "../store/childrenStore";
 import { useScreeningStore } from "../store/screeningStore";
-import VerificationTracker from "./VerificationTracker";
 
 export function HasChildView() {
   const router = useRouter();
@@ -34,11 +33,11 @@ export function HasChildView() {
 
   console.log("latestScreening", childScreenings[0]);
 
-  const status = activeChild?.status || "UNVERIFIED";
+  const childStatus = activeChild?.status || "UNVERIFIED";
   const parentStatus = profile?.status || "UNVERIFIED";
 
   const parentVerified = parentStatus === "VERIFIED";
-  const childVerified = status === "VERIFIED";
+  const childVerified = childStatus === "VERIFIED";
   const bothVerified = parentVerified && childVerified;
 
   const handleUploadVideo = () => {
@@ -52,14 +51,17 @@ export function HasChildView() {
   return (
     <View style={styles.mainCard}>
       <Text style={styles.mainTitle}>{t("home.fillInfoStartTreatment")}</Text>
-
+      {/* 
       {!bothVerified && (
-        <VerificationTracker parentStatus={parentStatus} childStatus={status} />
-      )}
+        <VerificationTracker
+          parentStatus={parentStatus}
+          childStatus={childStatus}
+        />
+      )} */}
 
       {/* {latestScreening && <ScreeningResultCard screening={latestScreening} />} */}
 
-      {!latestScreening && bothVerified && (
+      {!latestScreening && (
         <TouchableOpacity
           style={styles.actionCard}
           onPress={handleMChat}

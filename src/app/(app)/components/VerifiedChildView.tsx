@@ -3,12 +3,12 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { colors, spacing } from "../../../shared/theme";
 import { useRoadmaps } from "../hooks/useRoadmaps";
@@ -25,6 +25,8 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
   const { t } = useTranslation();
   const { activeChild } = useChildrenStore();
   const { data: roadmapData } = useRoadmaps(activeChild?.childId);
+
+  console.log("roadmapData", roadmapData);
 
   const activeRoadmap = roadmapData?.roadmaps?.[0];
   const weekPlans = activeRoadmap?.weekPlans || [];

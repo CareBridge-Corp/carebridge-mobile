@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Image,
@@ -19,19 +20,22 @@ import { DoctorsSection } from "./components/DoctorsSection";
 import { EmptyChildView } from "./components/EmptyChildView";
 import { HasChildView } from "./components/HasChildView";
 import { HomeSkeletonView } from "./components/HomeSkeletonView";
+import VerificationTracker from "./components/VerificationTracker";
 import { VerifiedChildView } from "./components/VerifiedChildView";
 import { useChildren } from "./hooks/useChildren";
 import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
+import { useRoadmaps } from "./hooks/useRoadmaps";
+import { useChildScreenings } from "./hooks/useScreenings";
 import { useChildrenStore } from "./store/childrenStore";
 
 export default function AppHomeScreen() {
   const user = useAuthStore((state) => state.user);
-  const { activeChild, children } = useChildrenStore();
+  const { activeChild, children, setActiveChild } = useChildrenStore();
   const { language, setLanguage } = useLanguageStore();
   const { t } = useTranslation();
 
-  // console.log(children);
+  console.log("children:", children, activeChild);
   const [showChildSelector, setShowChildSelector] = useState(false);
 
   // Determine greeting based on time of day
@@ -43,15 +47,57 @@ export default function AppHomeScreen() {
   };
 
   // Fetch children and sync with store
-  const { isLoading } = useChildren();
+  const {
+    data: childrenData,
+    isLoading,
+    refetch: refetchChildren,
+  } = useChildren();
 
-  // Fetch parent profile to check verification status
-  const { data: profile } = useProfile();
+  // Only set the active child to the first one if there isn't one already selected
+  useEffect(() => {
+    if (!activeChild) {
+      if (childrenData && childrenData.length > 0) {
+        setActiveChild(childrenData[0]);
+      } else if (children && children.length > 0) {
+        setActiveChild(children[0]);
+      }
+    }
+  }, [childrenData, children, activeChild, setActiveChild]);
+
+  const { data: profile, refetch: refetchProfile } = useProfile();
+
+  const { data: screeningsData, refetch: refetchScreenings } =
+    useChildScreenings(activeChild?.childId);
+  const { data: roadmapsData, refetch: refetchRoadmaps } = useRoadmaps(
+    activeChild?.childId,
+  );
+
+  // Refetch verification status when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetchProfile();
+      refetchChildren();
+      if (activeChild?.childId) {
+        refetchScreenings();
+        refetchRoadmaps();
+      }
+    }, [
+      refetchProfile,
+      refetchChildren,
+      refetchScreenings,
+      refetchRoadmaps,
+      activeChild?.childId,
+    ]),
+  );
 
   // Fetch clinician if child is verified
   const { data: clinician } = useAssignedClinician(
     activeChild?.status === "VERIFIED" ? activeChild?.childId : undefined,
   );
+
+  const hasRoadmap = roadmapsData?.roadmaps && roadmapsData.roadmaps.length > 0;
+
+  // Fetch screenings and roadmaps for the active child
 
   const hasChildren = children.length > 0;
 
@@ -69,6 +115,8 @@ export default function AppHomeScreen() {
     childVerified,
     bothVerified,
   });
+
+  console.log(activeChild);
 
   // const handleMChat = () => {
   //   router.push("/(app)/mchat-privacy" as Href);
@@ -145,10 +193,17 @@ export default function AppHomeScreen() {
                 {/* <View>
                   <Text>Please Complete the Verification Process</Text>
                 </View> */}
-                <HasChildView />
+
+                <VerificationTracker
+                  parentStatus={profile?.status}
+                  childStatus={activeChild?.status}
+                />
               </View>
             ) : (
-              <VerifiedChildView clinician={clinician} />
+              <>
+                <HasChildView />
+                {hasRoadmap && <VerifiedChildView clinician={clinician} />}
+              </>
             )}
           </View>
         )}

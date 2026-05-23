@@ -14,7 +14,7 @@ export default function VerificationTracker({
   childStatus,
 }: {
   parentStatus: string;
-  childStatus: string;
+  childStatus: any;
 }) {
   const router = useRouter();
 
@@ -56,6 +56,7 @@ export default function VerificationTracker({
 
   const allVerified = parentStatus === "VERIFIED" && childStatus === "VERIFIED";
   const hasRejected = parentStatus === "REJECTED" || childStatus === "REJECTED";
+  const bothPending = parentStatus === "PENDING" && childStatus === "PENDING";
   const completedCount =
     (parentStatus === "VERIFIED" ? 1 : 0) +
     (childStatus === "VERIFIED" ? 1 : 0);
@@ -183,25 +184,47 @@ export default function VerificationTracker({
       {/* Info Banner */}
       {!allVerified && (
         <View
-          style={[styles.infoBanner, hasRejected && styles.infoBannerError]}
+          style={[
+            styles.infoBanner,
+            hasRejected && styles.infoBannerError,
+            bothPending && styles.infoBannerPending,
+          ]}
         >
           <Ionicons
             name={
-              hasRejected ? "information-circle" : "information-circle-outline"
+              hasRejected
+                ? "information-circle"
+                : bothPending
+                  ? "time-outline"
+                  : "information-circle-outline"
             }
             size={20}
-            color={hasRejected ? colors.error : colors.primary}
+            color={
+              hasRejected
+                ? colors.error
+                : bothPending
+                  ? colors.warning
+                  : colors.primary
+            }
           />
-          <Text style={[styles.infoText, hasRejected && styles.infoTextError]}>
+          <Text
+            style={[
+              styles.infoText,
+              hasRejected && styles.infoTextError,
+              bothPending && styles.infoTextPending,
+            ]}
+          >
             {hasRejected
               ? "Please review and resubmit rejected verifications"
-              : "Both verifications must be completed to access clinical services"}
+              : bothPending
+                ? "Your verifications are being reviewed. You'll be notified once approved."
+                : "Both verifications must be completed to access clinical services"}
           </Text>
         </View>
       )}
 
       {/* Single Action Button */}
-      {!allVerified && (
+      {!allVerified && !bothPending && (
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => router.push("/(app)/(verification)/verify" as Href)}
@@ -366,6 +389,9 @@ const styles = StyleSheet.create({
   infoBannerError: {
     backgroundColor: "#FEE2E2",
   },
+  infoBannerPending: {
+    backgroundColor: "#FEF3C7",
+  },
   infoText: {
     flex: 1,
     fontSize: typography.fontSize.sm,
@@ -374,6 +400,9 @@ const styles = StyleSheet.create({
   },
   infoTextError: {
     color: colors.error,
+  },
+  infoTextPending: {
+    color: colors.warning,
   },
   actionButton: {
     flexDirection: "row",
