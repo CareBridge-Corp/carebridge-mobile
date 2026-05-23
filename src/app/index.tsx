@@ -2,6 +2,7 @@ import { Href, useRouter, useSegments } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { initializePushNotifications } from "../shared/services/pushNotifications";
 import { useAuthStore } from "./(auth)/store/authStore";
 
 export default function Index() {
@@ -17,6 +18,7 @@ export default function Index() {
         const userStr = await SecureStore.getItemAsync("authUser");
         if (token && userStr) {
           login(token, JSON.parse(userStr));
+          await initializePushNotifications();
         }
       } catch (e) {
         // Failed to initialize auth - user will need to login

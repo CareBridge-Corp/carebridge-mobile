@@ -2,6 +2,7 @@ import { Toast, ToastType } from "@iqorlobanov/react-native-toast";
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+import { initializePushNotifications } from "../../../shared/services/pushNotifications";
 import { authService } from "../services/authService";
 import { useAuthStore } from "../store/authStore";
 import { AuthResponse, SignupCredentials } from "../types";
@@ -27,6 +28,7 @@ export function useSignup(
           );
         }
         login(response.token, response.user);
+        await initializePushNotifications();
       } else {
         Toast.show({
           type: ToastType.SUCCESS,
