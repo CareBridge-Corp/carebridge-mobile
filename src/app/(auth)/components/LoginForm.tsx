@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,6 +23,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const loginMutation = useLogin();
+  const router = useRouter();
   const { t } = useTranslation();
 
   const handleLogin = () => {
@@ -82,6 +84,13 @@ export function LoginForm() {
             />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.forgotPasswordLink}
+          onPress={() => router.push("/(auth)/forgot-password")}
+        >
+          <Text style={styles.forgotPasswordText}>{t("auth.forgotPassword")}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Sign Up Button */}
@@ -125,6 +134,15 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.lg,
     marginBottom: spacing.massive,
+  },
+  forgotPasswordLink: {
+    alignSelf: "flex-end",
+    marginTop: -spacing.sm,
+  },
+  forgotPasswordText: {
+    color: colors.textLink,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
   },
   inputWrapper: {
     position: "relative",

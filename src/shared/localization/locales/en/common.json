@@ -20,7 +20,20 @@
     "skip": "Skip",
     "noAccount": "Didn't have an account?",
     "alreadyHaveAccount": "Already have an account?",
-    "forgotPassword": "Forgot Password?"
+    "forgotPassword": "Forgot Password?",
+    "forgotPasswordTitle": "Forgot password",
+    "forgotPasswordSubtitle": "Enter your email and we will send you a reset link.",
+    "sendResetLink": "Send reset link",
+    "resetPasswordTitle": "Reset password",
+    "resetPasswordSubtitle": "Enter the token from your email and choose a new password.",
+    "resetPassword": "Reset password",
+    "resetToken": "Reset token",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "backToLogin": "Back to login",
+    "resetTokenRequired": "Reset token is required.",
+    "passwordMinLength": "Password must be at least 8 characters.",
+    "passwordMismatch": "Passwords do not match."
   },
   "home": {
     "title": "Home",
