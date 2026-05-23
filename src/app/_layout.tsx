@@ -8,7 +8,6 @@ import { StatusBar, Text } from "react-native";
 import { queryClient } from "../shared/api/queryClient";
 import { socketService } from "../shared/api/socket";
 import "../shared/localization/i18n";
-import { addNotificationListeners } from "../shared/services/pushNotifications";
 import { typography } from "../shared/theme/typography";
 
 // Keep the splash screen visible while we fetch resources
@@ -77,11 +76,21 @@ export default function RootLayout() {
   useEffect(() => {
     socketService.setQueryClient(queryClient);
 
-    const cleanupNotifications = addNotificationListeners(() => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    });
+    let cleanupNotifications = () => {};
 
-    return cleanupNotifications;
+    void import("../shared/services/pushNotifications").then(
+      ({ addNotificationListeners }) => {
+        void addNotificationListeners(() => {
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+        }).then((cleanup) => {
+          cleanupNotifications = cleanup;
+        });
+      },
+    );
+
+    return () => {
+      cleanupNotifications();
+    };
   }, []);
 
   useEffect(() => {
