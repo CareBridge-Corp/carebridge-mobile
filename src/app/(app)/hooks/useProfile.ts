@@ -9,7 +9,8 @@ export function useProfile() {
     queryKey: ["profile", "me"],
     queryFn: async () => {
       const response = await apiClient.get("/users/me");
-      //   console.log("Fetched user profile:", response);
+      console.log("Fetched user profile:", response);
+
       const user = response.user;
       setProfile(user);
       return user;

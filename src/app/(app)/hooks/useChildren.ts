@@ -23,17 +23,19 @@ export function useChildren() {
       try {
         const response: any = await apiClient.get("/users/children");
         const children = response.children || [];
-
-        console.log("Fetched children data:", children);
+        console.log("Fetched children data from API:", children);
         setChildren(children);
         setLoading(false);
-        return response;
+        return children;
       } catch (error: any) {
         setError(error.message || "Failed to fetch children");
         setLoading(false);
         throw error;
       }
     },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 }
 

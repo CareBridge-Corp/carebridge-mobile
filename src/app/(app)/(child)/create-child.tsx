@@ -276,7 +276,6 @@ export default function CreateChildScreen() {
       >
         <Text style={styles.title}>Child's Info</Text>
 
-        {/* Profile Image Upload */}
         <View style={styles.imageUploadWrapper}>
           <TouchableOpacity
             style={styles.imageUploadContainer}

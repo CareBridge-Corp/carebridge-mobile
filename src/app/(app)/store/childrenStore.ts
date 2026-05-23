@@ -51,8 +51,17 @@ export const useChildrenStore = create<ChildrenStore>()(
 
       setChildren: (children) =>
         set((state) => {
-          const newActiveChild =
-            state.activeChild || (children.length > 0 ? children[0] : null);
+          let newActiveChild = state.activeChild;
+          if (state.activeChild) {
+            const updatedChild = children.find(
+              (c) => c.childId === state.activeChild?.childId,
+            );
+            // Merge properties to not lose parentId if it's not in the response
+            if (updatedChild)
+              newActiveChild = { ...state.activeChild, ...updatedChild };
+          } else if (children.length > 0) {
+            newActiveChild = children[0];
+          }
           return {
             children,
             activeChild: newActiveChild,

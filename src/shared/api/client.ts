@@ -66,7 +66,7 @@ class ApiClient {
         );
         if (error.response?.data) {
           console.log(
-            `[API Error Data]`,
+            `[API Error Data] `,
             JSON.stringify(error.response.data, null, 2),
           );
         }
