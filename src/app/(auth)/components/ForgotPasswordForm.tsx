@@ -16,37 +16,30 @@ import {
   spacing,
   typography,
 } from "../../../shared/theme";
-import { useLogin } from "../hooks/useLogin";
+import { useForgotPassword } from "../hooks/useForgotPassword";
 
-export function LoginForm() {
+export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const loginMutation = useLogin();
+  const forgotPasswordMutation = useForgotPassword();
   const router = useRouter();
   const { t } = useTranslation();
 
-  const handleLogin = () => {
-    loginMutation.mutate({ email, password });
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handleSubmit = () => {
+    forgotPasswordMutation.mutate({ email: email.trim() });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.loginTitle")}</Text>
-      <Text style={styles.subtitle}>{t("auth.loginSubtitle")}</Text>
+      <Text style={styles.title}>{t("auth.forgotPasswordTitle")}</Text>
+      <Text style={styles.subtitle}>{t("auth.forgotPasswordSubtitle")}</Text>
 
-      {loginMutation.error && (
+      {forgotPasswordMutation.error && (
         <View style={styles.errorContainer}>
-          <Text style={styles.error}>{loginMutation.error.message}</Text>
+          <Text style={styles.error}>{forgotPasswordMutation.error.message}</Text>
         </View>
       )}
 
       <View style={styles.form}>
-        {/* Email Input */}
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
@@ -56,58 +49,35 @@ export function LoginForm() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            autoComplete="email"
           />
           <View style={styles.iconContainer}>
             <Ionicons name="mail-outline" size={20} color={colors.icon} />
           </View>
         </View>
-
-        {/* Password Input */}
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t("auth.password")}
-            placeholderTextColor={colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity
-            style={styles.iconContainer}
-            onPress={togglePasswordVisibility}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={showPassword ? "eye-outline" : "eye-off-outline"}
-              size={20}
-              color={colors.icon}
-            />
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={styles.forgotPasswordLink}
-          onPress={() => router.push("/(auth)/forgot-password")}
-        >
-          <Text style={styles.forgotPasswordText}>{t("auth.forgotPassword")}</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Sign Up Button */}
       <TouchableOpacity
         style={[
           styles.button,
-          loginMutation.isPending && styles.buttonDisabled,
+          forgotPasswordMutation.isPending && styles.buttonDisabled,
         ]}
-        onPress={handleLogin}
-        disabled={loginMutation.isPending}
+        onPress={handleSubmit}
+        disabled={forgotPasswordMutation.isPending || !email.trim()}
         activeOpacity={0.8}
       >
-        {loginMutation.isPending ? (
+        {forgotPasswordMutation.isPending ? (
           <ActivityIndicator color={colors.white} />
         ) : (
-          <Text style={styles.buttonText}>{t("auth.login")}</Text>
+          <Text style={styles.buttonText}>{t("auth.sendResetLink")}</Text>
         )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.backToLogin}
+        onPress={() => router.push("/(auth)/login")}
+      >
+        <Text style={styles.backToLoginText}>{t("auth.backToLogin")}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -134,15 +104,6 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.lg,
     marginBottom: spacing.massive,
-  },
-  forgotPasswordLink: {
-    alignSelf: "flex-end",
-    marginTop: -spacing.sm,
-  },
-  forgotPasswordText: {
-    color: colors.textLink,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
   },
   inputWrapper: {
     position: "relative",
@@ -172,7 +133,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xxl,
     alignItems: "center",
     position: "absolute",
-    bottom: spacing.huge,
+    bottom: spacing.huge + 40,
     left: spacing.xxl,
     right: spacing.xxl,
   },
@@ -183,6 +144,18 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.medium,
+  },
+  backToLogin: {
+    position: "absolute",
+    bottom: spacing.huge,
+    left: spacing.xxl,
+    right: spacing.xxl,
+    alignItems: "center",
+  },
+  backToLoginText: {
+    color: colors.textLink,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
   },
   errorContainer: {
     backgroundColor: "#FEE",

@@ -20,7 +20,20 @@
     "skip": "ዝለል",
     "noAccount": "መለያ የለዎትም?",
     "alreadyHaveAccount": "መለያ አለዎት?",
-    "forgotPassword": "የይለፍ ቃል ረስተዋል?"
+    "forgotPassword": "የይለፍ ቃል ረስተዋል?",
+    "forgotPasswordTitle": "የይለፍ ቃል ረሳኽ",
+    "forgotPasswordSubtitle": "ኢሜይልዎን ያስገቡ እና የማስተካከያ ሊንክ እንልክልዎታለን።",
+    "sendResetLink": "የማስተካከያ ሊንክ ላክ",
+    "resetPasswordTitle": "የይለፍ ቃል ቀይር",
+    "resetPasswordSubtitle": "ከኢሜይል የተላከውን ቶከን ያስገቡ እና አዲስ የይለፍ ቃል ይምረጡ።",
+    "resetPassword": "የይለፍ ቃል ቀይር",
+    "resetToken": "የማስተካከያ ቶከን",
+    "newPassword": "አዲስ የይለፍ ቃል",
+    "confirmPassword": "የይለፍ ቃል አረጋግጥ",
+    "backToLogin": "ወደ መግቢያ ተመለስ",
+    "resetTokenRequired": "የማስተካከያ ቶከን ያስፈልጋል።",
+    "passwordMinLength": "የይለፍ ቃል ቢያንስ 8 ቁምፊ መሆን አለበት።",
+    "passwordMismatch": "የይለፍ ቃሎች አይዛመዱም።"
   },
   "home": {
     "title": "መነሻ",

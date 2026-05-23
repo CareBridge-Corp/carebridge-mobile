@@ -20,7 +20,20 @@
     "skip": "Utali",
     "noAccount": "Akkaawuntii hin qabduu?",
     "alreadyHaveAccount": "Duraan akkaawuntii qabduu?",
-    "forgotPassword": "Jecha icciitii dagattee?"
+    "forgotPassword": "Jecha icciitii dagattee?",
+    "forgotPasswordTitle": "Jecha icciitii dagatte",
+    "forgotPasswordSubtitle": "Iimeeyilii kee galchi, liinkii deebisanii kaa'uuf siif ergina.",
+    "sendResetLink": "Liinkii deebisanii kaa'uu ergi",
+    "resetPasswordTitle": "Jecha icciitii deebisi",
+    "resetPasswordSubtitle": "Tookeenii iimeeyilii irraa argatte galchi, jecha icciitii haaraa filadhu.",
+    "resetPassword": "Jecha icciitii deebisi",
+    "resetToken": "Tookeenii deebisanii kaa'uu",
+    "newPassword": "Jecha icciitii haaraa",
+    "confirmPassword": "Jecha icciitii mirkaneessi",
+    "backToLogin": "Gara seensaa deebi'i",
+    "resetTokenRequired": "Tookeenii deebisanii kaa'uu barbaachisa.",
+    "passwordMinLength": "Jecha icciitiin yoo xiqqaate qubee 8 ta'uu qaba.",
+    "passwordMismatch": "Jechoonni icciitii wal hin fakkatan."
   },
   "home": {
     "title": "Mana",

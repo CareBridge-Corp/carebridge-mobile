@@ -1,5 +1,11 @@
 import { apiClient } from "../../../shared/api/client";
-import { AuthResponse, LoginCredentials, SignupCredentials } from "../types";
+import {
+  AuthResponse,
+  ForgotPasswordPayload,
+  LoginCredentials,
+  ResetPasswordPayload,
+  SignupCredentials,
+} from "../types";
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
@@ -35,5 +41,25 @@ export const authService = {
     } catch (error) {
       // Logout API call failed - continue with local cleanup
     }
+  },
+
+  forgotPassword: async (
+    payload: ForgotPasswordPayload,
+  ): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      "/auth/forgot-password",
+      payload,
+    );
+    return response;
+  },
+
+  resetPassword: async (
+    payload: ResetPasswordPayload,
+  ): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      "/auth/reset-password",
+      payload,
+    );
+    return response;
   },
 };
