@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Image,
@@ -11,84 +11,66 @@ import {
   View,
 } from "react-native";
 import { colors, spacing } from "../../../shared/theme";
-import { useRoadmaps } from "../hooks/useRoadmaps";
-import { useChildrenStore } from "../store/childrenStore";
 import { Clinician } from "../store/clinicianStore";
+import { RoadmapSummary, WeekPlan } from "../types/roadmap";
 import { GrowthJourneyCard } from "./GrowthJourneyCard";
 
 interface VerifiedChildViewProps {
   clinician?: Clinician | null;
+  weekPlans: WeekPlan[];
+  roadmap: RoadmapSummary | null;
 }
 
-export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
+function getWeekPhaseStatus(status: WeekPlan["status"]) {
+  if (status === "COMPLETED") return "completed" as const;
+  if (status === "IN_PROGRESS") return "active" as const;
+  return "pending" as const;
+}
+
+function getWeekPhaseSubtitle(status: WeekPlan["status"]) {
+  if (status === "COMPLETED") return "Completed";
+  if (status === "IN_PROGRESS") return "In Progress";
+  return "Pending";
+}
+
+export function VerifiedChildView({
+  clinician,
+  weekPlans,
+  roadmap,
+}: VerifiedChildViewProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { activeChild } = useChildrenStore();
-  const { data: roadmapData } = useRoadmaps(activeChild?.childId);
-
-  console.log("roadmapData", roadmapData);
-
-  const activeRoadmap = roadmapData?.roadmaps?.[0];
-  const weekPlans = activeRoadmap?.weekPlans || [];
-
-  const treatmentPhases = weekPlans.map((wp) => ({
-    title: `Week ${wp.weekNumber}`,
-    subtitle:
-      wp.status === "COMPLETED"
-        ? "Completed"
-        : wp.status === "PENDING"
-          ? "Pending"
-          : "In Progress",
-    status:
-      wp.status === "COMPLETED"
-        ? "completed"
-        : wp.status === "PENDING"
-          ? "pending"
-          : "active",
-    weekPlanId: wp.weekPlanId,
-    description: wp.description,
-    tasks: wp.activities?.map((a) => a.title) || [],
-    progress:
-      wp.activities?.map((a) => {
-        return (
-          wp.activityStatuses?.find((s) => s.activityId === a.activityId)
-            ?.completed || false
-        );
-      }) || [],
-  }));
-
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
+  const treatmentPhases = useMemo(
+    () =>
+      weekPlans.map((wp) => ({
+        title: `Week ${wp.weekNumber}`,
+        subtitle: getWeekPhaseSubtitle(wp.status),
+        status: getWeekPhaseStatus(wp.status),
+        weekPlanId: wp.weekPlanId,
+        description: wp.description,
+        tasks: wp.activities?.map((a) => a.title) || [],
+        progress:
+          wp.activities?.map(
+            (a) =>
+              wp.activityStatuses?.find((s) => s.activityId === a.activityId)
+                ?.completed || false,
+          ) || [],
+      })),
+    [weekPlans],
+  );
 
   useEffect(() => {
     if (treatmentPhases.length > 0) {
       const activeIdx = treatmentPhases.findIndex((p) => p.status === "active");
       setExpandedIndex(activeIdx !== -1 ? activeIdx : 0);
     }
-  }, [treatmentPhases.length]);
+  }, [treatmentPhases]);
 
-  // Logic to handle loading/fallback states correctly
-  const displayPhases =
-    treatmentPhases.length > 0
-      ? treatmentPhases
-      : [
-          {
-            title: "Week 1 completed",
-            subtitle: "Neurology specialist",
-            status: "completed",
-          },
-          {
-            title: "Speech therapy Week 1",
-            subtitle: "In Progress",
-            status: "active",
-            tasks: ["Playing games", "Walking and running", "Hearing exercise"],
-            progress: [true, true, false, false, false],
-          },
-          {
-            title: "Week 3",
-            subtitle: "Neurology specialist",
-            status: "pending",
-          },
-        ];
+  if (!roadmap || weekPlans.length === 0) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -111,7 +93,7 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
       </View>
 
       <View style={styles.journeyWrapper}>
-        <GrowthJourneyCard />
+        <GrowthJourneyCard weekPlans={weekPlans} />
       </View>
 
       {/* Curator Section */}
@@ -151,21 +133,19 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
 
       {/* Timeline Section */}
       <View style={styles.timelineContainer}>
-        {displayPhases.map((phase: any, index) => (
+        {treatmentPhases.map((phase, index) => (
           <TouchableOpacity
-            key={index}
+            key={phase.weekPlanId}
             style={styles.timelineItem}
             onPress={() =>
               setExpandedIndex(index === expandedIndex ? null : index)
             }
             activeOpacity={0.7}
           >
-            {/* Connector Line */}
-            {index < displayPhases.length - 1 && (
+            {index < treatmentPhases.length - 1 && (
               <View style={styles.connector} />
             )}
 
-            {/* Status Dot */}
             <View
               style={[
                 styles.statusDot,
@@ -174,7 +154,6 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
               ]}
             />
 
-            {/* Content */}
             <View style={styles.phaseContent}>
               <Text
                 style={[
@@ -189,12 +168,12 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
               {index === expandedIndex && (
                 <View style={styles.activePhaseCard}>
                   {phase.description && (
-                    <Text style={styles.phaseDescription} numberOfLines={2}>
+                    <Text style={styles.phaseDescription} numberOfLines={3}>
                       {phase.description}
                     </Text>
                   )}
-                  {phase.tasks?.map((task: string, i: number) => (
-                    <View key={i} style={styles.taskItem}>
+                  {phase.tasks?.map((task, i) => (
+                    <View key={`${phase.weekPlanId}-${i}`} style={styles.taskItem}>
                       <View
                         style={[
                           styles.taskCheckCircle,
@@ -222,9 +201,9 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
 
                   <View style={styles.progressRow}>
                     <View style={styles.dotsContainer}>
-                      {phase.progress?.map((done: boolean, i: number) => (
+                      {phase.progress?.map((done, i) => (
                         <View
-                          key={i}
+                          key={`${phase.weekPlanId}-dot-${i}`}
                           style={[
                             styles.progressDot,
                             done && styles.progressDotDone,
@@ -278,19 +257,14 @@ export function VerifiedChildView({ clinician }: VerifiedChildViewProps) {
         showsHorizontalScrollIndicator={false}
         style={styles.resourcesScroll}
       >
-        <View style={styles.resourceCard}>
-          <Text style={styles.resourceCategory}>Speech therapy</Text>
-          <Text style={styles.resourceTitle} numberOfLines={4}>
-            Speech therapy Phase 1 Fill out the information and start the
-            treatment Fill out the information and start the treatment
-          </Text>
-        </View>
-        <View style={styles.resourceCard}>
-          <Text style={styles.resourceCategory}>Speech therapy</Text>
-          <Text style={styles.resourceTitle} numberOfLines={4}>
-            Speech therapy Phase 2 Next steps in communication improvement
-          </Text>
-        </View>
+        {weekPlans.slice(0, 3).map((wp) => (
+          <View key={wp.weekPlanId} style={styles.resourceCard}>
+            <Text style={styles.resourceCategory}>Week {wp.weekNumber}</Text>
+            <Text style={styles.resourceTitle} numberOfLines={4}>
+              {wp.description}
+            </Text>
+          </View>
+        ))}
       </ScrollView>
 
       {/* Sensory Games */}

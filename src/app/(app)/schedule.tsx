@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Href, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,6 +13,11 @@ import {
 } from "react-native";
 import { useAuthStore } from "../(auth)/store/authStore";
 import { useLanguageStore } from "../../shared/store/languageStore";
+import {
+  canStartActivity,
+  getActivityStatus,
+  isRoadmapCycleComplete,
+} from "../../shared/utils/roadmapProgress";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { VerificationRequiredView } from "./components/VerificationRequiredView";
@@ -49,15 +54,12 @@ export default function ScheduleScreen() {
   );
 
   const isVerified = activeChild?.status === "VERIFIED";
-  const { data: roadmapData, isLoading } = useRoadmaps(
+  const { data: roadmapData } = useRoadmaps(
     isVerified ? activeChild?.childId : undefined,
   );
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
-
-  // Get active roadmap and plans
-  const activeRoadmap = roadmapData?.roadmaps?.[0];
-  const weekPlans = activeRoadmap?.weekPlans || [];
+  const weekPlans = roadmapData?.weekPlans ?? [];
+  const activeRoadmap = roadmapData?.roadmap ?? null;
 
   // Determine current active week based on selection or current date
   const [activeWeekPlanId, setActiveWeekPlanId] = useState<string | null>(null);
@@ -97,22 +99,6 @@ export default function ScheduleScreen() {
       setActiveWeekPlanId(weekPlans[currentIndex + 1].weekPlanId);
   };
 
-  // Generate week dates for the selector (7 days centered around today)
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - 3 + i);
-    return date;
-  });
-
-  const handleMChat = () => {
-    router.push("/(app)/mchat-privacy" as Href);
-  };
-
-  const handleContinue = () => {
-    // Lead to details or specific activity
-    console.log("Continue task pressed");
-  };
-
   if (!isVerified) {
     return (
       <View style={styles.container}>
@@ -120,7 +106,6 @@ export default function ScheduleScreen() {
           barStyle="dark-content"
           backgroundColor={colors.backgroundBlue}
         />
-        {/* Header (Keep same as main index) */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>{t("home.goodMorning")}</Text>
@@ -149,7 +134,6 @@ export default function ScheduleScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Date Display */}
         <View style={styles.dateContainer}>
           <Ionicons name="calendar-outline" size={20} color="#0C4A6E" />
           <Text style={styles.dateText}>{formattedDate}</Text>
@@ -203,42 +187,23 @@ export default function ScheduleScreen() {
 
       <View style={styles.calendarCard}>
         <View style={styles.weekPaginationContainer}>
-          <TouchableOpacity onPress={handlePrevWeek} style={styles.pageButton}>
+          <TouchableOpacity
+            onPress={handlePrevWeek}
+            style={styles.pageButton}
+            disabled={weekPlans.length === 0}
+          >
             <Ionicons name="chevron-back" size={24} color="#0C4A6E" />
           </TouchableOpacity>
-          <View style={styles.weekContainer}>
-            {weekDates.map((date, index) => {
-              const isSelected =
-                date.toDateString() === selectedDate.toDateString();
-              const dayName = date.toLocaleDateString("en-US", {
-                weekday: "short",
-              });
-              const dayNum = date.getDate();
-
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.dayItem, isSelected && styles.dayItemSelected]}
-                  onPress={() => setSelectedDate(date)}
-                >
-                  <Text
-                    style={[styles.dayNum, isSelected && styles.dayNumSelected]}
-                  >
-                    {dayNum}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dayName,
-                      isSelected && styles.dayNameSelected,
-                    ]}
-                  >
-                    {dayName}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <TouchableOpacity onPress={handleNextWeek} style={styles.pageButton}>
+          <Text style={styles.weekPlanLabel}>
+            {activeWeekPlan
+              ? `Week ${activeWeekPlan.weekNumber} of ${weekPlans.length}`
+              : "No published plan"}
+          </Text>
+          <TouchableOpacity
+            onPress={handleNextWeek}
+            style={styles.pageButton}
+            disabled={weekPlans.length === 0}
+          >
             <Ionicons name="chevron-forward" size={24} color="#0C4A6E" />
           </TouchableOpacity>
         </View>
@@ -276,16 +241,21 @@ export default function ScheduleScreen() {
                   {/* Therapy Header/Pagination Integration */}
                   <View style={styles.therapyHeader}>
                     <View style={styles.therapyInfo}>
-                      <Text style={styles.therapyTitle} numberOfLines={1}>
-                        {weekPlan.description
-                          .replace(/<[^>]*>?/gm, "")
-                          .split(" ")
-                          .slice(0, 4)
-                          .join(" ") + "..."}
+                      <Text style={styles.therapyTitle} numberOfLines={2}>
+                        Week {weekPlan.weekNumber}
                       </Text>
                       <Text style={styles.therapyStatus}>
-                        {isCompleted ? "Completed" : "In Progress"}
+                        {isCompleted
+                          ? "Completed"
+                          : isCurrent
+                            ? "In Progress"
+                            : "Pending"}
                       </Text>
+                      {weekPlan.description ? (
+                        <Text style={styles.weekDescription} numberOfLines={2}>
+                          {weekPlan.description}
+                        </Text>
+                      ) : null}
                       <View style={styles.progressCirclesContainer}>
                         {filteredActivities.slice(0, 5).map((activity) => {
                           const isActivityCompleted =
@@ -326,32 +296,50 @@ export default function ScheduleScreen() {
 
                   <View style={styles.expandedContent}>
                     {/* Task Cards */}
-                    {filteredActivities.map((activity, index) => (
+                    {filteredActivities.map((activity, index) => {
+                      const activityStatus = getActivityStatus(
+                        weekPlan,
+                        activity.activityId,
+                      );
+                      const access = canStartActivity(
+                        weekPlan,
+                        activity.activityId,
+                        weekPlans,
+                      );
+                      const isLocked = !access.allowed && !activityStatus.completed;
+
+                      return (
                       <View key={activity.activityId} style={styles.taskCard}>
                         <View style={styles.taskInfo}>
                           <Text style={styles.taskTitle}>
                             Task {index + 1}: {activity.title}
                           </Text>
                           <Text style={styles.taskStatus}>
-                            {weekPlan.activityStatuses?.find(
-                              (s) => s.activityId === activity.activityId,
-                            )?.completed
+                            {activityStatus.completed
                               ? "Completed"
-                              : "In Progress"}
+                              : activityStatus.started
+                                ? "In Progress"
+                                : isLocked
+                                  ? "Locked"
+                                  : "Ready"}
                           </Text>
                         </View>
 
                         <Text style={styles.taskDescription} numberOfLines={3}>
                           {activity.instruction}
                         </Text>
+                        {isLocked && access.reason ? (
+                          <Text style={styles.lockedHint}>{access.reason}</Text>
+                        ) : null}
 
                         <TouchableOpacity
                           style={[
                             styles.continueButton,
-                            weekPlan.activityStatuses?.find(
-                              (s) => s.activityId === activity.activityId,
-                            )?.completed && styles.completedContinueButton,
+                            activityStatus.completed &&
+                              styles.completedContinueButton,
+                            isLocked && styles.lockedContinueButton,
                           ]}
+                          disabled={isLocked}
                           onPress={() => {
                             router.push({
                               pathname: "/(app)/(doctor)/activity-detail",
@@ -368,21 +356,20 @@ export default function ScheduleScreen() {
                           <Text
                             style={[
                               styles.continueButtonText,
-                              weekPlan.activityStatuses?.find(
-                                (s) => s.activityId === activity.activityId,
-                              )?.completed &&
+                              activityStatus.completed &&
                                 styles.completedContinueButtonText,
+                              isLocked && styles.lockedContinueButtonText,
                             ]}
                           >
-                            {weekPlan.activityStatuses?.find(
-                              (s) => s.activityId === activity.activityId,
-                            )?.completed
+                            {activityStatus.completed
                               ? "Completed"
-                              : "Continue"}
+                              : isLocked
+                                ? "Locked"
+                                : "Continue"}
                           </Text>
                         </TouchableOpacity>
                       </View>
-                    ))}
+                    )})}
                   </View>
                 </View>
               );
@@ -390,7 +377,11 @@ export default function ScheduleScreen() {
           ) : (
             <View style={styles.noPlanContainer}>
               <Text style={styles.noPlanText}>
-                No activities found for this period.
+                {isRoadmapCycleComplete(weekPlans, activeRoadmap)
+                  ? "This 4-week roadmap cycle is complete. A new roadmap will be available after the one-month review period."
+                  : activeRoadmap
+                    ? "No weekly activities published yet."
+                    : "Your clinician has not published a treatment roadmap yet."}
               </Text>
             </View>
           )}
@@ -706,6 +697,17 @@ const styles = StyleSheet.create({
     color: "#A0B8C8",
     fontSize: 16,
   },
+  lockedContinueButton: {
+    backgroundColor: "#CBD5E1",
+  },
+  lockedContinueButtonText: {
+    color: "#64748B",
+  },
+  lockedHint: {
+    fontSize: 13,
+    color: "#94A3B8",
+    marginBottom: 12,
+  },
   completedContinueButtonText: {
     color: "#0C4A6E",
   },
@@ -771,6 +773,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 8,
     marginBottom: 16,
+  },
+  weekPlanLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0C4A6E",
   },
   pageButton: {
     padding: 8,

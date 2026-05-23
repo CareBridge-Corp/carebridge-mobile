@@ -1,0 +1,219 @@
+{
+    "message": "Week plans retrieved successfully",
+    "childId": "0b748014-e0d2-4ba0-b923-24886abd0f1b",
+    "count": 4,
+    "weekPlans": [
+        {
+            "weekPlanId": "575988c2-e4cf-47bb-8d74-9b57856ec087",
+            "roadmapId": "41aaa290-ea3b-40ae-b942-a6949e55818c",
+            "clinicianId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+            "weekNumber": 1,
+            "description": "Week 1 (Social Interaction): Turn-taking games — Take turns handing a toy back and forth to build interactive play.",
+            "activityIds": [
+                "9a0bc1d4-420e-47a3-a35a-8462c0be8c70",
+                "76fbd270-f739-43d8-a767-d7a72bdd5fff"
+            ],
+            "activityStatuses": [
+                {
+                    "started": false,
+                    "completed": false,
+                    "activityId": "9a0bc1d4-420e-47a3-a35a-8462c0be8c70"
+                },
+                {
+                    "started": false,
+                    "completed": false,
+                    "activityId": "76fbd270-f739-43d8-a767-d7a72bdd5fff"
+                }
+            ],
+            "activities": [
+                {
+                    "activityId": "9a0bc1d4-420e-47a3-a35a-8462c0be8c70",
+                    "title": "Look Where I Look",
+                    "description": "Teach your child to follow your gaze and look at what you're looking at.",
+                    "instruction": "Say your child's name, then look at an interesting object. Point and say \"Look!\" Wait for them to follow your gaze. Start with obvious, exciting objects. Make it fun by using animated expressions.",
+                    "mediaUrl": "https://res.cloudinary.com/carebridge/video/gaze-following.mp4",
+                    "riskCategory": "following-gaze"
+                },
+                {
+                    "activityId": "76fbd270-f739-43d8-a767-d7a72bdd5fff",
+                    "title": "Inference Activity 1",
+                    "description": "Auto-created activity placeholder from inference roadmap payload.",
+                    "instruction": "Follow clinician guidance and generated roadmap recommendations for this activity.",
+                    "mediaUrl": null,
+                    "riskCategory": "social-interaction"
+                }
+            ],
+            "mediaLinks": [],
+            "prescription": {
+                "dosage": "",
+                "frequency": "",
+                "description": "",
+                "medicationName": ""
+            },
+            "status": "PENDING",
+            "startDate": null,
+            "completionDate": null,
+            "parentNotes": null,
+            "createdAt": "2026-05-23T20:12:27.463Z",
+            "updatedAt": "2026-05-23T20:12:27.463Z",
+            "clinician": {
+                "userId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+                "firstName": "Aman",
+                "lastName": "Smith",
+                "email": "amanbantii544444444@gmail.com"
+            }
+        },
+        {
+            "weekPlanId": "06c63e57-7469-4379-b188-e4df54d41b8b",
+            "roadmapId": "41aaa290-ea3b-40ae-b942-a6949e55818c",
+            "clinicianId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+            "weekNumber": 2,
+            "description": "Week 2 (Joint Attention): Group pointing — Point to a shared object and wait for your child to look at it too.",
+            "activityIds": [
+                "0503ad02-a4ed-4c55-bd83-ceb59f54df12"
+            ],
+            "activityStatuses": [
+                {
+                    "started": false,
+                    "completed": false,
+                    "activityId": "0503ad02-a4ed-4c55-bd83-ceb59f54df12"
+                }
+            ],
+            "activities": [
+                {
+                    "activityId": "0503ad02-a4ed-4c55-bd83-ceb59f54df12",
+                    "title": "Inference Activity 3",
+                    "description": "Auto-created activity placeholder from inference roadmap payload.",
+                    "instruction": "Follow clinician guidance and generated roadmap recommendations for this activity.",
+                    "mediaUrl": null,
+                    "riskCategory": "social-interaction"
+                }
+            ],
+            "mediaLinks": [],
+            "prescription": {
+                "dosage": "",
+                "frequency": "",
+                "description": "",
+                "medicationName": ""
+            },
+            "status": "PENDING",
+            "startDate": null,
+            "completionDate": null,
+            "parentNotes": null,
+            "createdAt": "2026-05-23T20:12:34.704Z",
+            "updatedAt": "2026-05-23T20:12:34.704Z",
+            "clinician": {
+                "userId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+                "firstName": "Aman",
+                "lastName": "Smith",
+                "email": "amanbantii544444444@gmail.com"
+            }
+        },
+        {
+            "weekPlanId": "ddd3b9b7-c271-4f5e-8d41-f1eb743380ae",
+            "roadmapId": "41aaa290-ea3b-40ae-b942-a6949e55818c",
+            "clinicianId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+            "weekNumber": 3,
+            "description": "Week 3 (Social Communication): Emotion naming — Use faces or pictures to help your child identify happy, sad, or angry.",
+            "activityIds": [
+                "c36267be-bfba-4df5-9eb9-f1890d96924d"
+            ],
+            "activityStatuses": [
+                {
+                    "started": false,
+                    "completed": false,
+                    "activityId": "c36267be-bfba-4df5-9eb9-f1890d96924d"
+                }
+            ],
+            "activities": [
+                {
+                    "activityId": "c36267be-bfba-4df5-9eb9-f1890d96924d",
+                    "title": "Inference Activity 2",
+                    "description": "Auto-created activity placeholder from inference roadmap payload.",
+                    "instruction": "Follow clinician guidance and generated roadmap recommendations for this activity.",
+                    "mediaUrl": null,
+                    "riskCategory": "social-interaction"
+                }
+            ],
+            "mediaLinks": [],
+            "prescription": {
+                "dosage": "300ml",
+                "frequency": "2 per day",
+                "description": "i dont ",
+                "medicationName": "panadol"
+            },
+            "status": "PENDING",
+            "startDate": null,
+            "completionDate": null,
+            "parentNotes": null,
+            "createdAt": "2026-05-23T20:13:06.359Z",
+            "updatedAt": "2026-05-23T20:13:06.359Z",
+            "clinician": {
+                "userId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+                "firstName": "Aman",
+                "lastName": "Smith",
+                "email": "amanbantii544444444@gmail.com"
+            }
+        },
+        {
+            "weekPlanId": "501c70b7-55a5-4a73-92c2-577b72485997",
+            "roadmapId": "41aaa290-ea3b-40ae-b942-a6949e55818c",
+            "clinicianId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+            "weekNumber": 4,
+            "description": "Week 4 (Communication): Exchange objects — Pass objects back and forth to support social interaction and requests.",
+            "activityIds": [
+                "9a0bc1d4-420e-47a3-a35a-8462c0be8c70",
+                "c36267be-bfba-4df5-9eb9-f1890d96924d"
+            ],
+            "activityStatuses": [
+                {
+                    "started": false,
+                    "completed": false,
+                    "activityId": "9a0bc1d4-420e-47a3-a35a-8462c0be8c70"
+                },
+                {
+                    "started": false,
+                    "completed": false,
+                    "activityId": "c36267be-bfba-4df5-9eb9-f1890d96924d"
+                }
+            ],
+            "activities": [
+                {
+                    "activityId": "9a0bc1d4-420e-47a3-a35a-8462c0be8c70",
+                    "title": "Look Where I Look",
+                    "description": "Teach your child to follow your gaze and look at what you're looking at.",
+                    "instruction": "Say your child's name, then look at an interesting object. Point and say \"Look!\" Wait for them to follow your gaze. Start with obvious, exciting objects. Make it fun by using animated expressions.",
+                    "mediaUrl": "https://res.cloudinary.com/carebridge/video/gaze-following.mp4",
+                    "riskCategory": "following-gaze"
+                },
+                {
+                    "activityId": "c36267be-bfba-4df5-9eb9-f1890d96924d",
+                    "title": "Inference Activity 2",
+                    "description": "Auto-created activity placeholder from inference roadmap payload.",
+                    "instruction": "Follow clinician guidance and generated roadmap recommendations for this activity.",
+                    "mediaUrl": null,
+                    "riskCategory": "social-interaction"
+                }
+            ],
+            "mediaLinks": [],
+            "prescription": {
+                "dosage": "",
+                "frequency": "",
+                "description": "",
+                "medicationName": ""
+            },
+            "status": "PENDING",
+            "startDate": null,
+            "completionDate": null,
+            "parentNotes": null,
+            "createdAt": "2026-05-23T20:13:56.202Z",
+            "updatedAt": "2026-05-23T20:13:56.202Z",
+            "clinician": {
+                "userId": "f0903160-404e-4afe-bc57-cc0da893eea6",
+                "firstName": "Aman",
+                "lastName": "Smith",
+                "email": "amanbantii544444444@gmail.com"
+            }
+        }
+    ]
+}

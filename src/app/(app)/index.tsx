@@ -68,7 +68,7 @@ export default function AppHomeScreen() {
 
   const { data: screeningsData, refetch: refetchScreenings } =
     useChildScreenings(activeChild?.childId);
-  const { data: roadmapsData, refetch: refetchRoadmaps } = useRoadmaps(
+  const { data: roadmapData, refetch: refetchRoadmaps } = useRoadmaps(
     activeChild?.childId,
   );
 
@@ -95,9 +95,7 @@ export default function AppHomeScreen() {
     activeChild?.status === "VERIFIED" ? activeChild?.childId : undefined,
   );
 
-  const hasRoadmap = roadmapsData?.roadmaps && roadmapsData.roadmaps.length > 0;
-
-  // Fetch screenings and roadmaps for the active child
+  const hasActiveRoadmap = roadmapData?.hasActiveRoadmap ?? false;
 
   const hasChildren = children.length > 0;
 
@@ -202,7 +200,13 @@ export default function AppHomeScreen() {
             ) : (
               <>
                 <HasChildView />
-                {hasRoadmap && <VerifiedChildView clinician={clinician} />}
+                {hasActiveRoadmap && (
+                  <VerifiedChildView
+                    clinician={clinician}
+                    weekPlans={roadmapData?.weekPlans ?? []}
+                    roadmap={roadmapData?.roadmap ?? null}
+                  />
+                )}
               </>
             )}
           </View>
