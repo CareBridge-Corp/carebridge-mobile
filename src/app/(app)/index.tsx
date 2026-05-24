@@ -13,6 +13,7 @@ import { colors, layout, spacing } from "../../shared/theme";
 import { AsdResourcesSection } from "./components/AsdResourcesSection";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { ClinicianCard } from "./components/ClinicianCard";
+import { DomainProgressSection } from "./components/DomainProgressSection";
 import { HelpfulGamesSection } from "./components/HelpfulGamesSection";
 import { HomeHeader } from "./components/HomeHeader";
 import { HomeHero } from "./components/HomeHero";
@@ -25,6 +26,7 @@ import { useRoadmaps } from "./hooks/useRoadmaps";
 import { useChildScreenings } from "./hooks/useScreenings";
 import { useScreeningProgress } from "./hooks/useScreeningProgress";
 import { useChildrenStore } from "./store/childrenStore";
+import { resolveRoadmapCycleStatus } from "../../shared/utils/roadmapProgress";
 
 type LifecycleStage =
   | "no_children"
@@ -99,6 +101,11 @@ export default function AppHomeScreen() {
   );
 
   const hasActiveRoadmap = roadmapData?.hasActiveRoadmap ?? false;
+  const weekPlans = roadmapData?.weekPlans ?? [];
+  const activeRoadmap = roadmapData?.roadmap ?? null;
+  const { roadmapCycleComplete, readyForNextScreening } =
+    resolveRoadmapCycleStatus(weekPlans, activeRoadmap, progressData ?? undefined);
+
   const hasChildren = children.length > 0;
   const parentVerified = profile?.status === "VERIFIED";
   const childVerified = activeChild?.status === "VERIFIED";
@@ -108,8 +115,7 @@ export default function AppHomeScreen() {
   const latestScreening = screenings[0];
   const profileInProgress =
     progressData?.profileStatus === "profile_in_progress" ||
-    (!!latestScreening && !hasActiveRoadmap);
-  const readyForNextScreening = !!progressData?.readyForNextScreening;
+    (!!latestScreening && !hasActiveRoadmap && !roadmapCycleComplete);
 
   const stage = computeStage({
     hasChildren,
@@ -117,6 +123,7 @@ export default function AppHomeScreen() {
     hasActiveRoadmap,
     profileInProgress,
     hasLatestScreening: !!latestScreening,
+    roadmapCycleComplete,
     readyForNextScreening,
   });
 
@@ -163,7 +170,29 @@ export default function AppHomeScreen() {
               childVerified,
               latestScreening,
               progressPct: computeScreeningProgressPercent(progressData),
+              nextScreeningMonth: progressData?.nextScreeningMonth,
             })}
+
+            {/* M-CHAT round comparison — shown after 2+ screenings */}
+            {bothVerified &&
+            progressData?.screeningComparison?.hasComparison &&
+            (progressData.domainProgress?.length ?? 0) > 0 ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  title={t("home.developmentProgress")}
+                  action={{
+                    label: t("home.seeFullProgress"),
+                    onPress: () =>
+                      router.push("/(app)/growth-journey" as Href),
+                  }}
+                />
+                <DomainProgressSection
+                  domainProgress={progressData.domainProgress}
+                  screeningComparison={progressData.screeningComparison}
+                  compact
+                />
+              </View>
+            ) : null}
 
             {/* Top section: pediatricians network preview */}
             <View style={styles.section}>
@@ -250,10 +279,17 @@ function computeStage(input: {
   hasActiveRoadmap: boolean;
   profileInProgress: boolean;
   hasLatestScreening: boolean;
+  roadmapCycleComplete: boolean;
   readyForNextScreening: boolean;
 }): LifecycleStage {
   if (!input.hasChildren) return "no_children";
   if (!input.bothVerified) return "needs_verification";
+  if (input.roadmapCycleComplete && input.readyForNextScreening) {
+    return "ready_for_next_screening";
+  }
+  if (input.roadmapCycleComplete && !input.readyForNextScreening) {
+    return "follow_up_due";
+  }
   if (input.hasActiveRoadmap) return "active_care";
   if (input.profileInProgress) return "screening_under_review";
   if (input.readyForNextScreening) return "ready_for_next_screening";
@@ -270,8 +306,11 @@ function renderHero(
     childVerified: boolean;
     latestScreening?: any;
     progressPct?: number;
+    nextScreeningMonth?: number;
   },
 ) {
+  const startMChat = () => ctx.router.push("/(app)/mchat-privacy" as Href);
+
   switch (stage) {
     case "no_children":
       return (
@@ -355,22 +394,66 @@ function renderHero(
     case "ready_for_next_screening":
       return (
         <HomeHero
-          eyebrow={ctx.t("home.hero.followUp")}
-          title={ctx.t("home.hero.nextCheckIn")}
-          description={ctx.t("home.hero.nextCheckInDesc")}
-          illustrationIcon="refresh-circle-outline"
+          eyebrow={ctx.t("home.hero.nextMchatPhase")}
+          title={
+            ctx.childName
+              ? ctx.t("home.hero.planCompleteTitle", { name: ctx.childName })
+              : ctx.t("home.hero.planCompleteTitleDefault")
+          }
+          description={ctx.t("home.hero.nextMchatRequiredDesc")}
+          illustrationIcon="clipboard-outline"
           badge={{
-            label: ctx.t("home.hero.dueNow"),
+            label: ctx.t("home.hero.actionRequired"),
             tone: "warning",
+            icon: "alert-circle",
           }}
+          stats={[
+            {
+              label: ctx.t("home.hero.nextPhase"),
+              value: ctx.nextScreeningMonth
+                ? ctx.t("home.hero.monthNumber", {
+                    month: ctx.nextScreeningMonth,
+                  })
+                : ctx.t("home.hero.mchatRescreen"),
+            },
+            { label: ctx.t("home.hero.minutes"), value: "10" },
+            { label: ctx.t("home.hero.questions"), value: "20" },
+          ]}
           primaryAction={{
-            label: ctx.t("home.hero.startRescreening"),
-            onPress: () => ctx.router.push("/(app)/mchat-privacy" as Href),
+            label: ctx.t("home.hero.startNextMchat"),
+            onPress: startMChat,
+            leadingIcon: "arrow-forward-circle",
           }}
           secondaryAction={{
-            label: ctx.t("home.hero.notNow"),
-            onPress: () =>
-              ctx.router.push("/(app)/(mchat)/mchat-profile" as any),
+            label: ctx.t("home.hero.reviewCompletedPlan"),
+            onPress: () => ctx.router.push("/schedule" as Href),
+          }}
+        />
+      );
+    case "follow_up_due":
+      return (
+        <HomeHero
+          eyebrow={ctx.t("home.hero.planFinished")}
+          title={
+            ctx.childName
+              ? ctx.t("home.hero.planCompleteTitle", { name: ctx.childName })
+              : ctx.t("home.hero.planCompleteTitleDefault")
+          }
+          description={ctx.t("home.hero.nextMchatCooldownDesc")}
+          illustrationIcon="hourglass-outline"
+          badge={{
+            label: ctx.t("home.hero.comingSoon"),
+            tone: "info",
+            icon: "time-outline",
+          }}
+          progress={100}
+          primaryAction={{
+            label: ctx.t("home.hero.reviewCompletedPlan"),
+            onPress: () => ctx.router.push("/schedule" as Href),
+          }}
+          secondaryAction={{
+            label: ctx.t("home.hero.seeGrowthJourney"),
+            onPress: () => ctx.router.push("/(app)/growth-journey" as Href),
           }}
         />
       );
