@@ -20,7 +20,9 @@ import {
 } from "../../shared/utils/roadmapProgress";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
+import { PaywallCard } from "./components/PaywallCard";
 import { VerificationRequiredView } from "./components/VerificationRequiredView";
+import { useEntitlements } from "./hooks/useEntitlements";
 import { useRoadmaps } from "./hooks/useRoadmaps";
 import { useChildrenStore } from "./store/childrenStore";
 
@@ -54,6 +56,8 @@ export default function ScheduleScreen() {
   );
 
   const isVerified = activeChild?.status === "VERIFIED";
+  const { data: entitlements, isLoading: entitlementsLoading } =
+    useEntitlements();
   const { data: roadmapData } = useRoadmaps(
     isVerified ? activeChild?.childId : undefined,
   );
@@ -145,6 +149,37 @@ export default function ScheduleScreen() {
           visible={showChildSelector}
           onClose={() => setShowChildSelector(false)}
         />
+      </View>
+    );
+  }
+
+  if (
+    isVerified &&
+    !entitlementsLoading &&
+    entitlements &&
+    !entitlements.canUseTreatment
+  ) {
+    return (
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={colors.backgroundBlue}
+        />
+        <View style={styles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greeting}>{t("home.goodMorning")}</Text>
+            <Text style={styles.userName}>
+              {activeChild?.firstName || user?.firstName || t("home.guest")}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.paywallWrapper}>
+          <PaywallCard
+            title={t("payment.gate.treatmentTitle")}
+            description={t("payment.gate.treatmentDescription")}
+            purpose="SUBSCRIPTION"
+          />
+        </View>
       </View>
     );
   }
@@ -852,5 +887,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#0C4A6E",
+  },
+  paywallWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    paddingBottom: 120,
   },
 });

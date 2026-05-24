@@ -1,14 +1,20 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import { ActivityIndicator, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import { PaywallCard } from "../components/PaywallCard";
+import { useEntitlements } from "../hooks/useEntitlements";
 import { useAssignedClinician } from "../hooks/useClinician";
 import { useChildrenStore } from "../store/childrenStore";
 import { useBookingStore } from "../store/bookingStore";
 
 export default function BookingSelectDoctorScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { activeChild } = useChildrenStore();
+  const { data: entitlements, isLoading: entitlementsLoading } =
+    useEntitlements();
   const { data: clinician, isLoading } = useAssignedClinician(activeChild?.childId);
   const { setDoctor, setChildId } = useBookingStore();
 
@@ -32,6 +38,16 @@ export default function BookingSelectDoctorScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {!entitlementsLoading &&
+        entitlements &&
+        !entitlements.canBookAppointments ? (
+          <PaywallCard
+            title={t("payment.gate.appointmentTitle")}
+            description={t("payment.gate.appointmentDescription")}
+            purpose="SUBSCRIPTION"
+          />
+        ) : (
+          <>
         <Text style={styles.subtitle}>Your assigned clinician</Text>
 
         {isLoading ? (
@@ -53,13 +69,19 @@ export default function BookingSelectDoctorScreen() {
             No assigned clinician found for {activeChild?.firstName ?? "this child"}.
           </Text>
         )}
+          </>
+        )}
       </ScrollView>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.nextButton, !clinician && styles.nextButtonDisabled]}
+          style={[
+            styles.nextButton,
+            (!clinician || !entitlements?.canBookAppointments) &&
+              styles.nextButtonDisabled,
+          ]}
           onPress={handleNext}
-          disabled={!clinician}
+          disabled={!clinician || !entitlements?.canBookAppointments}
         >
           <Text style={styles.nextButtonText}>Choose Date & Time</Text>
           <Ionicons name="arrow-forward" size={20} color={colors.white} />

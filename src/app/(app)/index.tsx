@@ -27,6 +27,7 @@ import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
 import { useRoadmaps } from "./hooks/useRoadmaps";
 import { useChildScreenings } from "./hooks/useScreenings";
+import { useScreeningProgress } from "./hooks/useScreeningProgress";
 import { useChildrenStore } from "./store/childrenStore";
 
 export default function AppHomeScreen() {
@@ -71,6 +72,9 @@ export default function AppHomeScreen() {
   const { data: roadmapData, refetch: refetchRoadmaps } = useRoadmaps(
     activeChild?.childId,
   );
+  const { refetch: refetchScreeningProgress } = useScreeningProgress(
+    activeChild?.childId,
+  );
 
   // Refetch verification status when screen comes into focus
   useFocusEffect(
@@ -80,12 +84,14 @@ export default function AppHomeScreen() {
       if (activeChild?.childId) {
         refetchScreenings();
         refetchRoadmaps();
+        refetchScreeningProgress();
       }
     }, [
       refetchProfile,
       refetchChildren,
       refetchScreenings,
       refetchRoadmaps,
+      refetchScreeningProgress,
       activeChild?.childId,
     ]),
   );

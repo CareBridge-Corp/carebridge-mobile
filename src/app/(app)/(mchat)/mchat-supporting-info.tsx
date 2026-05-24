@@ -70,6 +70,7 @@ export default function MChatSupportingInfoScreen() {
       const screeningPayload = {
         childId: activeChild.childId,
         answers: answers,
+        questionIds: useMChatStore.getState().questionIds,
       };
 
       const screeningRes = await apiClient.post(

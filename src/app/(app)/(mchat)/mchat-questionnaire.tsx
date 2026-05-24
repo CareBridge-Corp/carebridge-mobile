@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Animated,
   PanResponder,
   StatusBar,
@@ -16,7 +17,10 @@ import {
   spacing,
   typography,
 } from "../../../shared/theme";
+import { useMChatQuestions } from "../hooks/useScreeningProgress";
+import { useChildrenStore } from "../store/childrenStore";
 import { useMChatStore } from "../store/mchatStore";
+import { useLanguageStore } from "../../../shared/store/languageStore";
 
 const MCHAT_QUESTIONS = [
   {
@@ -145,11 +149,43 @@ const MCHAT_QUESTIONS = [
 export default function MChatQuestionnaireScreen() {
   const router = useRouter();
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const activeChild = useChildrenStore((state) => state.activeChild);
+  const { language } = useLanguageStore();
+  const { data: questionsData, isLoading } = useMChatQuestions(
+    activeChild?.childId,
+    language,
+  );
 
-  const { answers, setAnswer } = useMChatStore();
+  const { answers, setAnswer, setSessionMeta } = useMChatStore();
 
-  const question = MCHAT_QUESTIONS[currentQuestion];
-  const totalQuestions = MCHAT_QUESTIONS.length;
+  const questions =
+    questionsData?.questions?.map((q) => ({
+      id: q.id,
+      question: q.question,
+      area: q.area,
+      example: "",
+    })) ??
+    MCHAT_QUESTIONS.map((q) => ({
+      id: q.id,
+      question: q.question,
+      area: "general_monitoring",
+      example: q.example ?? "",
+    }));
+
+  useEffect(() => {
+    if (questionsData?.questionIds?.length) {
+      setSessionMeta({
+        questionIds: questionsData.questionIds,
+        screeningMonth: questionsData.screeningMonth,
+        carryForwardCount: questionsData.carryForwardCount,
+        newQuestionCount: questionsData.newQuestionCount,
+      });
+    }
+  }, [questionsData, setSessionMeta]);
+
+  const questionKey = (id: number) => `Q${id}`;
+  const question = questions[currentQuestion];
+  const totalQuestions = questions.length;
 
   const shakeAnimation = useRef(new Animated.Value(0)).current;
 
@@ -179,15 +215,14 @@ export default function MChatQuestionnaireScreen() {
   };
 
   const handleAnswer = (answer: boolean) => {
-    setAnswer(question.question, answer);
+    if (!question) return;
+    setAnswer(questionKey(question.id), answer);
 
-    // Move to next question or finish
-    if (currentQuestion < MCHAT_QUESTIONS.length - 1) {
+    if (currentQuestion < totalQuestions - 1) {
       setTimeout(() => {
         setCurrentQuestion(currentQuestion + 1);
       }, 300);
     } else {
-      // Navigate to supporting info step
       setTimeout(() => {
         router.push("/(app)/(mchat)/mchat-supporting-info" as Href);
       }, 300);
@@ -203,14 +238,14 @@ export default function MChatQuestionnaireScreen() {
   };
 
   const handleNext = () => {
-    if (answers[question.question] === undefined) {
+    if (!question || answers[questionKey(question.id)] === undefined) {
       startShake();
       return;
     }
 
-    if (currentQuestion < MCHAT_QUESTIONS.length - 1) {
+    if (currentQuestion < totalQuestions - 1) {
       setCurrentQuestion(currentQuestion + 1);
-    } else if (currentQuestion === MCHAT_QUESTIONS.length - 1) {
+    } else if (currentQuestion === totalQuestions - 1) {
       router.push("/(app)/(mchat)/mchat-supporting-info" as Href);
     }
   };
@@ -232,7 +267,16 @@ export default function MChatQuestionnaireScreen() {
   });
 
   const prevQuestion =
-    currentQuestion > 0 ? MCHAT_QUESTIONS[currentQuestion - 1] : null;
+    currentQuestion > 0 ? questions[currentQuestion - 1] : null;
+
+  if (isLoading || !question) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#0C4A6E" />
+        <Text style={styles.loadingText}>Loading screening questions...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
@@ -246,7 +290,7 @@ export default function MChatQuestionnaireScreen() {
 
         {/* Progress Dots */}
         <View style={styles.progressDotsContainer}>
-          {MCHAT_QUESTIONS.map((_, index) => (
+          {questions.map((_, index) => (
             <View
               key={index}
               style={[
@@ -261,17 +305,17 @@ export default function MChatQuestionnaireScreen() {
         <TouchableOpacity
           style={[
             styles.navButton,
-            currentQuestion === MCHAT_QUESTIONS.length - 1 &&
+            currentQuestion === totalQuestions - 1 &&
               styles.navButtonDisabled,
           ]}
           onPress={handleNext}
-          disabled={currentQuestion === MCHAT_QUESTIONS.length - 1}
+          disabled={currentQuestion === totalQuestions - 1}
         >
           <Ionicons
             name="arrow-forward"
             size={28}
             color={
-              currentQuestion === MCHAT_QUESTIONS.length - 1
+              currentQuestion === totalQuestions - 1
                 ? "#C0D4E0"
                 : "#0C4A6E"
             }
@@ -309,15 +353,17 @@ export default function MChatQuestionnaireScreen() {
               <View style={styles.previousAnswerBadge}>
                 <Ionicons
                   name={
-                    answers[prevQuestion.question]
+                    answers[questionKey(prevQuestion.id)]
                       ? "checkmark-circle"
                       : "close-circle"
                   }
                   size={16}
-                  color={answers[prevQuestion.question] ? "#10B981" : "#EF4444"}
+                  color={
+                    answers[questionKey(prevQuestion.id)] ? "#10B981" : "#EF4444"
+                  }
                 />
                 <Text style={styles.previousAnswerText}>
-                  {answers[prevQuestion.question] ? "Yes" : "No"}
+                  {answers[questionKey(prevQuestion.id)] ? "Yes" : "No"}
                 </Text>
               </View>
             </View>
@@ -391,6 +437,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#E8F0F5",
+  },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: spacing.lg,
+    fontSize: typography.fontSize.md,
+    color: "#5A7A8F",
   },
   header: {
     flexDirection: "row",

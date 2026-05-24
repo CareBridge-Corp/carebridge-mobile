@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import { isPaymentRequiredError } from "../../../shared/api/client";
 import { useCreateAppointment } from "../hooks/useAppointments";
 import { useProfile } from "../hooks/useProfile";
 import { useBookingStore } from "../store/bookingStore";
@@ -50,8 +51,14 @@ export default function BookingConfirmationScreen() {
           onPress: () => router.replace("/(app)/schedule" as Href),
         },
       ]);
-    } catch (error: any) {
-      Alert.alert("Booking failed", error?.message ?? "Unable to create appointment.");
+    } catch (error: unknown) {
+      if (isPaymentRequiredError(error)) {
+        router.push("/(app)/payment?purpose=SUBSCRIPTION" as Href);
+        return;
+      }
+      const message =
+        error instanceof Error ? error.message : "Unable to create appointment.";
+      Alert.alert("Booking failed", message);
     } finally {
       setIsSubmitting(false);
     }

@@ -19,6 +19,7 @@ import {
   typography,
 } from "../../../shared/theme";
 import { useDeleteChild } from "../hooks/useChildren";
+import { useEntitlements } from "../hooks/useEntitlements";
 import { Child, useChildrenStore } from "../store/childrenStore";
 
 interface ChildSelectorModalProps {
@@ -32,6 +33,7 @@ export function ChildSelectorModal({
 }: ChildSelectorModalProps) {
   const router = useRouter();
   const { children, activeChild, setActiveChild } = useChildrenStore();
+  const { data: entitlements } = useEntitlements();
   const deleteMutation = useDeleteChild();
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -47,7 +49,11 @@ export function ChildSelectorModal({
 
   const handleAddChild = () => {
     onClose();
-    router.push("/(app)/create-child" as Href);
+    if (entitlements && !entitlements.canAddChild) {
+      router.push("/(app)/payment?purpose=EXTRA_CHILD" as Href);
+      return;
+    }
+    router.push("/(app)/(child)/create-child" as Href);
   };
 
   const handleDeleteChild = (childId: string, childName: string) => {

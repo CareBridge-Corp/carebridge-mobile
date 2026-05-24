@@ -7,7 +7,15 @@ export interface Screening {
   date: string;
   totalScore: number;
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
-  status: "COMPLETE" | "UNDER_REVIEW" | "PENDING";
+  status: "SUBMITTED" | "UNDER_REVIEW" | "VERIFIED" | "COMPLETE";
+  screeningMonth?: number;
+  failedQuestionIds?: string[];
+  areaBreakdown?: Array<{
+    area: string;
+    totalQuestions: number;
+    failedQuestions: number;
+    questionIds: string[];
+  }>;
   childPictureUrls: string[];
   createdAt: string;
 }
