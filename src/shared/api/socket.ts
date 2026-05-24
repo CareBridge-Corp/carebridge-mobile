@@ -1,17 +1,31 @@
 import { QueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "../../app/(auth)/store/authStore";
-import { showLocalNotification } from "../services/pushNotifications";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+
+type ConnectionListener = (connected: boolean) => void;
 
 class SocketService {
   private socket: Socket | null = null;
   private currentChildRoom: string | null = null;
   private queryClient: QueryClient | null = null;
+  private connectionListeners = new Set<ConnectionListener>();
 
   setQueryClient(client: QueryClient) {
     this.queryClient = client;
+  }
+
+  subscribeConnection(listener: ConnectionListener) {
+    this.connectionListeners.add(listener);
+    listener(this.isConnected());
+    return () => {
+      this.connectionListeners.delete(listener);
+    };
+  }
+
+  private notifyConnection(connected: boolean) {
+    this.connectionListeners.forEach((listener) => listener(connected));
   }
 
   connect() {
@@ -20,7 +34,6 @@ class SocketService {
     const token = useAuthStore.getState().token;
     if (!token) return;
 
-    // Use URL parser if BASE_URL includes /api
     const url = new URL(BASE_URL);
     const origin = url.origin;
 
@@ -34,7 +47,7 @@ class SocketService {
 
     this.socket.on("connect", () => {
       console.log("Socket connected");
-      // Rejoin room if we reconnected
+      this.notifyConnection(true);
       if (this.currentChildRoom) {
         this.joinChildRoom(this.currentChildRoom);
       }
@@ -42,14 +55,16 @@ class SocketService {
 
     this.socket.on("disconnect", () => {
       console.log("Socket disconnected");
+      this.notifyConnection(false);
     });
 
-    this.socket.on("chat:newMessage", (message: any) => {
+    this.socket.on("connect_error", (error) => {
+      console.log("Socket connect error:", error.message);
+      this.notifyConnection(false);
+    });
+
+    this.socket.on("chat:newMessage", (message: { childId: string }) => {
       console.log("New message received:", message);
-      const currentUserId = useAuthStore.getState().user?.userId;
-      if (message.senderId && message.senderId !== currentUserId) {
-        showLocalNotification("New chat message", message.content ?? "You received a new message");
-      }
       if (this.queryClient) {
         this.queryClient.invalidateQueries({
           queryKey: ["chat-messages", message.childId],
@@ -60,11 +75,10 @@ class SocketService {
         this.queryClient.invalidateQueries({
           queryKey: ["chat-conversations"],
         });
-        this.queryClient.invalidateQueries({ queryKey: ["notifications"] });
       }
     });
 
-    this.socket.on("chat:error", (error: any) => {
+    this.socket.on("chat:error", (error: unknown) => {
       console.log("Socket chat error:", error);
     });
   }
@@ -76,6 +90,7 @@ class SocketService {
       }
       this.socket.disconnect();
       this.socket = null;
+      this.notifyConnection(false);
     }
   }
 
