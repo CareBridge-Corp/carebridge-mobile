@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useAuthStore } from "../(auth)/store/authStore";
@@ -20,14 +20,21 @@ import { colors, layout, spacing } from "../../shared/theme";
 import {
   canStartActivity,
   getActivityStatus,
+  getCurrentWeekPlan,
   isRoadmapCycleComplete,
+  resolveRoadmapCycleStatus,
 } from "../../shared/utils/roadmapProgress";
+import {
+  getPersistedWeekPlanId,
+  persistWeekPlanId,
+} from "../../shared/utils/scheduleWeekPreference";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { HomeHeader } from "./components/HomeHeader";
 import { PaywallCard } from "./components/PaywallCard";
 import { VerificationRequiredView } from "./components/VerificationRequiredView";
 import { useEntitlements } from "./hooks/useEntitlements";
 import { useRoadmaps } from "./hooks/useRoadmaps";
+import { useScreeningProgress } from "./hooks/useScreeningProgress";
 import { useChildrenStore } from "./store/childrenStore";
 
 export default function ScheduleScreen() {
@@ -52,19 +59,76 @@ export default function ScheduleScreen() {
   const { data: roadmapData } = useRoadmaps(
     isVerified ? activeChild?.childId : undefined,
   );
+  const { data: progressData } = useScreeningProgress(
+    isVerified ? activeChild?.childId : undefined,
+  );
 
   const weekPlans = roadmapData?.weekPlans ?? [];
   const activeRoadmap = roadmapData?.roadmap ?? null;
+  const { roadmapCycleComplete, readyForNextScreening } =
+    resolveRoadmapCycleStatus(weekPlans, activeRoadmap, progressData ?? undefined);
+
+  const resolveActiveWeekPlanId = useCallback(async () => {
+    if (weekPlans.length === 0) return null;
+
+    if (
+      params.expandWeekId &&
+      weekPlans.some((wp) => wp.weekPlanId === params.expandWeekId)
+    ) {
+      return params.expandWeekId;
+    }
+
+    if (activeChild?.childId) {
+      const persisted = await getPersistedWeekPlanId(activeChild.childId);
+      if (persisted && weekPlans.some((wp) => wp.weekPlanId === persisted)) {
+        return persisted;
+      }
+    }
+
+    return getCurrentWeekPlan(weekPlans)?.weekPlanId ?? weekPlans[0]?.weekPlanId ?? null;
+  }, [weekPlans, params.expandWeekId, activeChild?.childId]);
 
   useEffect(() => {
-    if (params.expandWeekId) {
-      setActiveWeekPlanId(params.expandWeekId);
-    } else if (weekPlans.length > 0 && !activeWeekPlanId) {
-      const current =
-        weekPlans.find((wp) => wp.status === "IN_PROGRESS") || weekPlans[0];
-      if (current) setActiveWeekPlanId(current.weekPlanId);
+    let cancelled = false;
+
+    void (async () => {
+      const nextId = await resolveActiveWeekPlanId();
+      if (!cancelled && nextId) {
+        setActiveWeekPlanId(nextId);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resolveActiveWeekPlanId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      void (async () => {
+        const nextId = await resolveActiveWeekPlanId();
+        if (!cancelled && nextId) {
+          setActiveWeekPlanId(nextId);
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [resolveActiveWeekPlanId]),
+  );
+
+  useEffect(() => {
+    if (activeChild?.childId && activeWeekPlanId) {
+      void persistWeekPlanId(activeChild.childId, activeWeekPlanId);
     }
-  }, [params.expandWeekId, weekPlans, activeWeekPlanId]);
+  }, [activeChild?.childId, activeWeekPlanId]);
+
+  useEffect(() => {
+    setActiveWeekPlanId(null);
+  }, [activeChild?.childId]);
 
   const activeWeekPlan = weekPlans.find(
     (wp) => wp.weekPlanId === activeWeekPlanId,
@@ -126,7 +190,6 @@ export default function ScheduleScreen() {
               "payment.gate.treatmentDescription",
               "Subscribe to view your child's personalized therapy roadmap and activities.",
             )}
-            purpose="SUBSCRIPTION"
           />
         </View>
         <ChildSelectorModal
@@ -158,6 +221,38 @@ export default function ScheduleScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {readyForNextScreening ? (
+          <Card variant="elevated" padding="lg" style={styles.mchatBanner}>
+            <View style={styles.mchatBannerHeader}>
+              <Badge
+                label={t("schedule.nextMchatDue")}
+                tone="warning"
+                icon="alert-circle"
+              />
+            </View>
+            <Text variant="title3">{t("schedule.nextMchatTitle")}</Text>
+            <Text variant="bodySmall" tone="secondary" style={styles.mchatBannerDesc}>
+              {t("schedule.nextMchatDesc")}
+            </Text>
+            <Button
+              label={t("home.hero.startNextMchat")}
+              onPress={() => router.push("/(app)/mchat-privacy" as never)}
+              trailingIcon="arrow-forward"
+            />
+          </Card>
+        ) : roadmapCycleComplete ? (
+          <Card variant="flat" padding="lg" style={styles.mchatBanner}>
+            <Badge
+              label={t("schedule.cycleComplete")}
+              tone="success"
+              icon="checkmark-circle"
+            />
+            <Text variant="bodySmall" tone="secondary" style={styles.mchatBannerDesc}>
+              {t("schedule.nextMchatCooldown")}
+            </Text>
+          </Card>
+        ) : null}
+
         {/* Week navigation */}
         <View style={styles.weekNav}>
           <IconButton
@@ -317,7 +412,13 @@ export default function ScheduleScreen() {
                             ? "lock-closed"
                             : undefined
                       }
-                      onPress={() =>
+                      onPress={() => {
+                        if (activeChild?.childId) {
+                          void persistWeekPlanId(
+                            activeChild.childId,
+                            activeWeekPlan.weekPlanId,
+                          );
+                        }
                         router.push({
                           pathname: "/(app)/(doctor)/activity-detail",
                           params: {
@@ -326,8 +427,8 @@ export default function ScheduleScreen() {
                             title: activity.title,
                             description: activity.instruction,
                           },
-                        } as any)
-                      }
+                        } as any);
+                      }}
                     />
                   </Card>
                 );
@@ -458,5 +559,14 @@ const styles = StyleSheet.create({
   },
   growthLinkPressed: {
     opacity: 0.7,
+  },
+  mchatBanner: {
+    gap: spacing[3],
+  },
+  mchatBannerHeader: {
+    flexDirection: "row",
+  },
+  mchatBannerDesc: {
+    lineHeight: 20,
   },
 });

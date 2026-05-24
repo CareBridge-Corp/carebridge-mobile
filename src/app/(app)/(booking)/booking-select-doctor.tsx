@@ -55,7 +55,6 @@ export default function BookingSelectDoctorScreen() {
           <PaywallCard
             title={t("payment.gate.appointmentTitle")}
             description={t("payment.gate.appointmentDescription")}
-            purpose="SUBSCRIPTION"
           />
         ) : (
           <>

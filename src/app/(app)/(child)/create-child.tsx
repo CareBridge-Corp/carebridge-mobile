@@ -179,7 +179,7 @@ export default function CreateChildScreen() {
         },
         onError: (error: unknown) => {
           if (isPaymentRequiredError(error)) {
-            router.push("/(app)/payment?purpose=EXTRA_CHILD" as Href);
+            router.push("/(app)/payment" as Href);
             return;
           }
           const message =
@@ -207,12 +207,11 @@ export default function CreateChildScreen() {
       >
         {isPaywalled ? (
           <PaywallCard
-            title={t("payment.gate.extraChildTitle", "Add another child")}
+            title={t("payment.gate.membershipTitle", "Membership required")}
             description={t(
-              "payment.gate.extraChildDescription",
-              "Subscribe to add additional child profiles.",
+              "payment.gate.membershipDescription",
+              "Subscribe once to unlock chat, appointments, therapy plans, and additional child profiles.",
             )}
-            purpose="EXTRA_CHILD"
           />
         ) : null}
 
