@@ -42,11 +42,11 @@ export function useLogin(
         "You're signed in to CareBridge. Tap to continue your child's care plan.",
       );
 
-      Toast.show({
-        type: ToastType.SUCCESS,
-        title: "Success",
-        description: "Login successful!",
-      });
+      // Toast.show({
+      //   type: ToastType.SUCCESS,
+      //   title: "Success",
+      //   description: "Login successful!",
+      // });
       router.replace("/(app)" as Href);
     },
     onError: (error: Error) => {

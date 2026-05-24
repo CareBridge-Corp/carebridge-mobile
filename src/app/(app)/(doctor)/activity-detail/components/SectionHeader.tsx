@@ -2,8 +2,9 @@ import { SectionHeader as UiSectionHeader } from "../../../../../shared/componen
 
 interface SectionHeaderProps {
   title: string;
+  subtitle?: string;
 }
 
-export function SectionHeader({ title }: SectionHeaderProps) {
-  return <UiSectionHeader title={title} />;
+export function SectionHeader({ title, subtitle }: SectionHeaderProps) {
+  return <UiSectionHeader title={title} subtitle={subtitle} />;
 }

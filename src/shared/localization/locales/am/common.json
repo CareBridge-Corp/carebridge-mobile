@@ -228,7 +228,27 @@
     "noSupportingInfo": "የማስደገፍ መረጃ የለም",
     "noSupportingInfoDesc": "ከዚህ ምርመራ ጋር ተጨማሪ መረጃ አልተላከም።",
     "addSupportingInfo": "የማስደገፍ መረጃ ጨምር",
-    "submittedOn": "በ{{date}} ተልኳል"
+    "submittedOn": "በ{{date}} ተልኳል",
+    "whatWeAreChecking": "ምን እንደምንመለከት",
+    "exampleAnswer": "ምሳሌ"
+  },
+  "activity": {
+    "title": "እንቅስቃሴ",
+    "howToPractice": "እንዴት መለማመድ",
+    "howToPracticeDesc": "እነዚህን الخطوات ከልጅዎ ጋር በቤት ይከተሉ።",
+    "relatedGames": "ተዛማጅ ጨዋታዎች",
+    "relatedGamesDesc": "ክህሎቱን ለማጠናከር ከዛሬው እንቅስቃሴ ጋር ይጫወቱ።",
+    "evidence": "Clinical basis",
+    "evidenceClinical": "Clinical evidence",
+    "evidencePediatric": "Pediatric protocol",
+    "evidenceWho": "WHO guidance",
+    "weekProgress": "በዚህ ሳምንት ሂደት",
+    "demoVideo": "የሐኪም demo ቪዲዮ",
+    "noInstructions": "لهذا እንቅስቃሴ step-by-step መመሪያ አልተሰጠም።",
+    "markCompleted": "ተጠናቋል ምልክት",
+    "goToNext": "ወደ ቀጣይ እንቅስቃሴ",
+    "noGames": "لهذا እንቅስቃሴ ተዛማጅ ጨዋታዎች የሉም።",
+    "tryAtHome": "በቤት ይሞክሩ"
   },
   "booking": {
     "dateTime": "ቀን እና ሰዓት",
@@ -263,6 +283,8 @@
     "notSelected": "አልተመረጠም",
     "missingDetails": "ዝርዝር ይጎድላል",
     "missingDetailsMessage": "እባክዎ የቦoking الخطواتን ያጠናቁ።",
+    "missingClinician": "ከመረጋገጥዎ በፊት ሐኪምዎን ይምረጡ።",
+    "missingProfile": "መለያዎን ማረጋገጥ አልተቻለም። እባክዎ እንደገና ይግቡና ይሞክሩ።",
     "bookingSuccess": "appointment በተሳካ ሁኔታ ተይዟል።",
     "bookingFailed": "appointment መደረግ አልተሳካም",
     "full": "ሙሉ",
@@ -370,6 +392,13 @@
     "verifyPending": "ክፍያ ገና አልተረጋገጠም። Subscription ይመልከቱ።",
     "returnReceived": "የክፍያ መመለሻ ተቀብሏል።",
     "failed": "ክፍያ አልተሳካም",
+    "checkoutUnavailable": "Checkout መጀመር አልተቻለም። እንደገና ይሞክሩ።",
+    "cancelledTitle": "ክፍያ ተሰርዟል",
+    "cancelledMessage": "ክፍያ ከመጨረስዎ በፊት checkout ዘግተው ወጥተዋል።",
+    "successMessage": "ክፍያ ተሳክቷል። መዳረሻዎ ተከፍቷል።",
+    "notCompletedMessage": "ክፍያ አልተጠናቀቀም። ክፍያ አልተከፈለም።",
+    "pendingTitle": "ክፍያ በመጠባበቅ ላይ",
+    "initFailed": "ክፍያ መጀመር አልተቻለም።",
     "plan": {
       "SUBSCRIPTION": {
         "title": "ወርሃዊ subscription",
