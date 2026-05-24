@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, usePathname, useRouter } from "expo-router";
 import React, { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../../shared/components/ui";
@@ -10,31 +11,31 @@ type NavItem = "home" | "schedule" | "chat" | "profile";
 
 interface TabConfig {
   key: NavItem;
-  label: string;
+  labelKey: string;
   icon: keyof typeof import("@expo/vector-icons/Ionicons").default.glyphMap;
   iconFilled: keyof typeof import("@expo/vector-icons/Ionicons").default.glyphMap;
   path: string;
 }
 
 const TABS: TabConfig[] = [
-  { key: "home", label: "Home", icon: "home-outline", iconFilled: "home", path: "/" },
+  { key: "home", labelKey: "tabs.home", icon: "home-outline", iconFilled: "home", path: "/" },
   {
     key: "schedule",
-    label: "Schedule",
+    labelKey: "tabs.schedule",
     icon: "calendar-outline",
     iconFilled: "calendar",
     path: "/schedule",
   },
   {
     key: "chat",
-    label: "Chat",
+    labelKey: "tabs.chat",
     icon: "chatbubble-outline",
     iconFilled: "chatbubble",
     path: "/chat",
   },
   {
     key: "profile",
-    label: "Profile",
+    labelKey: "tabs.profile",
     icon: "person-outline",
     iconFilled: "person",
     path: "/profile",
@@ -70,6 +71,7 @@ export default function BottomNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const isImmersive = useMemo(
     () => IMMERSIVE_PATH_FRAGMENTS.some((fragment) => pathname.includes(fragment)),
@@ -98,11 +100,12 @@ export default function BottomNavigation() {
       <View style={styles.bar}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
+          const label = t(tab.labelKey);
           return (
             <Pressable
               key={tab.key}
               accessibilityRole="button"
-              accessibilityLabel={tab.label}
+              accessibilityLabel={label}
               accessibilityState={{ selected: isActive }}
               onPress={() => router.push(tab.path as Href)}
               hitSlop={6}
@@ -130,7 +133,7 @@ export default function BottomNavigation() {
                   { color: isActive ? colors.primary : colors.navInactiveTint },
                 ]}
               >
-                {tab.label}
+                {label}
               </Text>
             </Pressable>
           );
