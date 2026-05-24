@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import {
@@ -14,13 +14,6 @@ import { colors, spacing } from "../../../shared/theme";
 export default function MChatSuccessScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace("/(app)/mchat-results" as Href);
-    }, 2400);
-    return () => clearTimeout(timer);
-  }, [router]);
 
   const handleClose = () => router.replace("/(app)" as Href);
 
