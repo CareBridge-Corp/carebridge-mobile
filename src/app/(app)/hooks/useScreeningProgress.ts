@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "../../../shared/api/client";
+import { toApiLanguage } from "../../../shared/localization/language";
 
 export interface DomainProgressEntry {
   area: string;
@@ -81,7 +82,8 @@ export function useMChatQuestions(
   return useQuery({
     queryKey: ["mchat-questions", childId, lang],
     queryFn: async () => {
-      const params = new URLSearchParams({ lang });
+      const apiLang = toApiLanguage(lang);
+      const params = new URLSearchParams({ lang: apiLang });
       if (childId) params.append("childId", childId);
       return apiClient.get<MChatQuestionsResponse>(
         `/inference/questions?${params.toString()}`,

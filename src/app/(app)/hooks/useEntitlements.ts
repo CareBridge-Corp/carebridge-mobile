@@ -46,8 +46,11 @@ export async function initializePayment(input: {
   appointmentId?: string;
   doctorId?: string;
 }) {
-  const returnUrl = "carebridgemobile://payment-return";
-  const callbackUrl = `${process.env.EXPO_PUBLIC_API_URL?.replace(/\/api$/, "") || "http://192.168.64.208:5002"}/api/payments/webhook`;
+  const apiBase =
+    process.env.EXPO_PUBLIC_API_URL?.replace(/\/api$/, "") ||
+    "http://192.168.64.115:5002";
+  const returnUrl = `${apiBase}/payment-return?redirect=${encodeURIComponent("carebridgemobile://payment-return")}`;
+  const callbackUrl = `${apiBase}/api/payments/webhook`;
 
   return apiClient.post<InitializePaymentResponse>("/payments/initialize", {
     purpose: input.purpose,

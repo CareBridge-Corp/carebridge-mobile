@@ -7,6 +7,8 @@ interface SectionHeaderProps {
   title: string;
   /** Optional eyebrow text shown above the title. */
   eyebrow?: string;
+  /** Optional descriptive text shown below the title. */
+  subtitle?: string;
   /** Optional small action label on the right. */
   action?: {
     label: string;
@@ -21,6 +23,7 @@ interface SectionHeaderProps {
 export function SectionHeader({
   title,
   eyebrow,
+  subtitle,
   action,
   style,
 }: SectionHeaderProps) {
@@ -33,6 +36,11 @@ export function SectionHeader({
           </Text>
         ) : null}
         <Text variant="title3">{title}</Text>
+        {subtitle ? (
+          <Text variant="caption" tone="secondary" style={styles.subtitle}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       {action ? (
         <Pressable
@@ -61,6 +69,9 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     marginBottom: 2,
+  },
+  subtitle: {
+    marginTop: spacing[1],
   },
   actionPressed: {
     opacity: 0.6,
