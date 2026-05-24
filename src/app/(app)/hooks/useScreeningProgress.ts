@@ -61,6 +61,8 @@ export function useScreeningProgress(childId: string | undefined) {
 export interface MChatQuestion {
   id: number;
   question: string;
+  description?: string;
+  example?: string;
   area: string;
   lang: string;
 }
