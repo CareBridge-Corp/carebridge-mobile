@@ -23,16 +23,24 @@ import {
   Text,
 } from "../../../shared/components/ui";
 import { borderRadius, colors, layout, spacing } from "../../../shared/theme";
+import { useLanguageStore } from "../../../shared/store/languageStore";
 import { ChildSelectorModal } from "../components/ChildSelectorModal";
 import { SupportingInfoForm } from "../components/SupportingInfoForm";
 import { useScreeningDetail } from "../hooks/useScreenings";
+import {
+  parseQuestionId,
+  resolveQuestionLabel,
+  useQuestionBank,
+} from "../hooks/useScreeningProgress";
 import { useChildrenStore } from "../store/childrenStore";
 
 export default function ScreeningDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { language } = useLanguageStore();
 
   const { data: screeningData, isLoading } = useScreeningDetail(id);
+  const { data: questionBank } = useQuestionBank(language);
   const screening = screeningData;
 
   const { children, activeChild } = useChildrenStore();
@@ -243,10 +251,26 @@ export default function ScreeningDetailScreen() {
                   eyebrow={`${Object.keys(screening.answers).length} questions`}
                 />
                 {Object.entries(screening.answers)
-                  .sort(([a], [b]) => Number(a) - Number(b))
-                  .map(([question, answer]) => (
+                  .sort(([a], [b]) => {
+                    const idA = parseQuestionId(a) ?? Number.MAX_SAFE_INTEGER;
+                    const idB = parseQuestionId(b) ?? Number.MAX_SAFE_INTEGER;
+                    return idA - idB;
+                  })
+                  .map(([questionKey, answer]) => {
+                    const label = resolveQuestionLabel(
+                      questionKey,
+                      questionBank?.lookup ?? new Map(),
+                    );
+                    const answerValue =
+                      typeof answer === "boolean"
+                        ? answer
+                          ? "yes"
+                          : "no"
+                        : String(answer).toLowerCase();
+
+                    return (
                     <Card
-                      key={question}
+                      key={questionKey}
                       variant="elevated"
                       padding="md"
                       style={styles.answerCard}
@@ -255,18 +279,17 @@ export default function ScreeningDetailScreen() {
                         <Text
                           variant="body"
                           style={{ flex: 1 }}
-                          numberOfLines={3}
                         >
-                          {question}
+                          {label}
                         </Text>
                         <Badge
-                          label={answer === "yes" ? "Yes" : "No"}
-                          tone={answer === "yes" ? "success" : "neutral"}
+                          label={answerValue === "yes" ? "Yes" : "No"}
+                          tone={answerValue === "yes" ? "success" : "neutral"}
                           solid
                         />
                       </View>
                     </Card>
-                  ))}
+                  )})}
               </View>
             ) : null}
 
