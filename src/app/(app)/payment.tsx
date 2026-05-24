@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { Href, useLocalSearchParams, useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,19 +23,13 @@ import {
   openCheckoutAndReturnTxRef,
   waitForPaymentVerification,
 } from "./hooks/paymentCheckout";
-import {
-  initializePayment,
-  PaymentPurpose,
-  useEntitlements,
-} from "./hooks/useEntitlements";
+import { initializePayment, useEntitlements } from "./hooks/useEntitlements";
 
-const PLANS: Array<{
-  purpose: PaymentPurpose;
-  icon: keyof typeof Ionicons.glyphMap;
-}> = [
-  { purpose: "SUBSCRIPTION", icon: "sparkles" },
-  { purpose: "EXTRA_CHILD", icon: "person-add" },
-  { purpose: "APPOINTMENT", icon: "medical" },
+const FEATURES: Array<keyof typeof Ionicons.glyphMap> = [
+  "chatbubbles-outline",
+  "calendar-outline",
+  "fitness-outline",
+  "people-outline",
 ];
 
 type ModalState = {
@@ -56,12 +50,10 @@ const MODAL_HIDDEN: ModalState = {
 
 export default function PaymentScreen() {
   const router = useRouter();
-  const { purpose: purposeParam } = useLocalSearchParams<{ purpose?: string }>();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { data: entitlements, isLoading } = useEntitlements();
-  const [processingPurpose, setProcessingPurpose] =
-    useState<PaymentPurpose | null>(null);
+  const [processing, setProcessing] = useState(false);
   const [modal, setModal] = useState<ModalState>(MODAL_HIDDEN);
 
   const closeModal = () => setModal(MODAL_HIDDEN);
@@ -70,10 +62,10 @@ export default function PaymentScreen() {
     setModal({ ...next, visible: true });
   };
 
-  const handlePay = async (purpose: PaymentPurpose) => {
+  const handlePay = async () => {
     try {
-      setProcessingPurpose(purpose);
-      const response = await initializePayment({ purpose });
+      setProcessing(true);
+      const response = await initializePayment();
       const checkoutUrl =
         response.data?.checkout_url || response.checkout_url || null;
       const txRef = response.txRef;
@@ -147,20 +139,13 @@ export default function PaymentScreen() {
         onPrimary: closeModal,
       });
     } finally {
-      setProcessingPurpose(null);
+      setProcessing(false);
     }
   };
 
-  const getAmount = (purpose: PaymentPurpose) => {
-    if (!entitlements) return "";
-    if (purpose === "SUBSCRIPTION") {
-      return `${entitlements.pricing.subscriptionAmount} ${entitlements.pricing.currency}`;
-    }
-    if (purpose === "EXTRA_CHILD") {
-      return `${entitlements.pricing.extraChildAmount} ${entitlements.pricing.currency}`;
-    }
-    return `${entitlements.pricing.appointmentAmount} ${entitlements.pricing.currency}`;
-  };
+  const amountLabel = entitlements
+    ? `${entitlements.pricing.membershipAmount} ${entitlements.pricing.currency}`
+    : "";
 
   if (isLoading) {
     return (
@@ -172,9 +157,7 @@ export default function PaymentScreen() {
     );
   }
 
-  const visiblePlans = PLANS.filter(
-    (plan) => !purposeParam || plan.purpose === purposeParam,
-  );
+  const isActive = entitlements?.hasActiveSubscription;
 
   return (
     <Screen padded={false} background={colors.surfaceMuted}>
@@ -194,17 +177,11 @@ export default function PaymentScreen() {
           </Text>
           <View style={styles.statusRow}>
             <Text variant="title2">
-              {entitlements?.hasActiveSubscription
-                ? t("payment.active")
-                : t("payment.inactive")}
+              {isActive ? t("payment.active") : t("payment.inactive")}
             </Text>
             <Badge
-              label={
-                entitlements?.hasActiveSubscription
-                  ? t("payment.active")
-                  : t("payment.inactive")
-              }
-              tone={entitlements?.hasActiveSubscription ? "success" : "warning"}
+              label={isActive ? t("payment.active") : t("payment.inactive")}
+              tone={isActive ? "success" : "warning"}
             />
           </View>
           {entitlements?.subscriptionExpiresAt ? (
@@ -215,54 +192,59 @@ export default function PaymentScreen() {
           ) : null}
         </Card>
 
-        {visiblePlans.map((plan) => {
-          const processing = processingPurpose === plan.purpose;
-          return (
-            <Card
-              key={plan.purpose}
-              variant="elevated"
-              padding="lg"
-              style={styles.planCard}
-            >
-              <View style={styles.planHeader}>
-                <View style={styles.planIcon}>
-                  <Ionicons
-                    name={plan.icon}
-                    size={22}
-                    color={colors.primary}
-                  />
-                </View>
-                <View style={styles.planText}>
-                  <Text variant="title3">
-                    {t(`payment.plan.${plan.purpose}.title`)}
-                  </Text>
-                  <Text variant="bodySmall" tone="secondary">
-                    {t(`payment.plan.${plan.purpose}.description`)}
-                  </Text>
-                </View>
-              </View>
+        <Card variant="elevated" padding="lg" style={styles.planCard}>
+          <View style={styles.planHeader}>
+            <View style={styles.planIcon}>
+              <Ionicons name="sparkles" size={24} color={colors.primary} />
+            </View>
+            <View style={styles.planText}>
+              <Text variant="title2">{t("payment.membership.title")}</Text>
+              <Text variant="bodySmall" tone="secondary">
+                {t("payment.membership.description")}
+              </Text>
+            </View>
+          </View>
 
-              <View style={styles.planFooter}>
-                <View>
-                  <Text variant="caption" tone="secondary">
-                    AMOUNT
-                  </Text>
-                  <Text variant="title2" tone="brand">
-                    {getAmount(plan.purpose)}
-                  </Text>
-                </View>
-                <Button
-                  label={t("payment.payNow")}
-                  onPress={() => handlePay(plan.purpose)}
-                  loading={processing}
-                  fullWidth={false}
-                  size="sm"
-                  trailingIcon="arrow-forward"
-                />
+          <View style={styles.featureList}>
+            {FEATURES.map((icon, index) => (
+              <View key={icon} style={styles.featureRow}>
+                <Ionicons name={icon} size={18} color={colors.primary} />
+                <Text variant="bodySmall">
+                  {t(`payment.membership.features.${index}`)}
+                </Text>
               </View>
-            </Card>
-          );
-        })}
+            ))}
+          </View>
+
+          <View style={styles.priceBlock}>
+            <Text variant="caption" tone="secondary">
+              {t("payment.membership.priceLabel")}
+            </Text>
+            <Text variant="display" tone="brand">
+              {amountLabel}
+            </Text>
+            <Text variant="caption" tone="tertiary">
+              {t("payment.membership.billingNote")}
+            </Text>
+          </View>
+
+          {!isActive ? (
+            <Button
+              label={t("payment.payNow")}
+              onPress={handlePay}
+              loading={processing}
+              trailingIcon="arrow-forward"
+            />
+          ) : (
+            <Button
+              label={t("payment.renewNow")}
+              variant="secondary"
+              onPress={handlePay}
+              loading={processing}
+              trailingIcon="refresh-outline"
+            />
+          )}
+        </Card>
 
         <Button
           label={t("payment.backHome")}
@@ -319,9 +301,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   planIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primaryMuted,
     justifyContent: "center",
     alignItems: "center",
@@ -330,10 +312,18 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing[1],
   },
-  planFooter: {
+  featureList: {
+    gap: spacing[2],
+  },
+  featureRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    gap: spacing[3],
+    gap: spacing[2],
+  },
+  priceBlock: {
+    gap: spacing[1],
+    paddingTop: spacing[2],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 });
