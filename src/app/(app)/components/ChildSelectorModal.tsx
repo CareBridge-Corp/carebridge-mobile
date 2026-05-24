@@ -53,7 +53,7 @@ export function ChildSelectorModal({
   const handleAddChild = () => {
     onClose();
     if (entitlements && !entitlements.canAddChild) {
-      router.push("/(app)/payment?purpose=EXTRA_CHILD" as Href);
+      router.push("/(app)/payment" as Href);
       return;
     }
     router.push("/(app)/(child)/create-child" as Href);

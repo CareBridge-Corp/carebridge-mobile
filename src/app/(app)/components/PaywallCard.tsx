@@ -13,10 +13,9 @@ import { spacing } from "../../../shared/theme";
 interface PaywallCardProps {
   title: string;
   description: string;
-  purpose?: "SUBSCRIPTION" | "EXTRA_CHILD" | "APPOINTMENT";
 }
 
-export function PaywallCard({ title, description, purpose }: PaywallCardProps) {
+export function PaywallCard({ title, description }: PaywallCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -32,13 +31,7 @@ export function PaywallCard({ title, description, purpose }: PaywallCardProps) {
       <View style={styles.actions}>
         <Button
           label={t("payment.unlock", "Unlock access")}
-          onPress={() =>
-            router.push(
-              purpose
-                ? (`/(app)/payment?purpose=${purpose}` as Href)
-                : ("/(app)/payment" as Href),
-            )
-          }
+          onPress={() => router.push("/(app)/payment" as Href)}
           leadingIcon="lock-open-outline"
         />
       </View>
