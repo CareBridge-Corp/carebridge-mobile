@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dimensions,
   Pressable,
@@ -37,6 +38,7 @@ const { width } = Dimensions.get("window");
 
 export default function GrowthJourneyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { activeChild, children } = useChildrenStore();
   const { data: roadmapData, refetch } = useRoadmaps(activeChild?.childId);
   const [showChildSelector, setShowChildSelector] = useState(false);
@@ -124,6 +126,47 @@ export default function GrowthJourneyScreen() {
     activeRoadmap,
   );
 
+  const journeyStats = useMemo(() => {
+    let totalActivities = 0;
+    let completedActivities = 0;
+    let activeNode: {
+      activityId: string;
+      title: string;
+      weekPlanId: string;
+      weekNumber: number;
+    } | null = null;
+
+    for (const wp of weekPlans) {
+      const activities = wp.activities || [];
+      totalActivities += activities.length;
+      for (const activity of activities) {
+        const status = getActivityStatus(wp, activity.activityId);
+        if (status.completed) {
+          completedActivities += 1;
+          continue;
+        }
+        if (
+          !activeNode &&
+          canStartActivity(wp, activity.activityId, weekPlans).allowed
+        ) {
+          activeNode = {
+            activityId: activity.activityId,
+            title: activity.title,
+            weekPlanId: wp.weekPlanId,
+            weekNumber: wp.weekNumber,
+          };
+        }
+      }
+    }
+
+    return {
+      totalActivities,
+      completedActivities,
+      weekCount: weekPlans.length,
+      activeNode,
+    };
+  }, [weekPlans]);
+
   const { data: profile } = useProfile();
   const parentStatus = profile?.status || "UNVERIFIED";
   const childStatus = activeChild?.status || "UNVERIFIED";
@@ -142,7 +185,7 @@ export default function GrowthJourneyScreen() {
             onPress={() => router.back()}
           />
           <Text variant="title2" align="center" style={styles.headerTitle}>
-            Journey blocked
+            {t("growth.blocked")}
           </Text>
           <View style={styles.headerSide} />
         </View>
@@ -157,7 +200,7 @@ export default function GrowthJourneyScreen() {
               />
             </View>
             <Text variant="title1" align="center" style={styles.gateTitle}>
-              Complete verification first
+              {t("growth.verifyFirst")}
             </Text>
             <Text
               variant="body"
@@ -165,17 +208,16 @@ export default function GrowthJourneyScreen() {
               align="center"
               style={styles.gateSubtitle}
             >
-              Verify both the parent and child profiles to unlock the growth
-              journey.
+              {t("growth.verifyDesc")}
             </Text>
 
             <View style={styles.gateStatusList}>
-              <GateStatusRow label="Parent" verified={parentVerified} />
-              <GateStatusRow label="Child" verified={childVerified} />
+              <GateStatusRow label={t("growth.parent")} verified={parentVerified} />
+              <GateStatusRow label={t("growth.child")} verified={childVerified} />
             </View>
 
             <Button
-              label="Go to verification"
+              label={t("growth.goVerify")}
               onPress={() => router.push("/(app)/(verification)/verify" as Href)}
               trailingIcon="arrow-forward"
             />
@@ -206,7 +248,9 @@ export default function GrowthJourneyScreen() {
           />
           <View style={styles.headerTextBlock}>
             <Text variant="title3" numberOfLines={1}>
-              {`${activeChild?.firstName || "Child"}'s journey`}
+              {t("growth.childJourney", {
+                name: activeChild?.firstName || t("growth.child"),
+              })}
             </Text>
             <View style={styles.progressRow}>
               <ProgressBar
@@ -233,7 +277,7 @@ export default function GrowthJourneyScreen() {
         <View style={styles.cycleBanner}>
           <Badge
             tone="success"
-            label="Cycle complete"
+            label={t("growth.cycleComplete")}
             icon="checkmark-circle"
           />
           <Text
@@ -241,8 +285,7 @@ export default function GrowthJourneyScreen() {
             tone="secondary"
             style={styles.cycleBannerText}
           >
-            4-week roadmap complete. Next cycle available after the review
-            period.
+            {t("growth.cycleCompleteDesc")}
           </Text>
         </View>
       ) : null}
@@ -250,8 +293,8 @@ export default function GrowthJourneyScreen() {
       {weekPlans.length === 0 ? (
         <EmptyState
           icon="map-outline"
-          title="No published roadmap yet"
-          description="Once your clinician publishes an active roadmap, the step-by-step journey will appear here."
+          title={t("growth.noRoadmap")}
+          description={t("growth.noRoadmapDesc")}
         />
       ) : (
         <ScrollView
@@ -259,6 +302,112 @@ export default function GrowthJourneyScreen() {
           showsVerticalScrollIndicator={false}
           ref={(ref) => ref?.scrollToEnd({ animated: false })}
         >
+          {/* Summary + active activity CTA */}
+          <View style={styles.summaryWrap}>
+            <Card variant="elevated" padding="lg">
+              <View style={styles.summaryHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="label" tone="brand">
+                    {t("growth.summaryTitle")}
+                  </Text>
+                  <Text variant="title2" style={styles.summaryTitle}>
+                    {t("growth.activitiesDone", {
+                      done: journeyStats.completedActivities,
+                      total: journeyStats.totalActivities,
+                    })}
+                  </Text>
+                </View>
+                <Text variant="display" tone="brand">
+                  {totalProgress}%
+                </Text>
+              </View>
+              <ProgressBar value={totalProgress} />
+              <View style={styles.summaryMetricsRow}>
+                <View style={styles.summaryMetric}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <Text variant="caption" tone="secondary">
+                    {t("growth.weeks", { count: journeyStats.weekCount })}
+                  </Text>
+                </View>
+                <View style={styles.summaryMetric}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={16}
+                    color={colors.success}
+                  />
+                  <Text variant="caption" tone="secondary">
+                    {t("growth.doneCount", {
+                      count: journeyStats.completedActivities,
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.summaryMetric}>
+                  <Ionicons
+                    name="trail-sign-outline"
+                    size={16}
+                    color={colors.warning}
+                  />
+                  <Text variant="caption" tone="secondary">
+                    {t("growth.toGo", {
+                      count: Math.max(
+                        0,
+                        journeyStats.totalActivities -
+                          journeyStats.completedActivities,
+                      ),
+                    })}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+
+            {journeyStats.activeNode ? (
+              <Card variant="tinted" padding="md" style={styles.activeCard}>
+                <View style={styles.activeCardHeader}>
+                  <Badge label={t("growth.todaysTask")} tone="brand" icon="sparkles" />
+                  <Text variant="caption" tone="secondary">
+                    {t("growth.week", {
+                      number: journeyStats.activeNode.weekNumber,
+                    })}
+                  </Text>
+                </View>
+                <Text
+                  variant="title3"
+                  numberOfLines={2}
+                  style={styles.activeCardTitle}
+                >
+                  {journeyStats.activeNode.title}
+                </Text>
+                <Button
+                  label={t("growth.continueActivity")}
+                  trailingIcon="arrow-forward"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(app)/(doctor)/activity-detail",
+                      params: {
+                        activityId: journeyStats.activeNode!.activityId,
+                        weekPlanId: journeyStats.activeNode!.weekPlanId,
+                      },
+                    } as any)
+                  }
+                />
+              </Card>
+            ) : null}
+
+            <View style={styles.legendRow}>
+              <LegendDot color={colors.success} icon="checkmark" label={t("growth.legendDone")} />
+              <LegendDot color={colors.primary} icon="sparkles" label={t("growth.legendActive")} />
+              <LegendDot
+                color={colors.borderStrong}
+                icon="lock-closed"
+                label={t("growth.legendLocked")}
+              />
+            </View>
+          </View>
+
           <View
             style={styles.pathContainer}
             onLayout={(event) =>
@@ -403,6 +552,27 @@ export default function GrowthJourneyScreen() {
   );
 }
 
+function LegendDot({
+  color,
+  icon,
+  label,
+}: {
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+}) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.legendCircle, { backgroundColor: color }]}>
+        <Ionicons name={icon} size={12} color={colors.textInverse} />
+      </View>
+      <Text variant="caption" tone="secondary">
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function GateStatusRow({
   label,
   verified,
@@ -410,6 +580,7 @@ function GateStatusRow({
   label: string;
   verified: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.gateStatusRow}>
       <View style={styles.gateStatusLeft}>
@@ -423,7 +594,7 @@ function GateStatusRow({
         </Text>
       </View>
       <Badge
-        label={verified ? "Verified" : "Pending"}
+        label={verified ? t("common.verified") : t("common.pending")}
         tone={verified ? "success" : "warning"}
       />
     </View>
@@ -521,6 +692,63 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+  },
+  summaryWrap: {
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    gap: spacing[3],
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing[3],
+    marginBottom: spacing[3],
+  },
+  summaryTitle: {
+    marginTop: spacing[1],
+  },
+  summaryMetricsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing[3],
+    paddingTop: spacing[3],
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+  },
+  summaryMetric: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  activeCard: {
+    gap: spacing[3],
+  },
+  activeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  activeCardTitle: {
+    marginTop: spacing[1],
+    marginBottom: spacing[3],
+  },
+  legendRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing[4],
+    marginTop: spacing[1],
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  legendCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pathContainer: {
     paddingVertical: 40,
