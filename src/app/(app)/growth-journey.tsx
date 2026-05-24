@@ -28,10 +28,13 @@ import {
   getActivityStatus,
   isRoadmapCycleComplete,
   resolveActiveRoadmap,
+  resolveRoadmapCycleStatus,
 } from "../../shared/utils/roadmapProgress";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
+import { DomainProgressSection } from "./components/DomainProgressSection";
 import { useProfile } from "./hooks/useProfile";
 import { useRoadmaps } from "./hooks/useRoadmaps";
+import { useScreeningProgress } from "./hooks/useScreeningProgress";
 import { useChildrenStore } from "./store/childrenStore";
 
 const { width } = Dimensions.get("window");
@@ -41,13 +44,16 @@ export default function GrowthJourneyScreen() {
   const { t } = useTranslation();
   const { activeChild, children } = useChildrenStore();
   const { data: roadmapData, refetch } = useRoadmaps(activeChild?.childId);
+  const { data: progressData, refetch: refetchProgress } =
+    useScreeningProgress(activeChild?.childId);
   const [showChildSelector, setShowChildSelector] = useState(false);
   const [pathHeight, setPathHeight] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch]),
+      refetchProgress();
+    }, [refetch, refetchProgress]),
   );
 
   const weekPlans = roadmapData?.weekPlans ?? [];
@@ -124,6 +130,11 @@ export default function GrowthJourneyScreen() {
   const roadmapCycleComplete = isRoadmapCycleComplete(
     weekPlans,
     activeRoadmap,
+  );
+  const { readyForNextScreening } = resolveRoadmapCycleStatus(
+    weekPlans,
+    activeRoadmap,
+    progressData ?? undefined,
   );
 
   const journeyStats = useMemo(() => {
@@ -285,8 +296,18 @@ export default function GrowthJourneyScreen() {
             tone="secondary"
             style={styles.cycleBannerText}
           >
-            {t("growth.cycleCompleteDesc")}
+            {readyForNextScreening
+              ? t("growth.cycleCompleteNextMchat")
+              : t("growth.cycleCompleteDesc")}
           </Text>
+          {readyForNextScreening ? (
+            <Button
+              label={t("home.hero.startNextMchat")}
+              onPress={() => router.push("/(app)/mchat-privacy" as Href)}
+              trailingIcon="arrow-forward"
+              style={styles.cycleBannerButton}
+            />
+          ) : null}
         </View>
       ) : null}
 
@@ -395,6 +416,21 @@ export default function GrowthJourneyScreen() {
                   }
                 />
               </Card>
+            ) : null}
+
+            {progressData?.screeningComparison?.hasComparison ? (
+              <View style={styles.progressSection}>
+                <Text variant="label" tone="brand">
+                  {t("screening.progressTitle")}
+                </Text>
+                <Text variant="caption" tone="secondary">
+                  {t("screening.progressSubtitle")}
+                </Text>
+                <DomainProgressSection
+                  domainProgress={progressData.domainProgress ?? []}
+                  screeningComparison={progressData.screeningComparison}
+                />
+              </View>
             ) : null}
 
             <View style={styles.legendRow}>
@@ -641,15 +677,16 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   cycleBanner: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: spacing[3],
     paddingHorizontal: spacing[5],
-    paddingVertical: spacing[3],
+    paddingVertical: spacing[4],
     backgroundColor: colors.successBackground,
   },
   cycleBannerText: {
-    flex: 1,
+    lineHeight: 20,
+  },
+  cycleBannerButton: {
+    alignSelf: "stretch",
   },
   gateBody: {
     flex: 1,
@@ -731,6 +768,10 @@ const styles = StyleSheet.create({
   activeCardTitle: {
     marginTop: spacing[1],
     marginBottom: spacing[3],
+  },
+  progressSection: {
+    gap: spacing[2],
+    marginTop: spacing[1],
   },
   legendRow: {
     flexDirection: "row",

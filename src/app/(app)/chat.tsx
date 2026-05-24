@@ -50,9 +50,15 @@ export default function ChatScreen() {
 
   useEffect(() => {
     socketService.connect();
-    const timer = setTimeout(() => setSocketConnected(true), 500);
-    return () => clearTimeout(timer);
+    const unsubscribe = socketService.subscribeConnection(setSocketConnected);
+    return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (activeChild?.childId) {
+      socketService.joinChildRoom(activeChild.childId);
+    }
+  }, [activeChild?.childId]);
 
   const { data: conversations, isLoading } = useConversations(
     activeChild?.childId,
