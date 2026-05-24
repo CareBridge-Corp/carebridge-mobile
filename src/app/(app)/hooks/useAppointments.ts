@@ -33,6 +33,43 @@ export function useAvailableSlots(
   });
 }
 
+export interface AvailableDay {
+  date: string;
+  day_of_week: number;
+  total_slots: number;
+  available_slots: number;
+  first_slot?: string;
+  last_slot?: string;
+  is_available: boolean;
+}
+
+export function useAvailableDays(
+  doctorId: string | undefined,
+  from: string | undefined,
+  to: string | undefined,
+  meetingType: "in_person" | "online" = "in_person",
+) {
+  return useQuery({
+    queryKey: ["available-days", doctorId, from, to, meetingType],
+    queryFn: async () => {
+      if (!doctorId || !from || !to) return [] as AvailableDay[];
+
+      const response = await apiClient.get<{
+        doctor_id: string;
+        from: string;
+        to: string;
+        meeting_type: string;
+        days: AvailableDay[];
+      }>(
+        `/doctors/${doctorId}/available-days?from=${from}&to=${to}&meeting_type=${meetingType}`,
+      );
+
+      return response.days ?? [];
+    },
+    enabled: !!doctorId && !!from && !!to,
+  });
+}
+
 export function useDoctorAppointments(
   doctorId: string | undefined,
   filters?: { status?: string; from?: string; to?: string },
@@ -49,7 +86,7 @@ export function useDoctorAppointments(
 
       const qs = queryParams.toString();
       const response = await apiClient.get<{ appointments: Appointment[] }>(
-        `/doctors/${doctorId}/appointments${qs ? `?${qs}` : ""}`,
+        `/doctors/${doctorId}/appointments/parent${qs ? `?${qs}` : ""}`,
       );
       return response.appointments ?? [];
     },
