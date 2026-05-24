@@ -1,16 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  Alert,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
+import StatusModal from "../../shared/components/StatusModal";
 import {
   Badge,
   Button,
@@ -21,10 +20,13 @@ import {
 } from "../../shared/components/ui";
 import { colors, layout, spacing } from "../../shared/theme";
 import {
+  openCheckoutAndReturnTxRef,
+  waitForPaymentVerification,
+} from "./hooks/paymentCheckout";
+import {
   initializePayment,
   PaymentPurpose,
   useEntitlements,
-  verifyPayment,
 } from "./hooks/useEntitlements";
 
 const PLANS: Array<{
@@ -36,6 +38,22 @@ const PLANS: Array<{
   { purpose: "APPOINTMENT", icon: "medical" },
 ];
 
+type ModalState = {
+  visible: boolean;
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+  primaryLabel?: string;
+  onPrimary?: () => void;
+};
+
+const MODAL_HIDDEN: ModalState = {
+  visible: false,
+  type: "info",
+  title: "",
+  message: "",
+};
+
 export default function PaymentScreen() {
   const router = useRouter();
   const { purpose: purposeParam } = useLocalSearchParams<{ purpose?: string }>();
@@ -44,6 +62,13 @@ export default function PaymentScreen() {
   const { data: entitlements, isLoading } = useEntitlements();
   const [processingPurpose, setProcessingPurpose] =
     useState<PaymentPurpose | null>(null);
+  const [modal, setModal] = useState<ModalState>(MODAL_HIDDEN);
+
+  const closeModal = () => setModal(MODAL_HIDDEN);
+
+  const showModal = (next: Omit<ModalState, "visible">) => {
+    setModal({ ...next, visible: true });
+  };
 
   const handlePay = async (purpose: PaymentPurpose) => {
     try {
@@ -53,27 +78,74 @@ export default function PaymentScreen() {
         response.data?.checkout_url || response.checkout_url || null;
       const txRef = response.txRef;
 
-      if (!checkoutUrl) {
-        Alert.alert("Payment error", "Could not start checkout.");
+      if (!checkoutUrl || !txRef) {
+        showModal({
+          type: "error",
+          title: t("payment.failed"),
+          message: t("payment.checkoutUnavailable"),
+          primaryLabel: t("common.ok"),
+          onPrimary: closeModal,
+        });
         return;
       }
 
-      await WebBrowser.openBrowserAsync(checkoutUrl);
+      const verifyTxRef = await openCheckoutAndReturnTxRef(checkoutUrl, txRef);
+      const verifyResult = await waitForPaymentVerification(verifyTxRef);
+      await queryClient.invalidateQueries({ queryKey: ["entitlements"] });
 
-      if (txRef) {
-        await verifyPayment(txRef);
+      const paid =
+        verifyResult.payment?.status === "PAID" ||
+        verifyResult.entitlements?.hasActiveSubscription;
+
+      if (paid) {
+        showModal({
+          type: "success",
+          title: t("common.success"),
+          message: t("payment.successMessage"),
+          primaryLabel: t("common.ok"),
+          onPrimary: () => {
+            closeModal();
+            router.replace("/(app)" as Href);
+          },
+        });
+        return;
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["entitlements"] });
-      Alert.alert("Payment", "If payment succeeded, your access is now unlocked.");
-    } catch (error: any) {
-      const responseData = error?.response?.data;
+      if (verifyResult.payment?.status === "FAILED") {
+        showModal({
+          type: "error",
+          title: t("payment.failed"),
+          message: t("payment.notCompletedMessage"),
+          primaryLabel: t("common.ok"),
+          onPrimary: closeModal,
+        });
+        return;
+      }
+
+      showModal({
+        type: "info",
+        title: t("payment.pendingTitle"),
+        message: t("payment.verifyPending"),
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
+    } catch (error: unknown) {
+      const responseData =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { details?: string; error?: string } } })
+              .response?.data
+          : undefined;
       const details =
         responseData?.details ||
         responseData?.error ||
-        error?.message ||
-        "Unable to initialize payment.";
-      Alert.alert("Payment failed", details);
+        (error instanceof Error ? error.message : t("payment.initFailed"));
+      showModal({
+        type: "error",
+        title: t("payment.failed"),
+        message: details,
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
     } finally {
       setProcessingPurpose(null);
     }
@@ -198,6 +270,15 @@ export default function PaymentScreen() {
           onPress={() => router.push("/(app)" as Href)}
         />
       </ScrollView>
+
+      <StatusModal
+        visible={modal.visible}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        primaryButtonText={modal.primaryLabel ?? t("common.ok")}
+        onPrimaryPress={modal.onPrimary ?? closeModal}
+      />
     </Screen>
   );
 }
