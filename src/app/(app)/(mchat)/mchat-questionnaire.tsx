@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Animated,
@@ -85,6 +86,7 @@ const MCHAT_QUESTIONS = [
 
 export default function MChatQuestionnaireScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const activeChild = useChildrenStore((state) => state.activeChild);
   const { language } = useLanguageStore();
@@ -175,7 +177,7 @@ export default function MChatQuestionnaireScreen() {
         <View style={styles.loadingCenter}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text variant="body" tone="secondary" style={{ marginTop: spacing[3] }}>
-            Loading screening...
+            {t("mchat.loading")}
           </Text>
         </View>
       </Screen>
@@ -190,18 +192,21 @@ export default function MChatQuestionnaireScreen() {
       <View style={styles.header} {...panResponder.panHandlers}>
         <IconButton
           icon="chevron-back"
-          accessibilityLabel="Back"
+          accessibilityLabel={t("common.back")}
           onPress={handleBack}
         />
         <View style={styles.progressWrap}>
           <Text variant="caption" tone="secondary" style={styles.progressLabel}>
-            Question {currentQuestion + 1} of {totalQuestions}
+            {t("mchat.questionOf", {
+              current: currentQuestion + 1,
+              total: totalQuestions,
+            })}
           </Text>
           <ProgressBar value={progressPct} />
         </View>
         <IconButton
           icon="chevron-forward"
-          accessibilityLabel="Next"
+          accessibilityLabel={t("common.next")}
           onPress={handleNext}
         />
       </View>
@@ -228,7 +233,9 @@ export default function MChatQuestionnaireScreen() {
 
             {answer !== undefined ? (
               <Badge
-                label={`Your answer: ${answer ? "Yes" : "No"}`}
+                label={
+                  answer ? t("mchat.yourAnswerYes") : t("mchat.yourAnswerNo")
+                }
                 tone={answer ? "success" : "neutral"}
                 icon={answer ? "checkmark-circle" : "ellipse-outline"}
                 style={styles.answerBadge}
@@ -251,7 +258,7 @@ export default function MChatQuestionnaireScreen() {
             answer === false && styles.answerBtnSelected,
             pressed && styles.answerBtnPressed,
           ]}
-          accessibilityLabel="No"
+          accessibilityLabel={t("common.no")}
         >
           <Ionicons
             name="close-circle"
@@ -264,7 +271,7 @@ export default function MChatQuestionnaireScreen() {
               color: answer === false ? colors.textInverse : colors.textPrimary,
             }}
           >
-            No
+            {t("common.no")}
           </Text>
         </Pressable>
         <Pressable
@@ -274,7 +281,7 @@ export default function MChatQuestionnaireScreen() {
             answer === true && styles.answerBtnSelected,
             pressed && styles.answerBtnPressed,
           ]}
-          accessibilityLabel="Yes"
+          accessibilityLabel={t("common.yes")}
         >
           <Ionicons
             name="checkmark-circle"
@@ -287,7 +294,7 @@ export default function MChatQuestionnaireScreen() {
               color: answer === true ? colors.textInverse : colors.textPrimary,
             }}
           >
-            Yes
+            {t("common.yes")}
           </Text>
         </Pressable>
       </Animated.View>

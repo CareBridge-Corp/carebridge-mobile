@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import {
   Button,
@@ -12,6 +13,7 @@ import { colors, spacing } from "../../../shared/theme";
 
 export default function MChatSuccessScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -28,7 +30,7 @@ export default function MChatSuccessScreen() {
         <View style={{ flex: 1 }} />
         <IconButton
           icon="close"
-          accessibilityLabel="Close"
+          accessibilityLabel={t("common.cancel")}
           onPress={handleClose}
         />
       </View>
@@ -42,14 +44,14 @@ export default function MChatSuccessScreen() {
           />
         </View>
         <Text variant="display" align="center" style={styles.title}>
-          Screening submitted
+          {t("mchat.successTitle")}
         </Text>
         <Text variant="body" tone="secondary" align="center" style={styles.body2}>
-          {`Your clinician will review the answers and prepare a personalised care plan. You'll be notified the moment it's ready.`}
+          {t("mchat.successDesc")}
         </Text>
       </View>
 
-      <Button label="Back to home" onPress={handleClose} />
+      <Button label={t("mchat.backHome")} onPress={handleClose} />
     </Screen>
   );
 }

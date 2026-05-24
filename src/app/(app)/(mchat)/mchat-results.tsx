@@ -1,5 +1,6 @@
 import { Href, useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import {
   Badge,
@@ -13,27 +14,28 @@ import {
 } from "../../../shared/components/ui";
 import { colors, spacing } from "../../../shared/theme";
 
-const NEXT_STEPS = [
-  {
-    title: "Consult a pediatrician",
-    body: "Book a developmental specialist for a comprehensive evaluation.",
-  },
-  {
-    title: "Monitor development",
-    body: "Track your child's milestones and behaviours over the next few weeks.",
-  },
-  {
-    title: "Early intervention",
-    body: "Consider early intervention services if recommended by your doctor.",
-  },
-];
-
 export default function MChatResultsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const totalQuestions = 7;
   const concernAnswers = 3;
-  const riskLevel = "Medium";
+  const riskLevel = t("mchat.riskMedium");
   const riskPercentage = 43;
+
+  const nextSteps = [
+    {
+      title: t("mchat.nextStep1Title"),
+      body: t("mchat.nextStep1Body"),
+    },
+    {
+      title: t("mchat.nextStep2Title"),
+      body: t("mchat.nextStep2Body"),
+    },
+    {
+      title: t("mchat.nextStep3Title"),
+      body: t("mchat.nextStep3Body"),
+    },
+  ];
 
   const handleClose = () => router.replace("/(app)" as Href);
   const handleConsultDoctor = () =>
@@ -41,16 +43,16 @@ export default function MChatResultsScreen() {
 
   return (
     <Screen padded={false} background={colors.surfaceMuted} scroll>
-      <ScreenHeader title="M-CHAT results" onBack={handleClose} />
+      <ScreenHeader title={t("mchat.resultsTitle")} onBack={handleClose} />
 
       <View style={styles.body}>
         <Card variant="elevated" padding="lg">
-          <Badge label="Result" tone="warning" icon="alert-circle" />
+          <Badge label={t("mchat.resultsBadge")} tone="warning" icon="alert-circle" />
           <Text variant="display" style={styles.riskLabel}>
-            {riskLevel} risk
+            {t("mchat.riskLevel", { level: riskLevel })}
           </Text>
           <Text variant="body" tone="secondary">
-            Based on the M-CHAT-R/F screening for autism risk factors.
+            {t("mchat.riskDescription")}
           </Text>
 
           <View style={styles.progressRow}>
@@ -61,7 +63,7 @@ export default function MChatResultsScreen() {
               height={10}
             />
             <Text variant="caption" tone="secondary" style={styles.progressLabel}>
-              {riskPercentage}% risk score
+              {t("mchat.riskScore", { percent: riskPercentage })}
             </Text>
           </View>
         </Card>
@@ -73,7 +75,7 @@ export default function MChatResultsScreen() {
                 {totalQuestions}
               </Text>
               <Text variant="caption" tone="secondary">
-                Questions
+                {t("mchat.questionsLabel")}
               </Text>
             </View>
             <View style={styles.summaryDivider} />
@@ -82,23 +84,23 @@ export default function MChatResultsScreen() {
                 {concernAnswers}
               </Text>
               <Text variant="caption" tone="secondary">
-                Concern answers
+                {t("mchat.concernAnswers")}
               </Text>
             </View>
           </View>
         </Card>
 
         <Card variant="elevated" padding="lg">
-          <Text variant="title2">What this means</Text>
+          <Text variant="title2">{t("mchat.whatThisMeans")}</Text>
           <Text variant="body" tone="secondary" style={styles.interpretation}>
-            {`A medium score doesn't mean your child has autism — it suggests that a professional evaluation is recommended. Early support has lifelong benefits.`}
+            {t("mchat.interpretation")}
           </Text>
         </Card>
 
         <View>
-          <SectionHeader title="Next steps" />
+          <SectionHeader title={t("mchat.nextSteps")} />
           <Card variant="flat" padding="lg" style={styles.stepsCard}>
-            {NEXT_STEPS.map((step, idx) => (
+            {nextSteps.map((step, idx) => (
               <View key={step.title} style={styles.step}>
                 <View style={styles.stepNum}>
                   <Text variant="body" tone="brand" weight="semibold">
@@ -120,12 +122,12 @@ export default function MChatResultsScreen() {
 
         <View style={styles.actions}>
           <Button
-            label="Consult a doctor"
+            label={t("mchat.consultDoctor")}
             onPress={handleConsultDoctor}
             leadingIcon="medical"
           />
           <Button
-            label="Back to home"
+            label={t("mchat.backHome")}
             variant="ghost"
             onPress={handleClose}
           />
