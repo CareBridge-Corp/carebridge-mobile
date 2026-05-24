@@ -11,10 +11,12 @@ export interface UserEntitlements {
   canBookAppointments: boolean;
   canUseTreatment: boolean;
   pricing: {
-    subscriptionAmount: string;
-    extraChildAmount: string;
-    appointmentAmount: string;
+    membershipAmount: string;
     currency: string;
+    /** @deprecated Use membershipAmount — kept for older clients */
+    subscriptionAmount?: string;
+    extraChildAmount?: string;
+    appointmentAmount?: string;
   };
 }
 
@@ -31,7 +33,7 @@ export function useEntitlements() {
   });
 }
 
-export type PaymentPurpose = "SUBSCRIPTION" | "EXTRA_CHILD" | "APPOINTMENT";
+export type PaymentPurpose = "SUBSCRIPTION";
 
 interface InitializePaymentResponse {
   data?: { checkout_url?: string };
@@ -52,18 +54,12 @@ export function getPaymentReturnUrls() {
   return { apiBase, deepLink, bridgeUrl, authReturnUrl };
 }
 
-export async function initializePayment(input: {
-  purpose: PaymentPurpose;
-  appointmentId?: string;
-  doctorId?: string;
-}) {
+export async function initializePayment() {
   const { bridgeUrl, apiBase } = getPaymentReturnUrls();
   const callbackUrl = `${apiBase}/api/payments/webhook`;
 
   return apiClient.post<InitializePaymentResponse>("/payments/initialize", {
-    purpose: input.purpose,
-    appointment_id: input.appointmentId,
-    doctor_id: input.doctorId,
+    purpose: "SUBSCRIPTION",
     return_url: bridgeUrl,
     callback_url: callbackUrl,
   });
