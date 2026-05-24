@@ -1,10 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { ScrollView, StyleSheet, View } from "react-native";
 import {
+  Badge,
   Button,
+  Card,
   IconButton,
+  ProgressBar,
   Screen,
   Text,
 } from "../../../../shared/components/ui";
@@ -22,10 +26,23 @@ import { CompletionModal } from "./components/CompletionModal";
 import { NewWeekModal } from "./components/NewWeekModal";
 import { RecommendedGames } from "./components/RecommendedGames";
 import { SectionHeader } from "./components/SectionHeader";
-import { VerifiedBadge } from "./components/VerifiedBadge";
+
+function splitInstructions(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function formatAreaLabel(area: string): string {
+  return area
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 export default function ActivityDetailScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     title: string;
     description: string;
@@ -33,7 +50,6 @@ export default function ActivityDetailScreen() {
     activityId: string;
   }>();
 
-  const [isExpanded, setIsExpanded] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showNewWeekModal, setShowNewWeekModal] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -74,9 +90,16 @@ export default function ActivityDetailScreen() {
   const currentIndex = allActivitiesWithContext.findIndex(
     (a) => a.activityId === params.activityId,
   );
-
   const currentActivity = allActivitiesWithContext[currentIndex];
   const nextActivity = allActivitiesWithContext[currentIndex + 1];
+  const weekActivities = currentWeekPlan?.activities ?? [];
+  const activityIndexInWeek = weekActivities.findIndex(
+    (a) => a.activityId === params.activityId,
+  );
+  const weekProgress =
+    weekActivities.length > 0 && activityIndexInWeek >= 0
+      ? ((activityIndexInWeek + 1) / weekActivities.length) * 100
+      : 0;
 
   const [isCompleted, setIsCompleted] = useState(
     currentActivityStatus?.completed || false,
@@ -89,7 +112,6 @@ export default function ActivityDetailScreen() {
     if (!currentWeekPlan || !params.activityId || isStarted || isCompleted) {
       return;
     }
-
     if (canStart.allowed) {
       startActivity
         .mutateAsync({
@@ -103,6 +125,26 @@ export default function ActivityDetailScreen() {
         .catch(() => {});
     }
   }, [currentWeekPlan?.weekPlanId, params.activityId]);
+
+  const activityData = useMemo(
+    () => ({
+      title: currentActivity?.title || params.title || t("activity.title"),
+      description:
+        currentActivity?.description ||
+        currentActivity?.instruction ||
+        params.description ||
+        "",
+      instruction: currentActivity?.instruction || params.description || "",
+      riskCategory: currentActivity?.riskCategory,
+      mediaUrl: currentActivity?.mediaUrl,
+    }),
+    [currentActivity, params, t],
+  );
+
+  const instructionSteps = useMemo(
+    () => splitInstructions(activityData.instruction),
+    [activityData.instruction],
+  );
 
   const handleNext = () => {
     if (!isCompleted) {
@@ -165,23 +207,37 @@ export default function ActivityDetailScreen() {
     }
   };
 
-  const activityData = {
-    title: currentActivity?.title || params.title || "Activity",
-    description: currentActivity?.instruction || params.description || "",
-  };
+  const statusBadge = isCompleted
+    ? { label: t("schedule.completed"), tone: "success" as const }
+    : isStarted
+      ? { label: t("common.inProgress"), tone: "brand" as const }
+      : { label: t("common.ready"), tone: "neutral" as const };
 
   return (
-    <Screen padded={false} background={colors.surface}>
+    <Screen padded={false} background={colors.surfaceMuted}>
       <View style={styles.navbar}>
-        <View style={{ flex: 1 }}>
-          <Text variant="title1" numberOfLines={2}>
+        <IconButton
+          icon="chevron-back"
+          accessibilityLabel={t("common.back")}
+          onPress={() => router.back()}
+        />
+        <View style={styles.navbarCenter}>
+          {currentWeekPlan ? (
+            <Text variant="caption" tone="secondary" align="center">
+              {t("schedule.weekOf", {
+                current: currentWeekPlan.weekNumber,
+                total: weekPlans.length || 4,
+              })}
+            </Text>
+          ) : null}
+          <Text variant="title3" numberOfLines={1} align="center">
             {activityData.title}
           </Text>
         </View>
         <IconButton
           icon="close"
           variant="tinted"
-          accessibilityLabel="Close"
+          accessibilityLabel={t("common.cancel")}
           onPress={() => router.back()}
         />
       </View>
@@ -190,50 +246,103 @@ export default function ActivityDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.videoContainer}>
-          <View style={styles.playButton}>
-            <Ionicons name="play" size={32} color={colors.primary} />
+        <Card variant="elevated" padding="lg" style={styles.heroCard}>
+          <View style={styles.heroTop}>
+            <Badge label={statusBadge.label} tone={statusBadge.tone} />
+            {activityData.riskCategory ? (
+              <Badge
+                label={formatAreaLabel(activityData.riskCategory)}
+                tone="info"
+                size="sm"
+              />
+            ) : null}
           </View>
-        </View>
 
-        <View style={styles.section}>
-          <SectionHeader title="Description" />
-          <Text
-            variant="body"
-            tone="secondary"
-            numberOfLines={isExpanded ? undefined : 6}
-            style={styles.descriptionText}
-          >
-            {activityData.description}
-          </Text>
-          <Pressable
-            onPress={() => setIsExpanded(!isExpanded)}
-            hitSlop={6}
-          >
-            <Text
-              variant="bodyMedium"
-              weight="semibold"
-              style={styles.moreLink}
-            >
-              {isExpanded ? "Show less" : "Show more"}
+          {activityData.description ? (
+            <Text variant="body" tone="secondary" style={styles.heroDesc}>
+              {activityData.description}
             </Text>
-          </Pressable>
-        </View>
+          ) : null}
 
-        <View style={styles.divider} />
+          <View style={styles.progressBlock}>
+            <View style={styles.progressLabelRow}>
+              <Text variant="caption" tone="secondary">
+                {t("activity.weekProgress")}
+              </Text>
+              <Text variant="caption" tone="brand" weight="semibold">
+                {Math.round(weekProgress)}%
+              </Text>
+            </View>
+            <ProgressBar value={weekProgress} height={8} />
+          </View>
+
+          {activityData.mediaUrl ? (
+            <View style={styles.mediaPlaceholder}>
+              <View style={styles.playCircle}>
+                <Ionicons name="play" size={28} color={colors.primary} />
+              </View>
+              <Text variant="caption" tone="secondary">
+                {t("activity.demoVideo")}
+              </Text>
+            </View>
+          ) : null}
+        </Card>
 
         <View style={styles.section}>
-          <SectionHeader title="Verified by" />
-          <VerifiedBadge label="Clinical evidence" />
-          <VerifiedBadge label="Pediatric protocol" />
-          <VerifiedBadge label="WHO guidance" />
+          <SectionHeader
+            title={t("activity.howToPractice")}
+            subtitle={t("activity.howToPracticeDesc")}
+          />
+          <Card variant="flat" padding="lg" style={styles.stepsCard}>
+            {instructionSteps.length > 0 ? (
+              instructionSteps.map((step, index) => (
+                <View key={`${index}-${step.slice(0, 12)}`} style={styles.stepRow}>
+                  <View style={styles.stepNum}>
+                    <Text variant="caption" tone="brand" weight="semibold">
+                      {index + 1}
+                    </Text>
+                  </View>
+                  <Text variant="body" tone="secondary" style={styles.stepText}>
+                    {step}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text variant="body" tone="secondary">
+                {t("activity.noInstructions")}
+              </Text>
+            )}
+          </Card>
         </View>
 
-        <View style={styles.divider} />
+        <View style={styles.section}>
+          <SectionHeader
+            title={t("activity.relatedGames")}
+            subtitle={t("activity.relatedGamesDesc")}
+          />
+          <RecommendedGames riskCategory={activityData.riskCategory} />
+        </View>
 
         <View style={styles.section}>
-          <SectionHeader title="Recommended games" />
-          <RecommendedGames />
+          <SectionHeader title={t("activity.evidence")} />
+          <View style={styles.evidenceRow}>
+            {[
+              t("activity.evidenceClinical"),
+              t("activity.evidencePediatric"),
+              t("activity.evidenceWho"),
+            ].map((label) => (
+              <View key={label} style={styles.evidenceChip}>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={14}
+                  color={colors.primary}
+                />
+                <Text variant="caption" weight="medium" numberOfLines={2}>
+                  {label}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
       </ScrollView>
 
@@ -242,9 +351,9 @@ export default function ActivityDetailScreen() {
           label={
             isCompleted
               ? nextActivity
-                ? "Go to next"
-                : "Finish"
-              : "Mark as completed"
+                ? t("activity.goToNext")
+                : t("common.done")
+              : t("activity.markCompleted")
           }
           variant={isCompleted ? "secondary" : "primary"}
           onPress={handleNext}
@@ -281,46 +390,97 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing[2],
     paddingBottom: spacing[3],
-    gap: spacing[3],
+    gap: spacing[2],
+    backgroundColor: colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderSubtle,
+  },
+  navbarCenter: {
+    flex: 1,
+    gap: 2,
   },
   scrollContent: {
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing[4],
     paddingBottom: spacing[10],
+    gap: spacing[5],
   },
-  videoContainer: {
-    width: "100%",
+  heroCard: {
+    gap: spacing[3],
+  },
+  heroTop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing[2],
+  },
+  heroDesc: {
+    lineHeight: 22,
+  },
+  progressBlock: {
+    gap: spacing[2],
+  },
+  progressLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  mediaPlaceholder: {
     aspectRatio: 16 / 9,
     backgroundColor: colors.surfaceSunken,
-    borderRadius: borderRadius.xl,
-    justifyContent: "center",
+    borderRadius: borderRadius.lg,
     alignItems: "center",
-    marginBottom: spacing[6],
+    justifyContent: "center",
+    gap: spacing[2],
   },
-  playButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  playCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.surface,
-    justifyContent: "center",
     alignItems: "center",
-    paddingLeft: 4,
+    justifyContent: "center",
+    paddingLeft: 3,
   },
   section: {
-    marginBottom: spacing[5],
+    gap: spacing[2],
   },
-  descriptionText: {
-    marginBottom: spacing[2],
+  stepsCard: {
+    gap: spacing[3],
   },
-  moreLink: {
-    color: colors.primary,
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing[3],
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle,
-    marginBottom: spacing[5],
+  stepNum: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  stepText: {
+    flex: 1,
+    lineHeight: 22,
+  },
+  evidenceRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing[2],
+  },
+  evidenceChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[1],
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    maxWidth: "100%",
   },
   footer: {
     paddingHorizontal: layout.screenPadding,
