@@ -192,7 +192,7 @@ export default function DoctorConsultationScreen() {
       });
     } catch (error: unknown) {
       if (isPaymentRequiredError(error)) {
-        router.push("/(app)/payment?purpose=SUBSCRIPTION" as Href);
+        router.push("/(app)/payment" as Href);
         return;
       }
       const message =
