@@ -1,0 +1,18 @@
+appId: com.thenm334.carebridgemobile
+env:
+  E2E_PARENT_EMAIL: ${E2E_PARENT_EMAIL}
+  E2E_PARENT_PASSWORD: ${E2E_PARENT_PASSWORD}
+---
+- runFlow: auth-login.yaml
+# Navigate to growth journey from home hero secondary action
+- tapOn:
+    text: "See growth journey"
+# Assert growth journey screen is visible
+- assertVisible:
+    text: "Growth journey"
+# Assert either roadmap content or empty state is visible
+- assertTrue:
+    visible:
+      anyOf:
+        - text: "Week 1"
+        - text: "No published roadmap yet"

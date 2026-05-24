@@ -1,0 +1,25 @@
+appId: com.thenm334.carebridgemobile
+env:
+  E2E_SIGNUP_EMAIL: test.signup.${__random__}@carebridge-e2e.com
+  E2E_SIGNUP_PASSWORD: TestPass123!
+---
+- launchApp
+- tapOn:
+    text: "Create account"
+- tapOn:
+    text: "First name"
+- inputText: "E2E"
+- tapOn:
+    text: "Last name"
+- inputText: "TestUser"
+- tapOn:
+    text: "Email"
+- inputText: ${E2E_SIGNUP_EMAIL}
+- tapOn:
+    text: "Password"
+- inputText: ${E2E_SIGNUP_PASSWORD}
+- tapOn:
+    text: "Create account"
+    index: 1
+- assertNotVisible:
+    text: "Create account"
