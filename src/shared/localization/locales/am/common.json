@@ -74,6 +74,8 @@
     "screeningsOnFile_plural": "{{count}} ምርመራዎች ተመዝግበዋል",
     "screeningHistoryDesc": "ያለፉ M-CHAT ምርመራዎችን እና የሐኪም ማስታወሻዎችን ለመመልከት ይንኩ።",
     "openHistory": "ታሪክ ክፈት",
+    "developmentProgress": "የእድገት ሂደት",
+    "seeFullProgress": "ሙሉ ሂደት ይመልከቱ",
     "hero": {
       "step1": "ደረጃ 1 ከ 4",
       "step2": "ደረጃ 2 ከ 4",
@@ -101,6 +103,19 @@
       "dueNow": "አሁን ይ مطلوب",
       "startRescreening": "እንደገና ምርመራ ጀምር",
       "notNow": "አሁን አይደለም",
+      "nextMchatPhase": "ቀጣይ የ M-CHAT ደረጃ",
+      "planCompleteTitle": "የ{{name}} 4-ሳምንት እቅድ ተጠናቋል",
+      "planCompleteTitleDefault": "4-ሳምንት እቅድዎ ተጠናቋል",
+      "nextMchatRequiredDesc": "በዚህ ዑደት ያሉትን ሁሉንም እንቅስቃሴዎች ጨርሰዋል። ቀጣዩን M-CHAT ጥያቄዎች ይሙሉ እና ሐኪምዎ ቀጣዩን የእንክብካቤ እቅድ እንዲለጥፍ ይช่วዱ።",
+      "nextMchatCooldownDesc": "በዚህ ዑደት ያሉት ሁሉንም እንቅስቃሴዎች ጨርሰዋል። ቀጣይ M-CHAT ደረጃ ከአንድ ወር ግምገማ በኋላ ይከፈታል። ከዚህ በታች የተጠናቀቁትን እንቅስቃሴዎች መመልከት ይችላሉ።",
+      "actionRequired": "እርምጃ ይፈለጋል",
+      "planFinished": "እቅድ ተጠናቋል",
+      "comingSoon": "በቅርቡ ይከፈታል",
+      "startNextMchat": "ቀጣይ M-CHAT ምርመራ ጀምር",
+      "reviewCompletedPlan": "የተጠናቀቀውን እቅድ ይመልከቱ",
+      "nextPhase": "ቀጣይ ደረጃ",
+      "monthNumber": "ወር {{month}}",
+      "mchatRescreen": "M-CHAT እንደገና",
       "continuePlan": "የዚህ ሳምንት እቅድ ቀጥል",
       "continuePlanDesc": "የ{{name}} የዛሬ እንቅስቃሴዎችን ለመመልከት መርሃግብሩን ይክፈቱ።",
       "openSchedule": "መርሃግብር ክፈት",
@@ -119,7 +134,40 @@
   },
   "resources": {
     "title": "ስለ ASD ይማሩ",
-    "subtitle": "ከታመኑ የጤና ድርጅቶች የተገኙ መረጃዎች።"
+    "subtitle": "ከታመኑ የጤና ድርጅቶች የተገኙ መረጃዎች።",
+    "items": {
+      "zemi": {
+        "eyebrow": "AUTISM ACTIVIST: ZEMI YENUS at TEDxAddis",
+        "source": "TEDxAddis",
+        "title": "ዘሚ ይኑስ",
+        "description": "Zemi Yenus is the founder of the Joy Center for Children with Autism and Related Developmental Disorders, which provides educational and rehabilitation access to children with autism.",
+        "url": "https://youtu.be/0k8QrkAd9TM?t=600"
+      },
+      "cdc": {
+        "source": "CDC",
+        "title": "Autism Spectrum Disorder ምንድን ነው?",
+        "description": "ከCDC ስለ ምልክቶች፣ diagnosis እና support ቀላል объяснение።",
+        "url": "https://www.cdc.gov/ncbddd/autism/facts.html"
+      },
+      "who": {
+        "source": "WHO",
+        "title": "Autism, World Health Organization",
+        "description": "EARLY intervention፣ የ семья support እና inclusive care መመሪያ።",
+        "url": "https://www.who.int/news-room/fact-sheets/detail/autism-spectrum-disorders"
+      },
+      "autismSpeaks": {
+        "source": "Autism Speaks",
+        "title": "First 100 days kit for families",
+        "description": "ከ diagnosis በኋላ ለመጀመሪያ 100 ቀናት practical action plan።",
+        "url": "https://www.autismspeaks.org/tool-kit/100-day-kit-young-children"
+      },
+      "nhs": {
+        "source": "NHS",
+        "title": "አውቲዝም ያለው ልጅ communication",
+        "description": "ለ日常 communication፣ routine እና sensory needs evidence-based tips።",
+        "url": "https://www.nhs.uk/conditions/autism/helping-your-child/"
+      }
+    }
   },
   "games": {
     "title": "በ相互作用的 ጨዋታዎች",
@@ -130,10 +178,22 @@
     "editProfile": "መገለጫ አርትዕ",
     "careTeam": "የእንክብካቤ ቡድን",
     "account": "መለያ",
+    "preferences": "ምርጫዎች",
     "language": "ቋንቋ",
+    "languageHint": "በመተግበሪያው ውስጥ የሚጠቀሙበትን ቋንቋ ይምረጡ።",
+    "personalInfo": "የግል መረጃ",
+    "personalInfoSubtitle": "ስም፣ ፎቶ እና የመገኛ መረጃ ያርትዑ",
+    "screeningHistory": "የምርመራ ታሪክ",
+    "screeningHistorySubtitle": "ሁሉንም M-CHAT submissions ይመልከቱ",
+    "screeningHistoryCardTitle": "M-CHAT-R/F ታሪክ",
+    "screeningHistoryCardSubtitle": "ያለፉት ምርመራዎችን ይመልከቱ",
+    "assignedClinician": "የተመደበ ሐኪም",
+    "settings": "ቅንብሮች",
+    "changePhoto": "ፎቶ ቀይር",
     "logout": "ውጣ",
+    "loggingOut": "በመውጣት ላይ...",
     "noClinician": "ገና ሐኪም አልተመደበም",
-    "subscription": "የ订阅 እና ክፍያ",
+    "subscription": "Subscription እና ክፍያ",
     "manageChildren": "ልጆችን ያስተዳድሩ",
     "verification": "ማረጋገጫ"
   },
@@ -187,6 +247,7 @@
     "goBack": "ተመለስ",
     "submissionFailed": "መላክ አልተሳካም",
     "submissionFailedMessage": "ምርመራዎን በመላክ ጊዜ ስህተት ተከስቷል።",
+    "supportingInfoFailedMessage": "ምርመራዎ ተቀምጧል፣ ነገር ግን ማስታወሻ፣ ፎቶ ወይም ድምጽ አልተላኩም። ለupload ብቻ እንደገና Submit ይጫኑ።",
     "limitReached": "حد ተደርሷል",
     "limitReachedMessage": "እስከ 5 ፎቶዎች ብቻ መጫን ይችላሉ።",
     "permissionRequired": "ፈቃድ ያስፈልጋል",
@@ -207,7 +268,7 @@
     "questionsLabel": "ጥያቄዎች",
     "concernAnswers": "የ걱정 መልሶች",
     "whatThisMeans": "ይህ ምን ማለት ነው",
-    "interpretation": "መካከለኛ ነጥብ ልጅዎ Autism አለው ማለት አይደለም — የሙያ ግምገማ እንደሚመከር ያመለክታል። ቀደም ባለ ድጋፍ ለህይወት ጥቅም አለው።",
+    "interpretation": "መካከለኛ ነጥብ ልጅዎ Autism አለው ማለት አይደለም። የሙያ ግምገማ እንደሚመከር ያመለክታል። ቀደም ባለ ድጋፍ ለህይወት ጥቅም አለው።",
     "nextSteps": "ቀጣይ الخطوات",
     "nextStep1Title": "ህፃናት ሐኪም ይconsult",
     "nextStep1Body": "ለሙሉ ግምገማ የልጅ ልማት ባለሙያ ይዘዙ።",
@@ -244,9 +305,16 @@
     "evidenceWho": "WHO guidance",
     "weekProgress": "በዚህ ሳምንት ሂደት",
     "demoVideo": "የሐኪም demo ቪዲዮ",
+    "watchOnYoutube": "በ YouTube ይመልከቱ",
+    "openMedia": "ቪዲዮ ይክፈቱ",
+    "noMedia": "لهذا እንቅስቃሴ ምንም media አልተሰጠም።",
     "noInstructions": "لهذا እንቅስቃሴ step-by-step መመሪያ አልተሰጠም።",
     "markCompleted": "ተጠናቋል ምልክት",
     "goToNext": "ወደ ቀጣይ እንቅስቃሴ",
+    "continueToWeek": "ወደ ሳምንት {{week}} ቀጥል",
+    "backToSchedule": "ወደ መርሃግብር ተመለስ",
+    "newWeekTitle": "ሳምንቱ ተጠናቀቀ!",
+    "newWeekMessage": "ጥሩ ሂደት! የዚህ ሳምንት እንቅስቃሴዎችን ጨርሰዋል። ዝግጁ ሲሆኑ ወደ ሳምንት {{week}} መቀጠል ይችላሉ።",
     "noGames": "لهذا እንቅስቃሴ ተዛማጅ ጨዋታዎች የሉም።",
     "tryAtHome": "በቤት ይሞክሩ"
   },
@@ -315,6 +383,10 @@
     "growthJourney": "የእድገት ጉዞ",
     "growthJourneyDesc": "ሁሉንም ሳምንታት በአንድ ጊዜ ይመልከቱ",
     "emptyCycle": "በጣም ጥሩ! አዲስ roadmap ከአንድ ወር ግምገማ በኋላ ይገኛል።",
+    "nextMchatDue": "ቀጣይ M-CHAT ይፈለጋል",
+    "nextMchatTitle": "ቀጣይ የ M-CHAT ደረጃ ይጀምሩ",
+    "nextMchatDesc": "4-ሳምንት እንቅስቃሴ እቅድዎ ተጠናቋል። ቀጣዩን M-CHAT ጥያቄዎች ይሙሉ እና ሐኪምዎ ቀጣይ እቅድ እንዲለጥፍ ይช่วዱ።",
+    "nextMchatCooldown": "ሁሉም እንቅስቃሴዎች ተጠናቀዋል። ቀጣይ M-CHAT ከግምገማ ጊዜ በኋላ ይከፈታል።",
     "emptyWeek": "ሐኪምዎ لهذا ሳምንት እንቅስቃሴዎችን ገና አልተለጠፈም።",
     "emptyRoadmap": "ሐኪምዎ የተخصص therapy roadmap በመዘጋጀት ላይ ነው።"
   },
@@ -328,6 +400,7 @@
     "goVerify": "ወደ ማረጋገጫ ሂድ",
     "cycleComplete": "ዑደት ተጠናቋል",
     "cycleCompleteDesc": "4-ሳምንት roadmap ተጠናቋል።",
+    "cycleCompleteNextMchat": "በዚህ ዑደት ያሉት ሁሉንም እንቅስቃሴዎች ጨርሰዋል። ቀጣይ M-CHAT ምርመራን ይሙሉ እና ከሐኪምዎ ጋር ቀጣይ የሕክምና ደረጃ ይጀምሩ።",
     "noRoadmap": "Roadmap ገና አልተለጠፈም",
     "noRoadmapDesc": "ሐኪምዎ roadmap ሲለጥፍ እዚህ ይታያል።",
     "summaryTitle": "የእርስዎ የእድገት ጉዞ",
@@ -375,7 +448,14 @@
     "carryForwardQuestions": "ቀደም ተብለው \"አይ\" የተመለሱ",
     "newQuestions": "አዲስ ጥያቄዎች",
     "longitudinalInfo": "ቀደም \"አይ\" የተመለሱ ጥያቄዎች እንደገና + 6 አዲስ ጥያቄዎች።",
-    "startMonthCheckIn": "ወርሃዊ ክትትል ጀምር"
+    "startMonthCheckIn": "ወርሃዊ ክትትል ጀምር",
+    "comparisonSummary": "ከ{{previous}} ቀደም ችግር ያላቸው መልሶች {{improved}} ተሻለ",
+    "comparisonSubtitle": "ወር {{previousMonth}} → ወር {{currentMonth}}",
+    "improvedAnswers": "{{count}} ተሻለ",
+    "stillConcerning": "{{count}} አሁንም ጉዳይ",
+    "newConcerns": "{{count}} አዲስ ጉዳዮች",
+    "areaImprovement": "{{improved}} ተሻለ · {{still}} አሁንም ትኩረት ይต้อง",
+    "nowYes": "አሁን \"አዎ\" ተመለሰ"
   },
   "payment": {
     "title": "CareBridge ክፈት",
@@ -384,8 +464,9 @@
     "active": "ንቁ",
     "inactive": "ንቁ አይደለም",
     "expires": "ያበቃል",
-    "payNow": "አሁን ይክፈሉ",
-    "unlock": "መዳረሻ ክፈት",
+    "payNow": "አሁን ይመዝገቡ",
+    "renewNow": "Membership አራዘምጥ",
+    "unlock": "Membership ይመልከቱ",
     "backHome": "ወደ መነሻ",
     "verifying": "ክፍያ በመረጋገጥ ላይ…",
     "verifiedRedirect": "ክፍያ ተረጋግጧል። በመዛወር ላይ…",
@@ -399,29 +480,27 @@
     "notCompletedMessage": "ክፍያ አልተጠናቀቀም። ክፍያ አልተከፈለም።",
     "pendingTitle": "ክፍያ በመጠባበቅ ላይ",
     "initFailed": "ክፍያ መጀመር አልተቻለም።",
-    "plan": {
-      "SUBSCRIPTION": {
-        "title": "ወርሃዊ subscription",
-        "description": "ውይይት፣ ጥበቃ እና ሕክምና።"
-      },
-      "EXTRA_CHILD": {
-        "title": "ተጨማሪ የልጅ መገለጫ",
-        "description": "ሌላ ልጅ ይጨምሩ።"
-      },
-      "APPOINTMENT": {
-        "title": "የappointment ክፍያ",
-        "description": "appointment booking ያረጋግጡ።"
+    "membership": {
+      "title": "CareBridge Membership",
+      "description": "በወር አንድ ጊዜ ክፍያ። chat፣ appointment እና ተጨማሪ ልጆች ሁሉ ይካተታሉ።",
+      "priceLabel": "ወርሃዊ ዋጋ",
+      "billingNote": "በChapa ወርሃዊ ይከፈላል።",
+      "features": {
+        "0": "ከሐኪምዎ ጋር chat",
+        "1": "Appointment መደረግ እና ማስተዳደር",
+        "2": "Therapy roadmap እና እንቅስቃሴዎች",
+        "3": "በአንድ መለያ ተጨማሪ የልጅ መገለጫዎች"
       }
     },
     "gate": {
-      "chatTitle": "Chat subscription ይต้อง",
+      "membershipTitle": "Membership ያስፈልጋል",
+      "membershipDescription": "Chat፣ appointment፣ therapy እና ተጨማሪ ልጆችን ለመክፈት አንድ ጊዜ subscribe ያድርጉ።",
+      "chatTitle": "Chat membership ይፈልጋል",
       "chatDescription": "ሐኪምዎን ለመልእክት subscribe ያድርጉ።",
       "treatmentTitle": "Therapy plan ክፈት",
       "treatmentDescription": "Roadmap እና እንቅስቃሴዎችን ለመመልከት subscribe ያድርጉ።",
-      "appointmentTitle": "Appointment subscription ይต้อง",
-      "appointmentDescription": "Appointment ለመደረግ subscribe ያድርጉ።",
-      "extraChildTitle": "ተጨማሪ የልጅ መገለጫ",
-      "extraChildDescription": "የመጀመሪያ ልጅ ነፃ። ሌላ ለመጨመር ይክፈሉ።"
+      "appointmentTitle": "Appointment membership ይፈልጋል",
+      "appointmentDescription": "Appointment ለመደረግ subscribe ያድርጉ።"
     }
   }
 }
