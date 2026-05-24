@@ -4,6 +4,7 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { Href, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   Platform,
@@ -31,6 +32,7 @@ import { useMChatStore } from "../store/mchatStore";
 
 export default function MChatSupportingInfoScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const {
     answers,
     parentDescription,
@@ -117,9 +119,9 @@ export default function MChatSupportingInfoScreen() {
       setConfirmModalVisible(false);
       setStatusConfig({
         type: "error",
-        title: "Submission failed",
+        title: t("mchat.submissionFailed"),
         message:
-          error.message || "An error occurred while submitting your screening.",
+          error.message || t("mchat.submissionFailedMessage"),
       });
       setStatusModalVisible(true);
     },
@@ -129,8 +131,8 @@ export default function MChatSupportingInfoScreen() {
     if (pictures.length >= 5) {
       setStatusConfig({
         type: "info",
-        title: "Limit reached",
-        message: "You can only upload up to 5 pictures.",
+        title: t("mchat.limitReached"),
+        message: t("mchat.limitReachedMessage"),
       });
       setStatusModalVisible(true);
       return;
@@ -139,8 +141,8 @@ export default function MChatSupportingInfoScreen() {
     if (status !== "granted") {
       setStatusConfig({
         type: "error",
-        title: "Permission required",
-        message: "Please grant camera roll permissions to upload images.",
+        title: t("mchat.permissionRequired"),
+        message: t("mchat.permissionRollMessage"),
       });
       setStatusModalVisible(true);
       return;
@@ -163,8 +165,8 @@ export default function MChatSupportingInfoScreen() {
       if (permission.status !== "granted") {
         setStatusConfig({
           type: "error",
-          title: "Permission required",
-          message: "Please grant microphone permissions to record audio.",
+          title: t("mchat.permissionRequired"),
+          message: t("mchat.permissionMicMessage"),
         });
         setStatusModalVisible(true);
         return;
@@ -252,8 +254,8 @@ export default function MChatSupportingInfoScreen() {
     if (Object.keys(answers).length < 20) {
       setStatusConfig({
         type: "error",
-        title: "Incomplete",
-        message: "Please answer all 20 questions before submitting.",
+        title: t("mchat.incomplete"),
+        message: t("mchat.incompleteMessage"),
       });
       setStatusModalVisible(true);
       return;
@@ -288,12 +290,12 @@ export default function MChatSupportingInfoScreen() {
       <View style={styles.headerRow}>
         <IconButton
           icon="chevron-back"
-          accessibilityLabel="Back"
+          accessibilityLabel={t("common.back")}
           onPress={handleBack}
         />
         <View style={styles.progressWrap}>
           <Text variant="caption" tone="secondary" style={styles.progressLabel}>
-            Final step
+            {t("mchat.finalStep")}
           </Text>
           <ProgressBar value={100} />
         </View>
@@ -306,23 +308,22 @@ export default function MChatSupportingInfoScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text variant="display" style={styles.title}>
-          Add supporting info
+          {t("mchat.addSupportingInfoTitle")}
         </Text>
         <Text variant="body" tone="secondary" style={styles.subtitle}>
-          Optional. Sharing details, photos, or a short voice note helps your
-          clinician give a richer analysis.
+          {t("mchat.addSupportingInfoDesc")}
         </Text>
 
-        <SectionHeader title="Notes for your clinician" />
+        <SectionHeader title={t("mchat.notesForClinician")} />
         <TextField
-          placeholder="e.g. I've noticed my child making less eye contact recently..."
+          placeholder={t("mchat.notesPlaceholder")}
           value={description}
           onChangeText={setDescription}
           multiline
           containerStyle={styles.field}
         />
 
-        <SectionHeader title="Voice note" />
+        <SectionHeader title={t("mchat.voiceNote")} />
         {!audioUri ? (
           <Pressable
             onPress={isRecording ? stopRecording : startRecording}
@@ -344,8 +345,10 @@ export default function MChatSupportingInfoScreen() {
               }}
             >
               {isRecording
-                ? `Recording · ${formatDuration(recordingDuration)}`
-                : "Tap to record"}
+                ? t("mchat.recording", {
+                    duration: formatDuration(recordingDuration),
+                  })
+                : t("mchat.tapToRecord")}
             </Text>
           </Pressable>
         ) : (
@@ -358,7 +361,7 @@ export default function MChatSupportingInfoScreen() {
               />
               <View>
                 <Text variant="body" weight="semibold">
-                  Voice note
+                  {t("mchat.voiceNote")}
                 </Text>
                 <Text variant="caption" tone="secondary">
                   {formatDuration(recordingDuration)}
@@ -374,7 +377,7 @@ export default function MChatSupportingInfoScreen() {
           </Card>
         )}
 
-        <SectionHeader title={`Photos (${pictures.length}/5)`} />
+        <SectionHeader title={t("mchat.photos", { count: pictures.length })} />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -400,11 +403,11 @@ export default function MChatSupportingInfoScreen() {
                 styles.addThumb,
                 pressed && { opacity: 0.85 },
               ]}
-              accessibilityLabel="Add photo"
+              accessibilityLabel={t("mchat.addPhoto")}
             >
               <Ionicons name="add" size={28} color={colors.primary} />
               <Text variant="caption" tone="brand">
-                Add photo
+                {t("mchat.addPhoto")}
               </Text>
             </Pressable>
           ) : null}
@@ -413,7 +416,7 @@ export default function MChatSupportingInfoScreen() {
 
       <View style={styles.footer}>
         <Button
-          label="Submit screening"
+          label={t("mchat.submit")}
           onPress={handleNext}
           loading={submitMutation.isPending}
           trailingIcon="checkmark-circle"
@@ -423,13 +426,13 @@ export default function MChatSupportingInfoScreen() {
       <StatusModal
         visible={confirmModalVisible}
         type="info"
-        title="Submit M-CHAT"
-        message="Are you ready to submit your answers and any supporting info? You cannot edit them after submitting."
+        title={t("mchat.submitConfirmTitle")}
+        message={t("mchat.submitConfirmMessage")}
         primaryButtonText={
-          submitMutation.isPending ? "Submitting..." : "Yes, submit"
+          submitMutation.isPending ? t("mchat.submitting") : t("mchat.yesSubmit")
         }
         onPrimaryPress={() => submitMutation.mutate()}
-        secondaryButtonText="Go back"
+        secondaryButtonText={t("mchat.goBack")}
         onSecondaryPress={() => setConfirmModalVisible(false)}
       />
       <StatusModal

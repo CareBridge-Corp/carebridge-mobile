@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Avatar, Card, Text } from "../../../shared/components/ui";
 import { colors, spacing } from "../../../shared/theme";
@@ -21,6 +22,7 @@ export function ClinicianCard({
   onPress,
   onMessagePress,
 }: ClinicianCardProps) {
+  const { t } = useTranslation();
   const fullName = [clinician.surname, clinician.firstName, clinician.lastName]
     .filter(Boolean)
     .join(" ");
@@ -31,13 +33,13 @@ export function ClinicianCard({
       variant="elevated"
       padding="md"
       onPress={onPress}
-      accessibilityLabel={`Your clinician ${fullName}`}
+      accessibilityLabel={`${t("doctor.yourClinician")} ${fullName}`}
     >
       <View style={styles.row}>
         <Avatar uri={clinician.profilePictureUrl} name={fullName} size="md" />
         <View style={styles.info}>
           <Text variant="caption" tone="secondary">
-            Your clinician
+            {t("doctor.yourClinician")}
           </Text>
           <Text variant="body" weight="semibold" numberOfLines={1}>
             {fullName}
