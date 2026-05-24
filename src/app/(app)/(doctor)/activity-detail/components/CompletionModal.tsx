@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Modal, StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Button, Text } from "../../../../../shared/components/ui";
 import { borderRadius, colors, spacing } from "../../../../../shared/theme";
 
@@ -16,6 +17,8 @@ export function CompletionModal({
   onConfirm,
   title,
 }: CompletionModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -33,7 +36,7 @@ export function CompletionModal({
             />
           </View>
           <Text variant="title2" align="center" style={styles.title}>
-            Activity completed?
+            {t("activity.completeConfirmTitle")}
           </Text>
           <Text
             variant="body"
@@ -41,19 +44,19 @@ export function CompletionModal({
             align="center"
             style={styles.subtitle}
           >
-            {`Have you finished practicing "${title}" with your child?`}
+            {t("activity.completeConfirmMessage", { title })}
           </Text>
 
           <View style={styles.buttons}>
             <Button
-              label="Not yet"
+              label={t("activity.notYet")}
               variant="secondary"
               onPress={onClose}
               fullWidth={false}
               style={styles.btn}
             />
             <Button
-              label="Yes, confirm"
+              label={t("activity.yesConfirm")}
               onPress={onConfirm}
               fullWidth={false}
               style={styles.btn}

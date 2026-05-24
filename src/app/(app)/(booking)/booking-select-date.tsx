@@ -21,14 +21,10 @@ import {
 import { borderRadius, colors, layout, spacing } from "../../../shared/theme";
 import { getDateLocale } from "../../../shared/localization/language";
 import { useLanguageStore } from "../../../shared/store/languageStore";
-import { useAvailableDays, useAvailableSlots } from "../hooks/useAppointments";
+import { useAvailableDays, useAvailableSlots, toLocalIsoDate } from "../hooks/useAppointments";
 import { useBookingStore } from "../store/bookingStore";
 
 const RANGE_DAYS = 30;
-
-function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
 
 function formatDay(dateStr: string, locale: string) {
   const date = new Date(`${dateStr}T00:00:00`);
@@ -44,21 +40,22 @@ export default function BookingSelectDateScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { language } = useLanguageStore();
-  const { doctor, meetingType, setSlot, setMeetingType } = useBookingStore();
+  const { doctor, meetingType, setSlot, setMeetingType, childId } = useBookingStore();
 
   const range = useMemo(() => {
     const today = new Date();
     const end = new Date(today);
     end.setDate(today.getDate() + RANGE_DAYS - 1);
-    return { from: toIsoDate(today), to: toIsoDate(end) };
+    return { from: toLocalIsoDate(today), to: toLocalIsoDate(end) };
   }, []);
 
-  const { data: availableDays = [], isLoading: daysLoading } = useAvailableDays(
-    doctor?.userId,
-    range.from,
-    range.to,
+  const { data: availableDays = [], isLoading: daysLoading } = useAvailableDays({
+    childId: childId ?? undefined,
+    doctorId: doctor?.userId,
+    from: range.from,
+    to: range.to,
     meetingType,
-  );
+  });
 
   // First selectable day = first day with availability. Falls back to today.
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -73,11 +70,12 @@ export default function BookingSelectDateScreen() {
     }
   }, [availableDays, selectedDate]);
 
-  const { data: slots = [], isLoading: slotsLoading } = useAvailableSlots(
-    doctor?.userId,
-    selectedDate || undefined,
+  const { data: slots = [], isLoading: slotsLoading } = useAvailableSlots({
+    childId: childId ?? undefined,
+    doctorId: doctor?.userId,
+    date: selectedDate || undefined,
     meetingType,
-  );
+  });
 
   const handleNext = () => {
     const slot = slots.find(
