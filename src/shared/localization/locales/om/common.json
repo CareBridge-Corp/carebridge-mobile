@@ -228,7 +228,27 @@
     "noSupportingInfo": "Odeeffannoo deeggarsaa hin jiru",
     "noSupportingInfoDesc": "Odeeffannoo dabalataa madaalliin kana waliin hin ergamne.",
     "addSupportingInfo": "Odeeffannoo deeggarsaa dabaluu",
-    "submittedOn": "Guyyaa {{date}} ergame"
+    "submittedOn": "Guyyaa {{date}} ergame",
+    "whatWeAreChecking": "Waa'ee maal ilaallu",
+    "exampleAnswer": "Fakkeenya"
+  },
+  "activity": {
+    "title": "Sochii",
+    "howToPractice": "Akkaataa shaakaluu",
+    "howToPracticeDesc": "Tarkaanfiiwwan kana mana keessatti daa'ima kee wajjin hordofi.",
+    "relatedGames": "Taphoota wal qabatan",
+    "relatedGamesDesc": "Dandeettii cimsuuf sochii har'aa wajjin taphi.",
+    "evidence": "Bu'uura klinikaalaa",
+    "evidenceClinical": "Ragaa klinikaalaa",
+    "evidencePediatric": "Protokoolii daa'immanii",
+    "evidenceWho": "Qajeelfama WHO",
+    "weekProgress": "Adeemsa torban kanaa",
+    "demoVideo": "Viidiyoo demo ogeessaa",
+    "noInstructions": "Qajeelfanni tarkaanfii kanaaf hin kenname.",
+    "markCompleted": "Akka xumurame mallatteessi",
+    "goToNext": "Gara sochii itti aanutti deemi",
+    "noGames": "Taphi wal qabatan hin jiru.",
+    "tryAtHome": "Mana keessatti yaali"
   },
   "booking": {
     "dateTime": "Guyyaa fi sa'aatii",
@@ -263,6 +283,8 @@
     "notSelected": "Hin filatamne",
     "missingDetails": "Bal'inni hin guutne",
     "missingDetailsMessage": "Tarkaanfiiwwan booking duraan xumuri.",
+    "missingClinician": "Mirkaneessuu dura ogeessa keessan fili.",
+    "missingProfile": "Akkaawuntii keessan mirkaneessuu hin dandeenye. Irra deebi'ii seeni.",
     "bookingSuccess": "Appointment milkaa'inaan qophaa'e.",
     "bookingFailed": "Appointment qopheessuun hin milkoofne",
     "full": "Guutuu",
@@ -370,6 +392,13 @@
     "verifyPending": "Kaffaltiin ammallee hin mirkanaa'in. Subscription ilaali.",
     "returnReceived": "Deebii kaffaltii fudhatame.",
     "failed": "Kaffaltiin hin milkoofne",
+    "checkoutUnavailable": "Checkout jalqabuu hin dandeenye. Irra deebi'ii yaali.",
+    "cancelledTitle": "Kaffaltiin dhaame",
+    "cancelledMessage": "Kaffaltii xumuruu dura checkout cufdee baate.",
+    "successMessage": "Kaffaltiin milkaa'e. Seeraan keessan banaa dha.",
+    "notCompletedMessage": "Kaffaltiin hin xumuramne. Kaffaltiin hin kaffalamne.",
+    "pendingTitle": "Kaffaltiin eegaa jira",
+    "initFailed": "Kaffaltii jalqabuu hin dandeenye.",
     "plan": {
       "SUBSCRIPTION": {
         "title": "Subscription ji'a",

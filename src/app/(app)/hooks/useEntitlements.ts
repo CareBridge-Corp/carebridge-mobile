@@ -41,26 +41,40 @@ interface InitializePaymentResponse {
   message?: string;
 }
 
+export function getPaymentReturnUrls() {
+  const apiBase =
+    process.env.EXPO_PUBLIC_API_URL?.replace(/\/api$/, "") ||
+    "http://192.168.64.115:5002";
+  const deepLink = "carebridgemobile://payment-return";
+  const bridgeUrl = `${apiBase}/payment-return?redirect=${encodeURIComponent(deepLink)}`;
+  const authReturnUrl = `${apiBase}/payment-return`;
+
+  return { apiBase, deepLink, bridgeUrl, authReturnUrl };
+}
+
 export async function initializePayment(input: {
   purpose: PaymentPurpose;
   appointmentId?: string;
   doctorId?: string;
 }) {
-  const apiBase =
-    process.env.EXPO_PUBLIC_API_URL?.replace(/\/api$/, "") ||
-    "http://192.168.64.115:5002";
-  const returnUrl = `${apiBase}/payment-return?redirect=${encodeURIComponent("carebridgemobile://payment-return")}`;
+  const { bridgeUrl, apiBase } = getPaymentReturnUrls();
   const callbackUrl = `${apiBase}/api/payments/webhook`;
 
   return apiClient.post<InitializePaymentResponse>("/payments/initialize", {
     purpose: input.purpose,
     appointment_id: input.appointmentId,
     doctor_id: input.doctorId,
-    return_url: returnUrl,
+    return_url: bridgeUrl,
     callback_url: callbackUrl,
   });
 }
 
+export interface VerifyPaymentResponse {
+  message: string;
+  payment?: { status: "PENDING" | "PAID" | "FAILED"; txRef?: string };
+  entitlements?: UserEntitlements;
+}
+
 export async function verifyPayment(txRef: string) {
-  return apiClient.get(`/payments/verify/${txRef}`);
+  return apiClient.get<VerifyPaymentResponse>(`/payments/verify/${txRef}`);
 }
