@@ -14,6 +14,7 @@ import {
   Screen,
   Text,
 } from "../../shared/components/ui";
+import { getDateLocale } from "../../shared/localization/language";
 import { useLanguageStore } from "../../shared/store/languageStore";
 import { colors, layout, spacing } from "../../shared/theme";
 import {
@@ -40,10 +41,11 @@ export default function ScheduleScreen() {
   const [showChildSelector, setShowChildSelector] = useState(false);
   const [activeWeekPlanId, setActiveWeekPlanId] = useState<string | null>(null);
 
-  const formattedDate = new Date().toLocaleDateString(
-    language === "ar" ? "ar-EG" : "en-US",
-    { weekday: "long", day: "numeric", month: "long" },
-  );
+  const formattedDate = new Date().toLocaleDateString(getDateLocale(language), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
   const isVerified = activeChild?.status === "VERIFIED";
   const { data: entitlements, isLoading: entitlementsLoading } = useEntitlements();
@@ -80,7 +82,7 @@ export default function ScheduleScreen() {
       setActiveWeekPlanId(weekPlans[idx + 1].weekPlanId);
   };
 
-  const greetingName = activeChild?.firstName || user?.firstName || "Friend";
+  const greetingName = activeChild?.firstName || user?.firstName || t("common.friend");
 
   const headerEl = (
     <HomeHeader

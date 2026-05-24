@@ -1,7 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { getDateLocale } from "../../../shared/localization/language";
+import { useLanguageStore } from "../../../shared/store/languageStore";
 import { isPaymentRequiredError } from "../../../shared/api/client";
 import {
   Badge,
@@ -18,6 +21,8 @@ import { useBookingStore } from "../store/bookingStore";
 
 export default function BookingConfirmationScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
   const { doctor, slot, meetingType, childId, reset } = useBookingStore();
   const { data: profile } = useProfile();
   const createAppointment = useCreateAppointment();
@@ -25,7 +30,10 @@ export default function BookingConfirmationScreen() {
 
   const handleConfirm = async () => {
     if (!doctor || !slot || !profile?.userId) {
-      Alert.alert("Missing details", "Please complete the booking steps first.");
+      Alert.alert(
+        t("booking.missingDetails"),
+        t("booking.missingDetailsMessage"),
+      );
       return;
     }
 
@@ -44,9 +52,9 @@ export default function BookingConfirmationScreen() {
       });
 
       reset();
-      Alert.alert("Success", "Appointment booked successfully.", [
+      Alert.alert(t("common.success"), t("booking.bookingSuccess"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => router.replace("/(app)/schedule" as Href),
         },
       ]);
@@ -57,7 +65,7 @@ export default function BookingConfirmationScreen() {
       }
       const message =
         error instanceof Error ? error.message : "Unable to create appointment.";
-      Alert.alert("Booking failed", message);
+      Alert.alert(t("booking.bookingFailed"), message);
     } finally {
       setIsSubmitting(false);
     }
@@ -65,27 +73,27 @@ export default function BookingConfirmationScreen() {
 
   const doctorName = doctor
     ? `${doctor.surname ?? ""} ${doctor.firstName} ${doctor.lastName}`.trim()
-    : "Not selected";
+    : t("booking.notSelected");
 
   const dateString = slot
-    ? new Date(slot.date).toLocaleDateString(undefined, {
+    ? new Date(slot.date).toLocaleDateString(getDateLocale(language), {
         weekday: "long",
         day: "numeric",
         month: "long",
         year: "numeric",
       })
-    : "Not selected";
+    : t("booking.notSelected");
 
   return (
     <Screen padded={false} background={colors.surfaceMuted}>
-      <ScreenHeader title="Confirm booking" subtitle="Step 3 of 3" />
+      <ScreenHeader title={t("booking.confirmBooking")} subtitle={t("booking.step3of3")} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         <Text variant="body" tone="secondary" style={styles.subtitle}>
-          Review your appointment details before confirming.
+          {t("booking.reviewDetails")}
         </Text>
 
         <Card variant="elevated" padding="lg" style={styles.card}>
@@ -99,7 +107,7 @@ export default function BookingConfirmationScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="caption" tone="secondary">
-                CLINICIAN
+                {t("booking.clinician").toUpperCase()}
               </Text>
               <Text variant="title3" style={styles.rowValue}>
                 {doctorName}
@@ -119,7 +127,7 @@ export default function BookingConfirmationScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="caption" tone="secondary">
-                DATE & TIME
+                {t("booking.dateTimeLabel").toUpperCase()}
               </Text>
               <Text variant="title3" style={styles.rowValue}>
                 {dateString}
@@ -131,7 +139,7 @@ export default function BookingConfirmationScreen() {
               ) : null}
               <View style={styles.badgeRow}>
                 <Badge
-                  label={meetingType === "online" ? "Online" : "In person"}
+                  label={meetingType === "online" ? t("booking.online") : t("booking.inPerson")}
                   tone="info"
                   icon={meetingType === "online" ? "videocam" : "business"}
                 />
@@ -152,7 +160,7 @@ export default function BookingConfirmationScreen() {
               tone="secondary"
               style={styles.infoText}
             >
-              {`Your clinician will confirm the appointment. You'll receive a notification once it's updated.`}
+              {t("booking.confirmInfo")}
             </Text>
           </View>
         </Card>
@@ -160,7 +168,7 @@ export default function BookingConfirmationScreen() {
 
       <View style={styles.footer}>
         <Button
-          label="Confirm appointment"
+          label={t("booking.confirmAppointment")}
           onPress={handleConfirm}
           loading={isSubmitting}
           leadingIcon="checkmark-circle"
