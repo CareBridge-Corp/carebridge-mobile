@@ -1,25 +1,28 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useAuthStore } from "../(auth)/store/authStore";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  ProgressBar,
+  Screen,
+  Text,
+} from "../../shared/components/ui";
 import { useLanguageStore } from "../../shared/store/languageStore";
+import { colors, layout, spacing } from "../../shared/theme";
 import {
   canStartActivity,
   getActivityStatus,
   isRoadmapCycleComplete,
 } from "../../shared/utils/roadmapProgress";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
+import { HomeHeader } from "./components/HomeHeader";
 import { PaywallCard } from "./components/PaywallCard";
 import { VerificationRequiredView } from "./components/VerificationRequiredView";
 import { useEntitlements } from "./hooks/useEntitlements";
@@ -29,35 +32,21 @@ import { useChildrenStore } from "./store/childrenStore";
 export default function ScheduleScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ expandWeekId?: string }>();
-
-  // Add this effect to handle expansion from home page
-  useEffect(() => {
-    if (params.expandWeekId) {
-      setExpandedWeekId(params.expandWeekId);
-    }
-  }, [params.expandWeekId]);
-
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const { activeChild, children } = useChildrenStore();
   const { language } = useLanguageStore();
 
   const [showChildSelector, setShowChildSelector] = useState(false);
-  const [expandedWeekId, setExpandedWeekId] = useState<string | null>(null);
+  const [activeWeekPlanId, setActiveWeekPlanId] = useState<string | null>(null);
 
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString(
+  const formattedDate = new Date().toLocaleDateString(
     language === "ar" ? "ar-EG" : "en-US",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    },
+    { weekday: "long", day: "numeric", month: "long" },
   );
 
   const isVerified = activeChild?.status === "VERIFIED";
-  const { data: entitlements, isLoading: entitlementsLoading } =
-    useEntitlements();
+  const { data: entitlements, isLoading: entitlementsLoading } = useEntitlements();
   const { data: roadmapData } = useRoadmaps(
     isVerified ? activeChild?.childId : undefined,
   );
@@ -65,94 +54,60 @@ export default function ScheduleScreen() {
   const weekPlans = roadmapData?.weekPlans ?? [];
   const activeRoadmap = roadmapData?.roadmap ?? null;
 
-  // Determine current active week based on selection or current date
-  const [activeWeekPlanId, setActiveWeekPlanId] = useState<string | null>(null);
-
   useEffect(() => {
-    // If we have an override from navigation params, use it
     if (params.expandWeekId) {
       setActiveWeekPlanId(params.expandWeekId);
     } else if (weekPlans.length > 0 && !activeWeekPlanId) {
-      // Default to in-progress or first week
       const current =
         weekPlans.find((wp) => wp.status === "IN_PROGRESS") || weekPlans[0];
       if (current) setActiveWeekPlanId(current.weekPlanId);
     }
-  }, [params.expandWeekId, weekPlans]);
+  }, [params.expandWeekId, weekPlans, activeWeekPlanId]);
 
   const activeWeekPlan = weekPlans.find(
     (wp) => wp.weekPlanId === activeWeekPlanId,
   );
 
-  // Pagination logic for weeks
   const handlePrevWeek = () => {
     if (!activeWeekPlan) return;
-    const currentIndex = weekPlans.findIndex(
-      (wp) => wp.weekPlanId === activeWeekPlanId,
-    );
-    if (currentIndex > 0)
-      setActiveWeekPlanId(weekPlans[currentIndex - 1].weekPlanId);
+    const idx = weekPlans.findIndex((wp) => wp.weekPlanId === activeWeekPlanId);
+    if (idx > 0) setActiveWeekPlanId(weekPlans[idx - 1].weekPlanId);
   };
-
   const handleNextWeek = () => {
     if (!activeWeekPlan) return;
-    const currentIndex = weekPlans.findIndex(
-      (wp) => wp.weekPlanId === activeWeekPlanId,
-    );
-    if (currentIndex < weekPlans.length - 1)
-      setActiveWeekPlanId(weekPlans[currentIndex + 1].weekPlanId);
+    const idx = weekPlans.findIndex((wp) => wp.weekPlanId === activeWeekPlanId);
+    if (idx < weekPlans.length - 1)
+      setActiveWeekPlanId(weekPlans[idx + 1].weekPlanId);
   };
 
+  const greetingName = activeChild?.firstName || user?.firstName || "Friend";
+
+  const headerEl = (
+    <HomeHeader
+      greeting={t("home.goodMorning", "Good morning")}
+      primaryName={greetingName}
+      subtitle={formattedDate}
+      avatarUri={activeChild?.profilePictureUrl}
+      badgeCount={children.length}
+      onAvatarPress={() => children.length > 0 && setShowChildSelector(true)}
+    />
+  );
+
+  // 1) Not verified yet
   if (!isVerified) {
     return (
-      <View style={styles.container}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor={colors.backgroundBlue}
-        />
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>{t("home.goodMorning")}</Text>
-            <Text style={styles.userName}>
-              {activeChild?.firstName || user?.firstName || t("home.guest")}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.avatar}
-            onPress={() => children.length > 0 && setShowChildSelector(true)}
-            activeOpacity={0.7}
-          >
-            {activeChild?.profilePictureUrl ? (
-              <Image
-                source={{ uri: activeChild.profilePictureUrl }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Ionicons name="person" size={28} color={colors.text} />
-            )}
-            {children.length > 1 && (
-              <View style={styles.childCountBadge}>
-                <Text style={styles.childCountText}>{children.length}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.dateContainer}>
-          <Ionicons name="calendar-outline" size={20} color="#0C4A6E" />
-          <Text style={styles.dateText}>{formattedDate}</Text>
-        </View>
-
+      <Screen padded={false} background={colors.surfaceMuted}>
+        {headerEl}
         <VerificationRequiredView />
-
         <ChildSelectorModal
           visible={showChildSelector}
           onClose={() => setShowChildSelector(false)}
         />
-      </View>
+      </Screen>
     );
   }
 
+  // 2) Paywall
   if (
     isVerified &&
     !entitlementsLoading &&
@@ -160,737 +115,346 @@ export default function ScheduleScreen() {
     !entitlements.canUseTreatment
   ) {
     return (
-      <View style={styles.container}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor={colors.backgroundBlue}
-        />
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>{t("home.goodMorning")}</Text>
-            <Text style={styles.userName}>
-              {activeChild?.firstName || user?.firstName || t("home.guest")}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.paywallWrapper}>
+      <Screen padded={false} background={colors.surfaceMuted}>
+        {headerEl}
+        <View style={styles.paywallWrap}>
           <PaywallCard
-            title={t("payment.gate.treatmentTitle")}
-            description={t("payment.gate.treatmentDescription")}
+            title={t("payment.gate.treatmentTitle", "Unlock therapy plan")}
+            description={t(
+              "payment.gate.treatmentDescription",
+              "Subscribe to view your child's personalized therapy roadmap and activities.",
+            )}
             purpose="SUBSCRIPTION"
           />
         </View>
-      </View>
+        <ChildSelectorModal
+          visible={showChildSelector}
+          onClose={() => setShowChildSelector(false)}
+        />
+      </Screen>
     );
   }
 
+  // 3) Verified + entitled — show week plan
+  const filteredActivities = activeWeekPlan?.activities ?? [];
+  const totalActivities = filteredActivities.length;
+  const completedCount =
+    activeWeekPlan?.activityStatuses?.filter(
+      (s) =>
+        s.completed &&
+        filteredActivities.some((fa) => fa.activityId === s.activityId),
+    ).length ?? 0;
+  const progressPct =
+    totalActivities > 0 ? Math.round((completedCount / totalActivities) * 100) : 0;
+
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={colors.backgroundBlue}
-      />
+    <Screen padded={false} background={colors.surfaceMuted}>
+      {headerEl}
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>{t("home.goodMorning")}</Text>
-          <Text style={styles.userName}>
-            {activeChild?.firstName || user?.firstName || t("home.guest")}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={styles.avatar}
-          onPress={() => children.length > 0 && setShowChildSelector(true)}
-          activeOpacity={0.7}
-        >
-          {activeChild?.profilePictureUrl ? (
-            <Image
-              source={{ uri: activeChild.profilePictureUrl }}
-              style={styles.avatarImage}
-            />
-          ) : (
-            <Ionicons name="person" size={28} color={colors.text} />
-          )}
-          {children.length > 1 && (
-            <View style={styles.childCountBadge}>
-              <Text style={styles.childCountText}>{children.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.calendarCard}>
-        <View style={styles.weekPaginationContainer}>
-          <TouchableOpacity
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Week navigation */}
+        <View style={styles.weekNav}>
+          <IconButton
+            icon="chevron-back"
+            accessibilityLabel="Previous week"
             onPress={handlePrevWeek}
-            style={styles.pageButton}
-            disabled={weekPlans.length === 0}
-          >
-            <Ionicons name="chevron-back" size={24} color="#0C4A6E" />
-          </TouchableOpacity>
-          <Text style={styles.weekPlanLabel}>
+            variant="tinted"
+            background={colors.surface}
+          />
+          <Text variant="title3">
             {activeWeekPlan
               ? `Week ${activeWeekPlan.weekNumber} of ${weekPlans.length}`
               : "No published plan"}
           </Text>
-          <TouchableOpacity
+          <IconButton
+            icon="chevron-forward"
+            accessibilityLabel="Next week"
             onPress={handleNextWeek}
-            style={styles.pageButton}
-            disabled={weekPlans.length === 0}
-          >
-            <Ionicons name="chevron-forward" size={24} color="#0C4A6E" />
-          </TouchableOpacity>
+            variant="tinted"
+            background={colors.surface}
+          />
         </View>
 
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
-        >
-          {activeWeekPlan ? (
-            (() => {
-              const weekPlan = activeWeekPlan;
-              const isCompleted = weekPlan.status === "COMPLETED";
-              const isCurrent = weekPlan.status === "IN_PROGRESS";
-
-              const filteredActivities = weekPlan.activities || [];
-
-              const totalActivities = filteredActivities.length;
-              const completedCount =
-                weekPlan.activityStatuses?.filter(
-                  (s) =>
-                    s.completed &&
-                    filteredActivities.some(
-                      (fa) => fa.activityId === s.activityId,
-                    ),
-                ).length || 0;
-              const progressPercentage =
-                totalActivities > 0
-                  ? Math.round((completedCount / totalActivities) * 100)
-                  : 0;
-              const clinician = weekPlan.clinician;
-
-              return (
-                <View key={weekPlan.weekPlanId} style={styles.weekPlanSection}>
-                  {/* Therapy Header/Pagination Integration */}
-                  <View style={styles.therapyHeader}>
-                    <View style={styles.therapyInfo}>
-                      <Text style={styles.therapyTitle} numberOfLines={2}>
-                        Week {weekPlan.weekNumber}
-                      </Text>
-                      <Text style={styles.therapyStatus}>
-                        {isCompleted
-                          ? "Completed"
-                          : isCurrent
-                            ? "In Progress"
-                            : "Pending"}
-                      </Text>
-                      {weekPlan.description ? (
-                        <Text style={styles.weekDescription} numberOfLines={2}>
-                          {weekPlan.description}
-                        </Text>
-                      ) : null}
-                      <View style={styles.progressCirclesContainer}>
-                        {filteredActivities.slice(0, 5).map((activity) => {
-                          const isActivityCompleted =
-                            weekPlan.activityStatuses?.find(
-                              (s) => s.activityId === activity.activityId,
-                            )?.completed;
-                          return (
-                            <View
-                              key={activity.activityId}
-                              style={[
-                                styles.miniProgressDot,
-                                isActivityCompleted &&
-                                  styles.miniProgressDotCompleted,
-                              ]}
-                            >
-                              {isActivityCompleted && (
-                                <Ionicons
-                                  name="checkmark-done"
-                                  size={16}
-                                  color="#0C4A6E"
-                                />
-                              )}
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </View>
-                    <View style={styles.circularProgressContainer}>
-                      <View style={styles.circularProgress}>
-                        <Text style={styles.progressText}>
-                          {progressPercentage}%
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.tasksDivider} />
-
-                  <View style={styles.expandedContent}>
-                    {/* Task Cards */}
-                    {filteredActivities.map((activity, index) => {
-                      const activityStatus = getActivityStatus(
-                        weekPlan,
-                        activity.activityId,
-                      );
-                      const access = canStartActivity(
-                        weekPlan,
-                        activity.activityId,
-                        weekPlans,
-                      );
-                      const isLocked = !access.allowed && !activityStatus.completed;
-
-                      return (
-                      <View key={activity.activityId} style={styles.taskCard}>
-                        <View style={styles.taskInfo}>
-                          <Text style={styles.taskTitle}>
-                            Task {index + 1}: {activity.title}
-                          </Text>
-                          <Text style={styles.taskStatus}>
-                            {activityStatus.completed
-                              ? "Completed"
-                              : activityStatus.started
-                                ? "In Progress"
-                                : isLocked
-                                  ? "Locked"
-                                  : "Ready"}
-                          </Text>
-                        </View>
-
-                        <Text style={styles.taskDescription} numberOfLines={3}>
-                          {activity.instruction}
-                        </Text>
-                        {isLocked && access.reason ? (
-                          <Text style={styles.lockedHint}>{access.reason}</Text>
-                        ) : null}
-
-                        <TouchableOpacity
-                          style={[
-                            styles.continueButton,
-                            activityStatus.completed &&
-                              styles.completedContinueButton,
-                            isLocked && styles.lockedContinueButton,
-                          ]}
-                          disabled={isLocked}
-                          onPress={() => {
-                            router.push({
-                              pathname: "/(app)/(doctor)/activity-detail",
-                              params: {
-                                activityId: activity.activityId,
-                                weekPlanId: weekPlan.weekPlanId,
-                                title: activity.title,
-                                description: activity.instruction,
-                              },
-                            } as any);
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <Text
-                            style={[
-                              styles.continueButtonText,
-                              activityStatus.completed &&
-                                styles.completedContinueButtonText,
-                              isLocked && styles.lockedContinueButtonText,
-                            ]}
-                          >
-                            {activityStatus.completed
-                              ? "Completed"
-                              : isLocked
-                                ? "Locked"
-                                : "Continue"}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    )})}
-                  </View>
+        {/* Active week summary */}
+        {activeWeekPlan ? (
+          <>
+            <Card variant="elevated" padding="lg">
+              <View style={styles.summaryHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="title2">Week {activeWeekPlan.weekNumber}</Text>
+                  <Badge
+                    label={
+                      activeWeekPlan.status === "COMPLETED"
+                        ? "Completed"
+                        : activeWeekPlan.status === "IN_PROGRESS"
+                          ? "In progress"
+                          : "Upcoming"
+                    }
+                    tone={
+                      activeWeekPlan.status === "COMPLETED"
+                        ? "success"
+                        : activeWeekPlan.status === "IN_PROGRESS"
+                          ? "info"
+                          : "neutral"
+                    }
+                    style={styles.weekBadge}
+                  />
                 </View>
-              );
-            })()
-          ) : (
-            <View style={styles.noPlanContainer}>
-              <Text style={styles.noPlanText}>
-                {isRoadmapCycleComplete(weekPlans, activeRoadmap)
-                  ? "This 4-week roadmap cycle is complete. A new roadmap will be available after the one-month review period."
-                  : activeRoadmap
-                    ? "No weekly activities published yet."
-                    : "Your clinician has not published a treatment roadmap yet."}
+                <Text variant="display" tone="brand">
+                  {progressPct}%
+                </Text>
+              </View>
+
+              {activeWeekPlan.description ? (
+                <Text variant="body" tone="secondary" style={styles.weekDesc}>
+                  {activeWeekPlan.description}
+                </Text>
+              ) : null}
+
+              <View style={styles.progress}>
+                <ProgressBar value={progressPct} />
+                <Text variant="caption" tone="secondary" style={styles.progressMeta}>
+                  {completedCount} of {totalActivities} activities done
+                </Text>
+              </View>
+            </Card>
+
+            {/* Activities */}
+            <View style={styles.activities}>
+              {filteredActivities.map((activity, index) => {
+                const status = getActivityStatus(
+                  activeWeekPlan,
+                  activity.activityId,
+                );
+                const access = canStartActivity(
+                  activeWeekPlan,
+                  activity.activityId,
+                  weekPlans,
+                );
+                const isLocked = !access.allowed && !status.completed;
+
+                const badgeTone: "success" | "info" | "neutral" | "warning" =
+                  status.completed
+                    ? "success"
+                    : status.started
+                      ? "info"
+                      : isLocked
+                        ? "neutral"
+                        : "warning";
+                const badgeLabel = status.completed
+                  ? "Done"
+                  : status.started
+                    ? "In progress"
+                    : isLocked
+                      ? "Locked"
+                      : "Ready";
+
+                return (
+                  <Card
+                    key={activity.activityId}
+                    variant="elevated"
+                    padding="md"
+                    style={styles.taskCard}
+                  >
+                    <View style={styles.taskHeader}>
+                      <Text variant="caption" tone="secondary">
+                        Task {index + 1}
+                      </Text>
+                      <Badge label={badgeLabel} tone={badgeTone} />
+                    </View>
+
+                    <Text variant="title3" style={styles.taskTitle}>
+                      {activity.title}
+                    </Text>
+                    <Text
+                      variant="bodySmall"
+                      tone="secondary"
+                      numberOfLines={3}
+                      style={styles.taskDesc}
+                    >
+                      {activity.instruction}
+                    </Text>
+
+                    {isLocked && access.reason ? (
+                      <Text
+                        variant="caption"
+                        tone="tertiary"
+                        style={styles.lockedHint}
+                      >
+                        <Ionicons name="lock-closed" size={12} />{" "}
+                        {access.reason}
+                      </Text>
+                    ) : null}
+
+                    <Button
+                      label={
+                        status.completed
+                          ? "Completed"
+                          : isLocked
+                            ? "Locked"
+                            : status.started
+                              ? "Continue"
+                              : "Start activity"
+                      }
+                      variant={
+                        status.completed
+                          ? "secondary"
+                          : isLocked
+                            ? "secondary"
+                            : "primary"
+                      }
+                      disabled={isLocked || status.completed}
+                      leadingIcon={
+                        status.completed
+                          ? "checkmark-done"
+                          : isLocked
+                            ? "lock-closed"
+                            : undefined
+                      }
+                      onPress={() =>
+                        router.push({
+                          pathname: "/(app)/(doctor)/activity-detail",
+                          params: {
+                            activityId: activity.activityId,
+                            weekPlanId: activeWeekPlan.weekPlanId,
+                            title: activity.title,
+                            description: activity.instruction,
+                          },
+                        } as any)
+                      }
+                    />
+                  </Card>
+                );
+              })}
+            </View>
+          </>
+        ) : (
+          <EmptyState
+            icon="calendar-outline"
+            title={
+              isRoadmapCycleComplete(weekPlans, activeRoadmap)
+                ? "Cycle complete"
+                : activeRoadmap
+                  ? "No activities yet"
+                  : "Roadmap not ready"
+            }
+            description={
+              isRoadmapCycleComplete(weekPlans, activeRoadmap)
+                ? "Great work! A new roadmap will be available after the one-month review period."
+                : activeRoadmap
+                  ? "Your clinician hasn't published activities for this week yet."
+                  : "Your clinician is preparing a personalised therapy roadmap. You'll be notified when it's ready."
+            }
+          />
+        )}
+
+        {/* Quick link to growth journey */}
+        {activeRoadmap ? (
+          <Pressable
+            onPress={() => router.push("/(app)/growth-journey" as any)}
+            style={({ pressed }) => [
+              styles.growthLink,
+              pressed && styles.growthLinkPressed,
+            ]}
+          >
+            <Ionicons name="trending-up" size={20} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text variant="body" weight="semibold">
+                Growth journey
+              </Text>
+              <Text variant="caption" tone="secondary">
+                See all weeks at a glance
               </Text>
             </View>
-          )}
-        </ScrollView>
-      </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.iconMuted}
+            />
+          </Pressable>
+        ) : null}
+      </ScrollView>
 
-      {/* Child Selector Modal */}
       <ChildSelectorModal
         visible={showChildSelector}
         onClose={() => setShowChildSelector(false)}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  paywallWrap: {
     flex: 1,
-    backgroundColor: colors.backgroundBlue,
-  },
-  unverifiedContainer: {
-    flex: 1,
-    padding: spacing.xxl,
     justifyContent: "center",
+    paddingHorizontal: spacing[5],
   },
-  mchatPromptCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xxxl,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+  scroll: {
+    flex: 1,
   },
-  promptTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    marginTop: spacing.xl,
-    marginBottom: spacing.md,
+  scrollContent: {
+    paddingHorizontal: spacing[5],
+    paddingBottom: layout.tabBarHeight + spacing[8],
+    gap: spacing[4],
   },
-  promptSubtitle: {
-    fontSize: 16,
-    color: "#5A7A8F",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: spacing.xxxl,
-  },
-  mchatButton: {
-    backgroundColor: colors.primary,
+  weekNav: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: 8,
-  },
-  mchatButtonText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  header: {
-    flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: spacing.xl,
+    marginBottom: spacing[1],
   },
-  greeting: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  avatarImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  childCountBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#0C4A6E",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  childCountText: {
-    fontSize: 12,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.white,
-  },
-  dateContainer: {
+  summaryHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(12, 74, 110, 0.05)",
-    marginHorizontal: spacing.xxl,
-    marginBottom: spacing.xl,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.lg,
-    alignSelf: "flex-start",
-    gap: 8,
+    gap: spacing[3],
   },
-  dateText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0C4A6E",
+  weekBadge: {
+    marginTop: spacing[2],
   },
-  scrollView: {
-    flex: 1,
+  weekDesc: {
+    marginTop: spacing[3],
   },
-  calendarCard: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 40,
-    borderTopRightRadius: 40,
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    minHeight: "100%",
+  progress: {
+    marginTop: spacing[4],
+    gap: spacing[2],
   },
-  weekContainer: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    marginHorizontal: 8,
+  progressMeta: {
+    textAlign: "right",
   },
-  dayItem: {
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 24,
-    minWidth: 45,
-  },
-  dayItemSelected: {
-    backgroundColor: "#0C4A6E",
-    // Premium shadow for selected date
-    shadowColor: "#0C4A6E",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  dayNum: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#94A3B8",
-    marginBottom: 4,
-  },
-  dayNumSelected: {
-    color: colors.white,
-  },
-  dayName: {
-    fontSize: 11,
-    color: "#94A3B8",
-    fontWeight: "600",
-    textTransform: "uppercase",
-  },
-  dayNameSelected: {
-    color: colors.white,
-  },
-  therapySection: {
-    marginBottom: spacing.xl,
-  },
-  therapyHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  therapyInfo: {
-    flex: 1,
-  },
-  therapyTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.xs,
-  },
-  therapyStatus: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
-  },
-  progressCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: "#0C4A6E",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: spacing.lg,
-  },
-  progressText: {
-    fontSize: 20,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-  },
-  progressCirclesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md,
-  },
-  progressDot: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  progressDotCompleted: {
-    backgroundColor: "#E0F2FE",
-  },
-  tasksDivider: {
-    height: 1,
-    backgroundColor: "#F1F5F9",
-    marginVertical: 24,
-  },
-  circularProgressContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  circularProgress: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 1.5,
-    borderColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  miniProgressDot: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#E2E8F0",
-    opacity: 0.5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  miniProgressDotCompleted: {
-    backgroundColor: "#DBEAFE",
-    opacity: 1,
+  activities: {
+    gap: spacing[3],
   },
   taskCard: {
-    backgroundColor: "#F1F5F9",
-    borderRadius: 32,
-    padding: 24,
-    marginBottom: 20,
+    gap: spacing[3],
   },
-  taskInfo: {
-    flex: 1,
+  taskHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   taskTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    marginBottom: 4,
+    marginTop: spacing[1],
   },
-  taskStatus: {
-    fontSize: 14,
-    color: "#94A3B8",
-    marginBottom: 12,
-  },
-  taskDescription: {
-    fontSize: 15,
-    color: "#64748B",
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  continueButton: {
-    backgroundColor: "#0C4A6E",
-    paddingVertical: 18,
-    borderRadius: 40,
-    alignItems: "center",
-  },
-  completedContinueButton: {
-    backgroundColor: "#DBEAFE",
-  },
-  continueButtonText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.white,
-  },
-  noPlanContainer: {
-    padding: spacing.xl,
-    alignItems: "center",
-  },
-  noPlanText: {
-    color: "#A0B8C8",
-    fontSize: 16,
-  },
-  lockedContinueButton: {
-    backgroundColor: "#CBD5E1",
-  },
-  lockedContinueButtonText: {
-    color: "#64748B",
+  taskDesc: {
+    marginBottom: spacing[1],
   },
   lockedHint: {
-    fontSize: 13,
-    color: "#94A3B8",
-    marginBottom: 12,
+    marginTop: -spacing[2],
   },
-  completedContinueButtonText: {
-    color: "#0C4A6E",
-  },
-  weekHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-  },
-  weekPlanSection: {
-    marginBottom: spacing.lg,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxl,
-    overflow: "hidden",
-  },
-  weekTitleContainer: {
-    flex: 1,
-  },
-  clinicianName: {
-    fontSize: 13,
-    color: colors.primary,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  headerRight: {
+  growthLink: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    gap: spacing[3],
+    padding: spacing[4],
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    marginTop: spacing[2],
   },
-  progressStats: {
-    alignItems: "flex-end",
-  },
-  progressPercentage: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0C4A6E",
-  },
-  progressRatio: {
-    fontSize: 11,
-    color: "#94A3B8",
-    fontWeight: "600",
-  },
-  expandIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  weekDisplayHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.md,
-  },
-  weekPaginationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 8,
-    marginBottom: 16,
-  },
-  weekPlanLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0C4A6E",
-  },
-  pageButton: {
-    padding: 8,
-  },
-  weekDivider: {
-    display: "none",
-  },
-  weekBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  completedBadge: {
-    backgroundColor: "#DBEAFE",
-    borderRadius: 12,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  completedBadgeText: {
-    fontSize: 12,
-    color: "#0C4A6E",
-    fontWeight: "500",
-  },
-  currentBadge: {
-    backgroundColor: "#E0F2FE",
-    borderRadius: 12,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  currentBadgeText: {
-    fontSize: 12,
-    color: "#0C4A6E",
-    fontWeight: "500",
-  },
-  expandedContent: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-    paddingHorizontal: 0,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-  weekDescription: {
-    fontSize: typography.fontSize.md,
-    color: "#475569",
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.md,
-  },
-  progressContainer: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  progressLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  progressLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748B",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  progressCount: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0C4A6E",
-  },
-  paywallWrapper: {
-    flex: 1,
-    justifyContent: "center",
-    paddingBottom: 120,
+  growthLinkPressed: {
+    opacity: 0.7,
   },
 });

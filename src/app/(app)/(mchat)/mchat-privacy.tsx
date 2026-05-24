@@ -1,126 +1,140 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, View } from "react-native";
 import {
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+  Button,
+  Card,
+  IconButton,
+  ProgressBar,
+  Screen,
+  Text,
+} from "../../../shared/components/ui";
+import { colors, spacing } from "../../../shared/theme";
+
+const PRIVACY_POINTS = [
+  {
+    icon: "shield-checkmark" as const,
+    title: "Your data stays private",
+    body: "Only you and your assigned clinician can view this screening.",
+  },
+  {
+    icon: "lock-closed" as const,
+    title: "Encrypted end-to-end",
+    body: "All answers are encrypted in transit and at rest.",
+  },
+  {
+    icon: "person-remove" as const,
+    title: "Delete anytime",
+    body: "You can withdraw consent and delete a screening at any time.",
+  },
+];
 
 export default function MChatPrivacyScreen() {
   const router = useRouter();
 
-  const handleNext = () => {
-    router.push("/(app)/mchat-questionnaire" as Href);
-  };
-
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#E8F0F5" />
-
-      {/* Close Button */}
-      <TouchableOpacity
-        style={styles.closeButton}
-        onPress={() => router.back()}
-      >
-        <Ionicons name="close" size={32} color="#0C4A6E" />
-      </TouchableOpacity>
-
-      {/* Progress Indicator */}
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, { flex: 1 }]} />
-        <View style={[styles.progressBar, { flex: 4, opacity: 0.3 }]} />
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <View style={styles.header}>
+        <IconButton
+          icon="close"
+          accessibilityLabel="Close"
+          onPress={() => router.back()}
+        />
+        <View style={styles.progressWrap}>
+          <ProgressBar value={20} />
+        </View>
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={styles.spacer} />
+      <View style={styles.body}>
+        <Text variant="label" tone="brand">
+          Step 1 of 5
+        </Text>
+        <Text variant="display" style={styles.title}>
+          Data security & privacy
+        </Text>
+        <Text variant="body" tone="secondary" style={styles.subtitle}>
+          {`Before we begin, here's how we protect what you share with us.`}
+        </Text>
 
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>
-            Data Security and{"\n"}privacy policy
-          </Text>
+        <View style={styles.list}>
+          {PRIVACY_POINTS.map((pt) => (
+            <Card key={pt.title} variant="flat" padding="md" style={styles.point}>
+              <View style={styles.pointIcon}>
+                <Text variant="title2" tone="brand">
+                  ✓
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="semibold">
+                  {pt.title}
+                </Text>
+                <Text variant="bodySmall" tone="secondary" style={styles.pointBody}>
+                  {pt.body}
+                </Text>
+              </View>
+            </Card>
+          ))}
         </View>
       </View>
 
-      {/* Next Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={handleNext}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.nextButtonText}>Next</Text>
-          <Ionicons name="chevron-forward" size={22} color={colors.white} />
-        </TouchableOpacity>
+      <View style={styles.footer}>
+        <Button
+          label="I agree, continue"
+          onPress={() =>
+            router.push("/(app)/mchat-questionnaire" as Href)
+          }
+          trailingIcon="arrow-forward"
+        />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#E8F0F5",
-  },
-  closeButton: {
-    position: "absolute",
-    top: 60,
-    left: spacing.xl,
-    zIndex: 10,
-    padding: spacing.xs,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: spacing.md,
-    gap: 6,
-  },
-  progressBar: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#0C4A6E",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xxl,
-  },
-  spacer: {
-    flex: 1,
-  },
-  titleContainer: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxxl,
-    padding: spacing.xxxl,
-    paddingVertical: spacing.huge,
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    lineHeight: 42,
-  },
-  buttonContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
-  },
-  nextButton: {
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    gap: spacing[3],
   },
-  nextButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+  progressWrap: {
+    flex: 1,
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+  },
+  title: {
+    marginTop: spacing[2],
+  },
+  subtitle: {
+    marginTop: spacing[3],
+    marginBottom: spacing[6],
+  },
+  list: {
+    gap: spacing[3],
+  },
+  point: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  pointIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pointBody: {
+    marginTop: 2,
+  },
+  footer: {
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[5],
   },
 });

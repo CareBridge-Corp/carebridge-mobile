@@ -1,21 +1,13 @@
-import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet, View } from "react-native";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
+  Button,
+  Card,
   Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "../../../shared/theme";
+  TextField,
+} from "../../../shared/components/ui";
+import { colors, spacing } from "../../../shared/theme";
 import { useSignup } from "../hooks/useSignup";
 
 export function SignupForm() {
@@ -24,7 +16,6 @@ export function SignupForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const signupMutation = useSignup();
   const { t } = useTranslation();
 
@@ -41,220 +32,113 @@ export function SignupForm() {
     });
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  const canSubmit =
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
+    email.trim().length > 0 &&
+    password.length >= 6;
 
   return (
-    <ScrollView
-      style={styles.container}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <Text style={styles.title}>{t("auth.signupTitle")}</Text>
-      <Text style={styles.subtitle}>{t("auth.loginSubtitle")}</Text>
-
+    <View style={styles.container}>
       {signupMutation.error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.error}>{signupMutation.error.message}</Text>
-        </View>
+        <Card
+          variant="flat"
+          padding="md"
+          style={{
+            backgroundColor: colors.errorBackground,
+            marginBottom: spacing[4],
+          }}
+        >
+          <Text variant="bodySmall" tone="danger">
+            {signupMutation.error.message}
+          </Text>
+        </Card>
       )}
 
       <View style={styles.form}>
-        {/* First Name Input */}
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t("auth.firstName")}
-            placeholderTextColor={colors.textSecondary}
-            value={firstName}
-            onChangeText={setFirstName}
-          />
-          <View style={styles.iconContainer}>
-            <Ionicons name="person-outline" size={20} color={colors.icon} />
-          </View>
-        </View>
-
-        {/* Last Name Input */}
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t("auth.lastName")}
-            placeholderTextColor={colors.textSecondary}
-            value={lastName}
-            onChangeText={setLastName}
-          />
-          <View style={styles.iconContainer}>
-            <Ionicons name="person-outline" size={20} color={colors.icon} />
-          </View>
-        </View>
-
-        {/* Email Input */}
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t("auth.email")}
-            placeholderTextColor={colors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <View style={styles.iconContainer}>
-            <Ionicons name="mail-outline" size={20} color={colors.icon} />
-          </View>
-        </View>
-
-        {/* Phone Input */}
-        <View style={styles.inputWrapper}>
-          <View style={styles.phonePrefixContainer}>
-            <Text style={styles.phonePrefix}>+251</Text>
-          </View>
-          <TextInput
-            style={[styles.input, { paddingLeft: 64 }]} // Make room for +251 prefix
-            placeholder="900000000"
-            placeholderTextColor={colors.textSecondary}
-            value={phone}
-            onChangeText={(text) => {
-              // allow numbers only
-              const numericValue = text.replace(/[^0-9]/g, "");
-              setPhone(numericValue);
-            }}
-            keyboardType="phone-pad"
-            maxLength={9}
-          />
-          <View style={styles.iconContainer}>
-            <Ionicons name="call-outline" size={20} color={colors.icon} />
-          </View>
-        </View>
-
-        {/* Password Input */}
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t("auth.password")}
-            placeholderTextColor={colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity
-            style={styles.iconContainer}
-            onPress={togglePasswordVisibility}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={showPassword ? "eye-outline" : "eye-off-outline"}
-              size={20}
-              color={colors.icon}
+        <View style={styles.row}>
+          <View style={styles.flex}>
+            <TextField
+              label={t("auth.firstName", "First name")}
+              placeholder="Jane"
+              value={firstName}
+              onChangeText={setFirstName}
+              autoCapitalize="words"
             />
-          </TouchableOpacity>
+          </View>
+          <View style={styles.flex}>
+            <TextField
+              label={t("auth.lastName", "Last name")}
+              placeholder="Doe"
+              value={lastName}
+              onChangeText={setLastName}
+              autoCapitalize="words"
+            />
+          </View>
         </View>
+
+        <TextField
+          label={t("auth.email", "Email")}
+          placeholder="you@example.com"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          leadingIcon="mail-outline"
+        />
+
+        <TextField
+          label={t("auth.phone", "Phone number")}
+          placeholder="900000000"
+          value={phone}
+          onChangeText={(text) => setPhone(text.replace(/[^0-9]/g, ""))}
+          keyboardType="phone-pad"
+          maxLength={9}
+          prefix="+251"
+          leadingIcon="call-outline"
+          helperText="Optional"
+        />
+
+        <TextField
+          label={t("auth.password", "Password")}
+          placeholder="At least 6 characters"
+          value={password}
+          onChangeText={setPassword}
+          isPassword
+          autoCapitalize="none"
+          leadingIcon="lock-closed-outline"
+          helperText={password.length > 0 && password.length < 6 ? undefined : ""}
+          errorText={
+            password.length > 0 && password.length < 6
+              ? "Use at least 6 characters"
+              : undefined
+          }
+        />
       </View>
 
-      {/* Sign Up Button */}
-      <TouchableOpacity
-        style={[
-          styles.button,
-          signupMutation.isPending && styles.buttonDisabled,
-        ]}
+      <Button
+        label={t("auth.signup", "Create account")}
         onPress={handleSignup}
-        disabled={signupMutation.isPending}
-        activeOpacity={0.8}
-      >
-        {signupMutation.isPending ? (
-          <ActivityIndicator color={colors.white} />
-        ) : (
-          <Text style={styles.buttonText}>{t("auth.signup")}</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        loading={signupMutation.isPending}
+        disabled={!canSubmit}
+        trailingIcon="arrow-forward"
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 180,
-    paddingBottom: 120,
-  },
-  title: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.lg,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.md,
-    color: colors.textLight,
-    marginBottom: spacing.xxxl,
-    lineHeight: typography.lineHeight.relaxed * typography.fontSize.md,
+    gap: spacing[6],
   },
   form: {
-    gap: spacing.lg,
-    marginBottom: spacing.massive,
+    gap: spacing[4],
   },
-  inputWrapper: {
-    position: "relative",
+  row: {
+    flexDirection: "row",
+    gap: spacing[3],
   },
-  phonePrefixContainer: {
-    position: "absolute",
-    left: spacing.xl,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    zIndex: 1, // ensure it's clickable through if needed, or sit on top
-  },
-  phonePrefix: {
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-    fontWeight: typography.fontWeight.medium,
-  },
-  input: {
-    backgroundColor: colors.inputBackground,
-    borderRadius: borderRadius.xxl,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingRight: 56,
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-  },
-  iconContainer: {
-    position: "absolute",
-    right: spacing.lg,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    width: 40,
-    height: "100%",
-  },
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxl,
-    alignItems: "center",
-    marginTop: spacing.xl,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-  },
-  errorContainer: {
-    backgroundColor: "#FEE",
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
-  },
-  error: {
-    color: colors.error,
-    fontSize: typography.fontSize.sm,
+  flex: {
+    flex: 1,
   },
 });

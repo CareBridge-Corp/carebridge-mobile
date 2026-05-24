@@ -3,175 +3,90 @@ import { StyleSheet, View } from "react-native";
 import { SkeletonLoader } from "../../../shared/components/SkeletonLoader";
 import { borderRadius, colors, spacing } from "../../../shared/theme";
 
+/**
+ * Skeleton placeholder for the Home screen while data loads.
+ * Mirrors the actual HomeHero card layout.
+ */
 export function HomeSkeletonView() {
   return (
-    <View style={styles.mainCard}>
-      {/* Title Skeletons */}
-      <SkeletonLoader style={styles.titleSkeletonTop} />
-      <SkeletonLoader style={styles.titleSkeletonBottom} />
-
-      {/* Action Cards Skeletons */}
-      <View style={styles.actionCard}>
-        <View style={styles.actionCardContent}>
-          <SkeletonLoader style={styles.cardTitleSkeleton} />
-          <SkeletonLoader style={styles.cardSubtitleSkeleton} />
-          <SkeletonLoader style={styles.cardSubtitleSkeletonShort} />
-
-          <View style={styles.watchGuideButton}>
-            <SkeletonLoader style={styles.playIconCircle} />
-            <SkeletonLoader style={styles.watchGuideTextSkeleton} />
+    <View style={styles.container}>
+      <View style={styles.heroCard}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <SkeletonLoader style={styles.eyebrow} />
+            <SkeletonLoader style={styles.titleLine1} />
+            <SkeletonLoader style={styles.titleLine2} />
           </View>
+          <SkeletonLoader style={styles.illustration} />
         </View>
-        <SkeletonLoader style={styles.arrowCircle} />
+
+        <SkeletonLoader style={styles.descriptionLine1} />
+        <SkeletonLoader style={styles.descriptionLine2} />
+
+        <SkeletonLoader style={styles.button} />
       </View>
 
-      <View style={styles.actionCard}>
-        <View style={styles.actionCardContent}>
-          <SkeletonLoader style={styles.cardTitleSkeleton} />
-          <SkeletonLoader style={styles.cardSubtitleSkeleton} />
-          <SkeletonLoader style={styles.cardSubtitleSkeletonShort} />
-
-          <View style={styles.watchGuideButton}>
-            <SkeletonLoader style={styles.playIconCircle} />
-            <View>
-              <SkeletonLoader style={styles.verifiedTitleSkeleton} />
-              <SkeletonLoader style={styles.verifiedSubtitleSkeleton} />
-            </View>
-          </View>
-        </View>
-        <SkeletonLoader style={styles.arrowCircle} />
-      </View>
-
-      {/* Feature Cards Skeletons */}
-      <View style={styles.placeholderRow}>
-        <View style={styles.featureCard}>
-          <SkeletonLoader style={styles.featureIconContainer} />
-          <SkeletonLoader style={styles.featureCardTitleSkeleton} />
-          <SkeletonLoader style={styles.featureCardSubtitleSkeleton} />
-        </View>
-
-        <View style={styles.featureCard}>
-          <SkeletonLoader style={styles.featureIconContainer} />
-          <SkeletonLoader style={styles.featureCardTitleSkeleton} />
-          <SkeletonLoader style={styles.featureCardSubtitleSkeleton} />
-        </View>
-      </View>
+      <SkeletonLoader style={styles.secondaryCard} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mainCard: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xxxl,
-    borderTopRightRadius: borderRadius.xxxl,
-    paddingTop: spacing.xxxl,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.xl,
+  container: {
+    paddingHorizontal: spacing[5],
+    gap: spacing[5],
   },
-  titleSkeletonTop: {
-    height: 28,
-    width: "80%",
-    marginBottom: spacing.xs,
-    borderRadius: spacing.sm,
+  heroCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
+    gap: spacing[3],
   },
-  titleSkeletonBottom: {
-    height: 28,
-    width: "60%",
-    marginBottom: spacing.xxl,
-    borderRadius: spacing.sm,
-  },
-  actionCard: {
-    backgroundColor: "#F4F8FA", // Softer skeleton bg for card
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xxl,
-    marginBottom: spacing.lg,
-    position: "relative",
-  },
-  actionCardContent: {
-    paddingRight: 50,
-  },
-  cardTitleSkeleton: {
-    height: 20,
-    width: "35%",
-    marginBottom: spacing.sm,
-    borderRadius: spacing.sm,
-  },
-  cardSubtitleSkeleton: {
-    height: 14,
-    width: "90%",
-    marginBottom: 6,
-    borderRadius: spacing.sm,
-  },
-  cardSubtitleSkeletonShort: {
-    height: 14,
-    width: "60%",
-    marginBottom: spacing.xl,
-    borderRadius: spacing.sm,
-  },
-  watchGuideButton: {
+  headerRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
+    alignItems: "flex-start",
+    gap: spacing[3],
   },
-  playIconCircle: {
+  eyebrow: {
+    height: 10,
+    width: "30%",
+    marginBottom: spacing[2],
+    borderRadius: 6,
+  },
+  titleLine1: {
+    height: 22,
+    width: "70%",
+    marginBottom: spacing[1],
+    borderRadius: 8,
+  },
+  titleLine2: {
+    height: 22,
+    width: "50%",
+    borderRadius: 8,
+  },
+  illustration: {
     width: 48,
     height: 48,
     borderRadius: 24,
   },
-  watchGuideTextSkeleton: {
-    height: 16,
-    width: 100,
-    borderRadius: spacing.sm,
-  },
-  verifiedTitleSkeleton: {
+  descriptionLine1: {
     height: 14,
-    width: 110,
-    marginBottom: 6,
-    borderRadius: spacing.sm,
+    width: "100%",
+    marginTop: spacing[2],
+    borderRadius: 6,
   },
-  verifiedSubtitleSkeleton: {
-    height: 12,
-    width: 160,
-    borderRadius: spacing.sm,
+  descriptionLine2: {
+    height: 14,
+    width: "85%",
+    borderRadius: 6,
   },
-  arrowCircle: {
-    position: "absolute",
-    top: spacing.xxl,
-    right: spacing.xxl,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  button: {
+    height: 52,
+    borderRadius: 9999,
+    marginTop: spacing[3],
   },
-  placeholderRow: {
-    flexDirection: "row",
-    gap: spacing.lg,
-    marginTop: spacing.lg,
-  },
-  featureCard: {
-    flex: 1,
-    backgroundColor: "#F4F8FA",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 160,
-  },
-  featureIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginBottom: spacing.md,
-  },
-  featureCardTitleSkeleton: {
-    height: 16,
-    width: "70%",
-    marginBottom: spacing.sm,
-    borderRadius: spacing.sm,
-  },
-  featureCardSubtitleSkeleton: {
-    height: 12,
-    width: "90%",
-    borderRadius: spacing.sm,
+  secondaryCard: {
+    height: 84,
+    borderRadius: borderRadius.xl,
   },
 });

@@ -1,26 +1,33 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   PanResponder,
-  StatusBar,
+  Pressable,
+  ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import {
+  Badge,
+  Card,
+  IconButton,
+  ProgressBar,
+  Screen,
+  Text,
+} from "../../../shared/components/ui";
+import { useLanguageStore } from "../../../shared/store/languageStore";
+import {
   borderRadius,
   colors,
+  shadows,
   spacing,
-  typography,
 } from "../../../shared/theme";
 import { useMChatQuestions } from "../hooks/useScreeningProgress";
 import { useChildrenStore } from "../store/childrenStore";
 import { useMChatStore } from "../store/mchatStore";
-import { useLanguageStore } from "../../../shared/store/languageStore";
 
 const MCHAT_QUESTIONS = [
   {
@@ -28,122 +35,52 @@ const MCHAT_QUESTIONS = [
     question:
       "If you point at something across the room, does your child look at it?",
     example:
-      "(FOR EXAMPLE, if you point at a toy or an animal, does your child look at the toy or animal?)",
+      "For example, if you point at a toy or an animal, does your child look at the toy or animal?",
   },
-  {
-    id: 2,
-    question: "Have you ever wondered if your child might be deaf?",
-    example: "",
-  },
+  { id: 2, question: "Have you ever wondered if your child might be deaf?", example: "" },
   {
     id: 3,
     question: "Does your child play pretend or make-believe?",
     example:
-      "(FOR EXAMPLE, pretend to drink from an empty cup, pretend to talk on a phone, or pretend to feed a doll or stuffed animal?)",
+      "For example, pretend to drink from an empty cup, pretend to talk on a phone, or pretend to feed a doll.",
   },
-  {
-    id: 4,
-    question: "Does your child like climbing on things?",
-    example: "(FOR EXAMPLE, furniture, playground equipment, or stairs)",
-  },
+  { id: 4, question: "Does your child like climbing on things?", example: "" },
   {
     id: 5,
     question:
       "Does your child make unusual finger movements near his or her eyes?",
-    example:
-      "(FOR EXAMPLE, does your child wiggle his or her fingers close to his or her eyes?)",
+    example: "",
   },
   {
     id: 6,
     question:
       "Does your child point with one finger to ask for something or to get help?",
-    example: "(FOR EXAMPLE, pointing to a snack or toy that is out of reach)",
+    example: "",
   },
   {
     id: 7,
     question:
       "Does your child point with one finger to show you something interesting?",
-    example:
-      "(FOR EXAMPLE, pointing to an airplane in the sky or a big truck in the road)",
+    example: "",
   },
-  {
-    id: 8,
-    question: "Is your child interested in other children?",
-    example:
-      "(FOR EXAMPLE, does your child watch other children, smile at them, or go to them?)",
-  },
+  { id: 8, question: "Is your child interested in other children?", example: "" },
   {
     id: 9,
     question:
-      "Does your child show you things by bringing them to you or holding them up for you to see – not to get help, but just to share?",
-    example:
-      "(FOR EXAMPLE, showing you a flower, a stuffed animal, or a toy truck)",
-  },
-  {
-    id: 10,
-    question: "Does your child respond when you call his or her name?",
-    example:
-      "(FOR EXAMPLE, does he or she look up, talk or babble, or stop what he or she is doing when you call his or her name?)",
-  },
-  {
-    id: 11,
-    question: "When you smile at your child, does he or she smile back at you?",
+      "Does your child show you things by bringing them to you – not to get help, but just to share?",
     example: "",
   },
-  {
-    id: 12,
-    question: "Does your child get upset by everyday noises?",
-    example:
-      "(FOR EXAMPLE, does your child scream or cry to noise such as a vacuum cleaner or loud music?)",
-  },
-  {
-    id: 13,
-    question: "Does your child walk?",
-    example: "",
-  },
-  {
-    id: 14,
-    question:
-      "Does your child look you in the eye when you are talking to him or her, playing with him or her, or dressing him or her?",
-    example: "",
-  },
-  {
-    id: 15,
-    question: "Does your child try to copy what you do?",
-    example:
-      "(FOR EXAMPLE, wave bye-bye, clap, or make a funny noise when you do)",
-  },
-  {
-    id: 16,
-    question:
-      "If you turn your head to look at something, does your child look around to see what you are looking at?",
-    example: "",
-  },
-  {
-    id: 17,
-    question: "Does your child try to get you to watch him or her?",
-    example:
-      "(FOR EXAMPLE, does your child look at you for praise, or say “look” or “watch me”?)",
-  },
-  {
-    id: 18,
-    question:
-      "Does your child understand when you tell him or her to do something?",
-    example:
-      "(FOR EXAMPLE, if you don’t point, can your child understand “put the book on the chair” or “bring me the blanket”?)",
-  },
-  {
-    id: 19,
-    question:
-      "If something new happens, does your child look at your face to see how you feel about it?",
-    example:
-      "(FOR EXAMPLE, if he or she hears a strange or funny noise, or sees a new toy, will he or she look at your face?)",
-  },
-  {
-    id: 20,
-    question: "Does your child like movement activities?",
-    example: "(FOR EXAMPLE, being swung or bounced on your knee)",
-  },
+  { id: 10, question: "Does your child respond when you call his or her name?", example: "" },
+  { id: 11, question: "When you smile at your child, does he or she smile back at you?", example: "" },
+  { id: 12, question: "Does your child get upset by everyday noises?", example: "" },
+  { id: 13, question: "Does your child walk?", example: "" },
+  { id: 14, question: "Does your child look you in the eye when you are talking?", example: "" },
+  { id: 15, question: "Does your child try to copy what you do?", example: "" },
+  { id: 16, question: "If you turn your head to look at something, does your child look around to see what you are looking at?", example: "" },
+  { id: 17, question: "Does your child try to get you to watch him or her?", example: "" },
+  { id: 18, question: "Does your child understand when you tell him or her to do something?", example: "" },
+  { id: 19, question: "If something new happens, does your child look at your face to see how you feel about it?", example: "" },
+  { id: 20, question: "Does your child like movement activities?", example: "" },
 ];
 
 export default function MChatQuestionnaireScreen() {
@@ -188,53 +125,31 @@ export default function MChatQuestionnaireScreen() {
   const totalQuestions = questions.length;
 
   const shakeAnimation = useRef(new Animated.Value(0)).current;
-
   const startShake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
+      Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnimation, { toValue: 0, duration: 50, useNativeDriver: true }),
     ]).start();
   };
 
   const handleAnswer = (answer: boolean) => {
     if (!question) return;
     setAnswer(questionKey(question.id), answer);
-
     if (currentQuestion < totalQuestions - 1) {
-      setTimeout(() => {
-        setCurrentQuestion(currentQuestion + 1);
-      }, 300);
+      setTimeout(() => setCurrentQuestion(currentQuestion + 1), 250);
     } else {
-      setTimeout(() => {
-        router.push("/(app)/(mchat)/mchat-supporting-info" as Href);
-      }, 300);
+      setTimeout(
+        () => router.push("/(app)/(mchat)/mchat-supporting-info" as Href),
+        250,
+      );
     }
   };
 
   const handleBack = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-    } else {
-      router.back();
-    }
+    if (currentQuestion > 0) setCurrentQuestion(currentQuestion - 1);
+    else router.back();
   };
 
   const handleNext = () => {
@@ -242,396 +157,215 @@ export default function MChatQuestionnaireScreen() {
       startShake();
       return;
     }
-
-    if (currentQuestion < totalQuestions - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    } else if (currentQuestion === totalQuestions - 1) {
-      router.push("/(app)/(mchat)/mchat-supporting-info" as Href);
-    }
+    if (currentQuestion < totalQuestions - 1) setCurrentQuestion(currentQuestion + 1);
+    else router.push("/(app)/(mchat)/mchat-supporting-info" as Href);
   };
 
   const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      // Detect meaningful horizontal swipes
-      return Math.abs(gestureState.dx) > 30;
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      if (gestureState.dx > 50) {
-        // Swiped right -> go back
-        handleBack();
-      } else if (gestureState.dx < -50) {
-        // Swiped left -> go to next
-        handleNext();
-      }
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 30,
+    onPanResponderRelease: (_, g) => {
+      if (g.dx > 50) handleBack();
+      else if (g.dx < -50) handleNext();
     },
   });
 
-  const prevQuestion =
-    currentQuestion > 0 ? questions[currentQuestion - 1] : null;
-
   if (isLoading || !question) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#0C4A6E" />
-        <Text style={styles.loadingText}>Loading screening questions...</Text>
-      </View>
+      <Screen background={colors.surfaceMuted}>
+        <View style={styles.loadingCenter}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text variant="body" tone="secondary" style={{ marginTop: spacing[3] }}>
+            Loading screening...
+          </Text>
+        </View>
+      </Screen>
     );
   }
 
+  const progressPct = ((currentQuestion + 1) / totalQuestions) * 100;
+  const answer = answers[questionKey(question.id)];
+
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
-      <StatusBar barStyle="dark-content" backgroundColor="#E8F0F5" />
-
-      {/* Header with Navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.navButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-
-        {/* Progress Dots */}
-        <View style={styles.progressDotsContainer}>
-          {questions.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.progressDot,
-                index === currentQuestion && styles.progressDotActive,
-                index < currentQuestion && styles.progressDotCompleted,
-              ]}
-            />
-          ))}
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <View style={styles.header} {...panResponder.panHandlers}>
+        <IconButton
+          icon="chevron-back"
+          accessibilityLabel="Back"
+          onPress={handleBack}
+        />
+        <View style={styles.progressWrap}>
+          <Text variant="caption" tone="secondary" style={styles.progressLabel}>
+            Question {currentQuestion + 1} of {totalQuestions}
+          </Text>
+          <ProgressBar value={progressPct} />
         </View>
-
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            currentQuestion === totalQuestions - 1 &&
-              styles.navButtonDisabled,
-          ]}
+        <IconButton
+          icon="chevron-forward"
+          accessibilityLabel="Next"
           onPress={handleNext}
-          disabled={currentQuestion === totalQuestions - 1}
-        >
-          <Ionicons
-            name="arrow-forward"
-            size={28}
-            color={
-              currentQuestion === totalQuestions - 1
-                ? "#C0D4E0"
-                : "#0C4A6E"
-            }
-          />
-        </TouchableOpacity>
+        />
       </View>
 
-      {/* Question at Top */}
-      <View style={styles.topQuestionContainer}>
-        <Text style={styles.topQuestionText}>{question.question}</Text>
-        {answers[`Q${question.id}`] !== undefined && (
-          <View style={styles.answerBadge}>
-            <Text style={styles.answerBadgeText}>
-              {answers[`Q${question.id}`] ? "Yes" : "No"}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Main Content */}
-      <View style={styles.content}>
-        {/* Previous Question Blurry Card */}
-        {prevQuestion && (
-          <View style={styles.previousQuestionContainer}>
-            <View style={styles.blurryCard}>
-              <View style={styles.questionNumberContainer}>
-                <Text style={styles.questionNumberSecondary}>
-                  {String(currentQuestion).padStart(2, "0")}
-                </Text>
-                <View style={styles.questionDotSecondary} />
-              </View>
-              <Text style={styles.questionTextSecondary} numberOfLines={1}>
-                {prevQuestion.question}
-              </Text>
-              <View style={styles.previousAnswerBadge}>
-                <Ionicons
-                  name={
-                    answers[questionKey(prevQuestion.id)]
-                      ? "checkmark-circle"
-                      : "close-circle"
-                  }
-                  size={16}
-                  color={
-                    answers[questionKey(prevQuestion.id)] ? "#10B981" : "#EF4444"
-                  }
-                />
-                <Text style={styles.previousAnswerText}>
-                  {answers[questionKey(prevQuestion.id)] ? "Yes" : "No"}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.questionCard}>
-          <View style={styles.questionNumberContainer}>
-            <Text style={styles.questionNumber}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        {...panResponder.panHandlers}
+      >
+        <Animated.View style={{ transform: [{ translateX: shakeAnimation }] }}>
+          <Card variant="elevated" padding="lg" style={styles.questionCard}>
+            <Text variant="display" tone="brand" style={styles.questionNumber}>
               {String(currentQuestion + 1).padStart(2, "0")}
             </Text>
-            <View style={styles.questionDot} />
-          </View>
+            <Text variant="title1" style={styles.questionText}>
+              {question.question}
+            </Text>
+            {question.example ? (
+              <Text variant="bodySmall" tone="secondary" style={styles.example}>
+                {question.example}
+              </Text>
+            ) : null}
 
-          <Text style={styles.questionTextLarge}>{question.question}</Text>
+            {answer !== undefined ? (
+              <Badge
+                label={`Your answer: ${answer ? "Yes" : "No"}`}
+                tone={answer ? "success" : "neutral"}
+                icon={answer ? "checkmark-circle" : "ellipse-outline"}
+                style={styles.answerBadge}
+              />
+            ) : null}
+          </Card>
+        </Animated.View>
+      </ScrollView>
 
-          {question.example ? (
-            <Text style={styles.exampleText}>{question.example}</Text>
-          ) : null}
-        </View>
-      </View>
-
-      {/* Answer Buttons at Bottom */}
       <Animated.View
         style={[
-          styles.answerContainer,
+          styles.answerRow,
           { transform: [{ translateX: shakeAnimation }] },
         ]}
       >
-        <TouchableOpacity
-          style={[
-            styles.answerButton,
-            answers[`Q${question.id}`] === false && styles.answerButtonSelected,
-          ]}
+        <Pressable
           onPress={() => handleAnswer(false)}
-          activeOpacity={0.7}
+          style={({ pressed }) => [
+            styles.answerBtn,
+            answer === false && styles.answerBtnSelected,
+            pressed && styles.answerBtnPressed,
+          ]}
+          accessibilityLabel="No"
         >
+          <Ionicons
+            name="close-circle"
+            size={20}
+            color={answer === false ? colors.textInverse : colors.textPrimary}
+          />
           <Text
-            style={[
-              styles.answerText,
-              answers[`Q${question.id}`] === false && styles.answerTextSelected,
-            ]}
+            variant="bodyMedium"
+            style={{
+              color: answer === false ? colors.textInverse : colors.textPrimary,
+            }}
           >
             No
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.answerButton,
-            answers[`Q${question.id}`] === true && styles.answerButtonSelected,
-          ]}
+        </Pressable>
+        <Pressable
           onPress={() => handleAnswer(true)}
-          activeOpacity={0.7}
+          style={({ pressed }) => [
+            styles.answerBtn,
+            answer === true && styles.answerBtnSelected,
+            pressed && styles.answerBtnPressed,
+          ]}
+          accessibilityLabel="Yes"
         >
+          <Ionicons
+            name="checkmark-circle"
+            size={20}
+            color={answer === true ? colors.textInverse : colors.textPrimary}
+          />
           <Text
-            style={[
-              styles.answerText,
-              answers[`Q${question.id}`] === true && styles.answerTextSelected,
-            ]}
+            variant="bodyMedium"
+            style={{
+              color: answer === true ? colors.textInverse : colors.textPrimary,
+            }}
           >
             Yes
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#E8F0F5",
-  },
-  loadingContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    marginTop: spacing.lg,
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-  },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.md,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    gap: spacing[2],
   },
-  navButton: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "center",
+  progressWrap: {
+    flex: 1,
   },
-  navButtonDisabled: {
-    opacity: 0.3,
+  progressLabel: {
+    marginBottom: spacing[1],
+    textAlign: "center",
   },
-  progressDotsContainer: {
-    flexDirection: "row",
-    gap: 4,
+  loadingCenter: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-  },
-  progressDot: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#C0D4E0",
-  },
-  progressDotActive: {
-    backgroundColor: "#0C4A6E",
-  },
-  progressDotCompleted: {
-    backgroundColor: "#5A7A8F",
-  },
-  topQuestionContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.lg,
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
-  topQuestionText: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
+  scroll: {
     flex: 1,
-    marginRight: spacing.md,
   },
-  answerBadge: {
-    backgroundColor: "#0C4A6E",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.lg,
-  },
-  answerBadgeText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.white,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.lg,
-  },
-  previousQuestionContainer: {
-    marginBottom: -100, // Deeper overlap for a more "stacked" deck look
-    zIndex: 1,
-    transform: [{ scale: 0.9 }, { translateY: 20 }], // Slightly smaller and shifted for depth
-  },
-  blurryCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.35)",
-    borderRadius: borderRadius.xxxl,
-    padding: spacing.xl,
-    paddingBottom: 110,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    opacity: 0.3,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  questionNumberSecondary: {
-    fontSize: 24,
-    fontWeight: typography.fontWeight.bold,
-    color: "#5A7A8F",
-  },
-  questionDotSecondary: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#B8D4E6",
-    marginLeft: 4,
-  },
-  questionTextSecondary: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  previousAnswerBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.md,
-    gap: 4,
-  },
-  previousAnswerText: {
-    fontSize: 12,
-    fontWeight: typography.fontWeight.bold,
-    color: "#5A7A8F",
+  scrollContent: {
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
+    paddingBottom: spacing[6],
   },
   questionCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxxl,
-    padding: spacing.xxxl,
-    zIndex: 2,
-    // Add soft elevation/shadow
-    shadowColor: "#0C4A6E",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.5)",
-  },
-  questionNumberContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.xxl,
+    ...shadows.md,
+    borderRadius: borderRadius.xl,
   },
   questionNumber: {
-    fontSize: 72,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    letterSpacing: -4,
+    marginBottom: spacing[3],
+    fontSize: 56,
+    lineHeight: 60,
   },
-  questionDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#B8D4E6",
-    marginLeft: spacing.sm,
+  questionText: {
+    marginBottom: spacing[3],
   },
-  questionTextLarge: {
-    fontSize: 28,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    lineHeight: 36,
-    marginBottom: spacing.lg,
+  example: {
+    marginBottom: spacing[3],
   },
-  exampleText: {
-    fontSize: typography.fontSize.md,
-    color: "#A0B8C8",
-    lineHeight: typography.lineHeight.relaxed * typography.fontSize.md,
+  answerBadge: {
+    marginTop: spacing[3],
   },
-  answerContainer: {
+  answerRow: {
     flexDirection: "row",
-    gap: spacing.lg,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
+    gap: spacing[3],
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[6],
+    paddingTop: spacing[3],
   },
-  answerButton: {
+  answerBtn: {
     flex: 1,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: "#D1DFE8",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: spacing[2],
+    paddingVertical: spacing[4],
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
-  answerButtonSelected: {
-    backgroundColor: "#0C4A6E",
-    borderColor: "#0C4A6E",
+  answerBtnSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  answerText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  answerTextSelected: {
-    color: colors.white,
+  answerBtnPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
 });

@@ -1,15 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Href, useLocalSearchParams, useRouter } from "expo-router";
+import { ScrollView, StyleSheet, View } from "react-native";
 import {
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
   Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { colors, spacing } from "../../../shared/theme";
+} from "../../../shared/components/ui";
+import { colors, layout, spacing } from "../../../shared/theme";
 import { useClinicianStore } from "../store/clinicianStore";
 
 export default function DoctorDetailsScreen() {
@@ -21,202 +23,159 @@ export default function DoctorDetailsScreen() {
 
   if (!clinician) {
     return (
-      <View style={styles.centered}>
-        <Text>Doctor information not found</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={{ color: colors.primary, marginTop: 10 }}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen background={colors.surfaceMuted}>
+        <View style={styles.center}>
+          <Text variant="title2" align="center">
+            Doctor information not found
+          </Text>
+          <Button
+            label="Go back"
+            variant="ghost"
+            onPress={() => router.back()}
+            style={{ marginTop: spacing[4] }}
+          />
+        </View>
+      </Screen>
     );
   }
 
+  const fullName =
+    `${clinician.surname ?? ""} ${clinician.firstName} ${clinician.lastName}`.trim();
+  const isActive = clinician.status === "ACTIVE";
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title="Doctor profile" />
 
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Doctor Profile</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            {clinician.profilePictureUrl ? (
-              <Image
-                source={{ uri: clinician.profilePictureUrl }}
-                style={styles.avatar}
-              />
-            ) : (
-              <View style={[styles.avatar, styles.placeholderAvatar]}>
-                <Ionicons name="person" size={50} color={colors.white} />
-              </View>
-            )}
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{clinician.status}</Text>
-            </View>
-          </View>
-
-          <Text style={styles.doctorName}>
-            {clinician.surname} {clinician.firstName} {clinician.lastName}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <Avatar
+            uri={clinician.profilePictureUrl}
+            name={fullName}
+            size="xl"
+          />
+          <Text variant="display" align="center" style={styles.name}>
+            {fullName}
           </Text>
-          <Text style={styles.licenseText}>
+          <Text variant="bodySmall" tone="secondary" align="center">
             License: {clinician.licenseNumber}
           </Text>
-
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.chatButton]}
-              onPress={() => router.push("/(app)/chat")}
-            >
-              <Ionicons
-                name="chatbubble-ellipses"
-                size={20}
-                color={colors.white}
-              />
-              <Text style={styles.actionButtonText}>Message</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionButton, styles.consultButton]}
-              onPress={() =>
-                router.push({
-                  pathname: "/(app)/(doctor)/doctor-consultation",
-                  params: { childId },
-                } as any)
-              }
-            >
-              <Ionicons name="calendar" size={20} color={colors.primary} />
-              <Text style={styles.consultButtonText}>Consult</Text>
-            </TouchableOpacity>
-          </View>
+          <Badge
+            label={clinician.status}
+            tone={isActive ? "success" : "neutral"}
+            icon={isActive ? "checkmark-circle" : "ellipse"}
+            style={styles.statusBadge}
+          />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Specializations</Text>
+        <View style={styles.actions}>
+          <Button
+            label="Message"
+            onPress={() => router.push("/(app)/chat" as Href)}
+            leadingIcon="chatbubble-ellipses"
+            fullWidth={false}
+            style={styles.actionBtn}
+          />
+          <Button
+            label="Consult"
+            variant="secondary"
+            fullWidth={false}
+            leadingIcon="calendar"
+            onPress={() =>
+              router.push({
+                pathname: "/(app)/(doctor)/doctor-consultation",
+                params: { childId },
+              } as any)
+            }
+            style={styles.actionBtn}
+          />
+        </View>
+
+        <SectionHeader title="Specializations" />
+        <View style={styles.specs}>
           {clinician.specializations.map((spec) => (
-            <View key={spec.specializationId} style={styles.specCard}>
-              <View style={styles.specHeader}>
-                <Text style={styles.specName}>{spec.name}</Text>
-              </View>
-              <Text style={styles.specDescription}>{spec.description}</Text>
-            </View>
+            <Card
+              key={spec.specializationId}
+              variant="tinted"
+              padding="md"
+            >
+              <Text variant="title3">{spec.name}</Text>
+              <Text
+                variant="bodySmall"
+                tone="secondary"
+                style={styles.specDesc}
+              >
+                {spec.description}
+              </Text>
+            </Card>
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact Information</Text>
-          <View style={styles.contactItem}>
-            <Ionicons name="mail-outline" size={20} color={colors.primary} />
-            <Text style={styles.contactText}>{clinician.email}</Text>
+        <SectionHeader title="Contact" />
+        <Card variant="tinted" padding="md" style={styles.contactCard}>
+          <View style={styles.contactRow}>
+            <Ionicons
+              name="mail-outline"
+              size={18}
+              color={colors.primary}
+            />
+            <Text variant="body" tone="primary" numberOfLines={1}>
+              {clinician.email}
+            </Text>
           </View>
-        </View>
-
-        <View style={{ height: 40 }} />
+        </Card>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 50,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.white,
-  },
-  backButton: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
-  profileHeader: { alignItems: "center", padding: spacing.xl },
-  avatarContainer: { position: "relative", marginBottom: spacing.md },
-  avatar: { width: 100, height: 100, borderRadius: 50 },
-  placeholderAvatar: {
-    backgroundColor: colors.primary,
+  center: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: layout.screenPadding,
+  },
+  scrollContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[3],
+    paddingBottom: spacing[10],
+    gap: spacing[3],
+  },
+  hero: {
+    alignItems: "center",
+    paddingVertical: spacing[5],
+    gap: spacing[2],
+  },
+  name: {
+    marginTop: spacing[3],
   },
   statusBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#10B981",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.white,
+    marginTop: spacing[2],
   },
-  statusText: { color: colors.white, fontSize: 10, fontWeight: "bold" },
-  doctorName: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: colors.text,
-    marginBottom: 4,
+  actions: {
+    flexDirection: "row",
+    gap: spacing[3],
+    marginBottom: spacing[2],
   },
-  licenseText: {
-    fontSize: 14,
-    color: colors.textLight,
-    marginBottom: spacing.lg,
+  actionBtn: {
+    flex: 1,
   },
-  actionButtons: { flexDirection: "row", gap: spacing.md },
-  actionButton: {
+  specs: {
+    gap: spacing[2],
+  },
+  specDesc: {
+    marginTop: spacing[1],
+  },
+  contactCard: {
+    marginBottom: spacing[2],
+  },
+  contactRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 25,
-    gap: 8,
+    gap: spacing[3],
   },
-  chatButton: { backgroundColor: colors.primary },
-  actionButtonText: { color: colors.white, fontWeight: "600" },
-  consultButton: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  consultButtonText: { color: colors.primary, fontWeight: "600" },
-  section: { paddingHorizontal: spacing.xl, marginTop: spacing.lg },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  specCard: {
-    backgroundColor: "#F8FAFC",
-    padding: spacing.md,
-    borderRadius: 12,
-    marginBottom: spacing.md,
-  },
-  specHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  specName: { fontSize: 15, fontWeight: "600", color: colors.text },
-  focusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  focusText: { fontSize: 10, fontWeight: "bold" },
-  specDescription: { fontSize: 13, color: colors.textMedium, lineHeight: 18 },
-  contactItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#F8FAFC",
-    padding: 12,
-    borderRadius: 12,
-  },
-  contactText: { fontSize: 14, color: colors.text },
 });

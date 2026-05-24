@@ -1,17 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import VerifyChildScreen from "../(child)/verify-child";
 import VerifyParentScreen from "../(parent)/verify-parent";
-import { colors, spacing, typography } from "../../../shared/theme";
+import {
+  IconButton,
+  Screen,
+  Text,
+} from "../../../shared/components/ui";
+import { colors, spacing } from "../../../shared/theme";
 import { useProfile } from "../hooks/useProfile";
 import { useChildrenStore } from "../store/childrenStore";
 
@@ -27,105 +25,70 @@ export default function VerificationStepperWrapper() {
 
   useEffect(() => {
     if (!profileLoading) {
-      // Determine which step to start on based on verification status
       if (parentStatus === "VERIFIED" && childStatus !== "VERIFIED") {
-        // Parent already verified, go to child verification
         setStep(2);
       } else if (parentStatus !== "VERIFIED") {
-        // Parent not verified, start with parent
         setStep(1);
       } else if (parentStatus === "VERIFIED" && childStatus === "VERIFIED") {
-        // Both verified, go back
         router.back();
         return;
       }
       setInitializing(false);
     }
-  }, [profileLoading, parentStatus, childStatus]);
+  }, [profileLoading, parentStatus, childStatus, router]);
 
   const handleParentSuccess = () => {
-    if (childStatus === "VERIFIED") {
-      // Child already verified, go back
-      router.back();
-    } else {
-      // Move to child verification
-      setStep(2);
-    }
+    if (childStatus === "VERIFIED") router.back();
+    else setStep(2);
   };
 
-  const handleChildSuccess = () => {
-    router.back();
-  };
+  const handleChildSuccess = () => router.back();
 
   const handleBack = () => {
-    if (step === 2 && parentStatus !== "VERIFIED") {
-      // Can go back to parent verification if parent not verified
-      setStep(1);
-    } else {
-      router.back();
-    }
+    if (step === 2 && parentStatus !== "VERIFIED") setStep(1);
+    else router.back();
   };
 
   if (profileLoading || initializing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
+      <Screen background={colors.surfaceMuted}>
+        <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading verification status...</Text>
+          <Text variant="body" tone="secondary" style={{ marginTop: spacing[3] }}>
+            Loading verification status...
+          </Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <Screen padded={false} background={colors.surfaceMuted}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={28} color={colors.primary} />
-        </TouchableOpacity>
-
-        {/* Progress Indicator */}
-        <View style={styles.progressContainer}>
-          <View style={styles.stepIndicator}>
-            <View
-              style={[
-                styles.progressDot,
-                (step >= 1 || parentStatus === "VERIFIED") &&
-                  styles.progressDotActive,
-                parentStatus === "VERIFIED" && styles.progressDotCompleted,
-              ]}
-            >
-              {parentStatus === "VERIFIED" && (
-                <Ionicons name="checkmark" size={8} color={colors.white} />
-              )}
-            </View>
-            <Text style={styles.stepLabel}>Parent</Text>
-          </View>
-
+        <IconButton
+          icon="chevron-back"
+          accessibilityLabel="Back"
+          onPress={handleBack}
+        />
+        <View style={styles.stepper}>
+          <StepNode
+            label="Parent"
+            active={step >= 1 || parentStatus === "VERIFIED"}
+            completed={parentStatus === "VERIFIED"}
+          />
           <View
             style={[
-              styles.progressLine,
-              parentStatus === "VERIFIED" && styles.progressLineActive,
+              styles.connector,
+              parentStatus === "VERIFIED" && styles.connectorActive,
             ]}
           />
-
-          <View style={styles.stepIndicator}>
-            <View
-              style={[
-                styles.progressDot,
-                (step >= 2 || childStatus === "VERIFIED") &&
-                  styles.progressDotActive,
-                childStatus === "VERIFIED" && styles.progressDotCompleted,
-              ]}
-            >
-              {childStatus === "VERIFIED" && (
-                <Ionicons name="checkmark" size={8} color={colors.white} />
-              )}
-            </View>
-            <Text style={styles.stepLabel}>Child</Text>
-          </View>
+          <StepNode
+            label="Child"
+            active={step >= 2 || childStatus === "VERIFIED"}
+            completed={childStatus === "VERIFIED"}
+          />
         </View>
-        <View style={{ width: 28 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
@@ -135,80 +98,109 @@ export default function VerificationStepperWrapper() {
           <VerifyChildScreen onSuccess={handleChildSuccess} hideHeader />
         )}
       </View>
-    </SafeAreaView>
+    </Screen>
+  );
+}
+
+function StepNode({
+  label,
+  active,
+  completed,
+}: {
+  label: string;
+  active: boolean;
+  completed: boolean;
+}) {
+  return (
+    <View style={styles.stepNode}>
+      <View
+        style={[
+          styles.stepCircle,
+          active && styles.stepCircleActive,
+          completed && styles.stepCircleCompleted,
+        ]}
+      >
+        {completed ? (
+          <Ionicons name="checkmark" size={14} color={colors.textInverse} />
+        ) : (
+          <Text
+            variant="caption"
+            style={{
+              color: active ? colors.textInverse : colors.textTertiary,
+            }}
+          >
+            {label.charAt(0)}
+          </Text>
+        )}
+      </View>
+      <Text
+        variant="caption"
+        tone={active ? "primary" : "tertiary"}
+        weight={active ? "semibold" : "regular"}
+        style={styles.stepLabel}
+      >
+        {label}
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
+  loading: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.md,
-  },
-  loadingText: {
-    fontSize: typography.fontSize.md,
-    color: colors.textLight,
-    marginTop: spacing.sm,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 20,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
+    paddingHorizontal: spacing[3],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+    backgroundColor: colors.surface,
   },
-  backButton: {
-    padding: spacing.sm,
-  },
-  progressContainer: {
+  stepper: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-  },
-  stepIndicator: {
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  progressDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.cardLightBlue,
     justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: colors.borderLight,
+    gap: spacing[2],
   },
-  progressDotActive: {
+  stepNode: {
+    alignItems: "center",
+    gap: 4,
+  },
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceSunken,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+  },
+  stepCircleActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  progressDotCompleted: {
+  stepCircleCompleted: {
     backgroundColor: colors.success,
     borderColor: colors.success,
   },
-  progressLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: colors.borderLight,
-    marginHorizontal: spacing.xs,
-  },
-  progressLineActive: {
-    backgroundColor: colors.success,
-  },
   stepLabel: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textLight,
-    fontWeight: typography.fontWeight.medium,
+    fontSize: 11,
+  },
+  connector: {
+    width: 36,
+    height: 2,
+    backgroundColor: colors.borderSubtle,
+    marginTop: -spacing[4],
+  },
+  connectorActive: {
+    backgroundColor: colors.success,
   },
   content: {
     flex: 1,

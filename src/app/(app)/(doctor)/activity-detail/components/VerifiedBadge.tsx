@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { borderRadius, spacing } from "../../../../../shared/theme";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Card, Text } from "../../../../../shared/components/ui";
+import { colors, spacing } from "../../../../../shared/theme";
 
 interface VerifiedBadgeProps {
   label: string;
@@ -8,45 +9,66 @@ interface VerifiedBadgeProps {
 }
 
 export function VerifiedBadge({ label, onPress }: VerifiedBadgeProps) {
+  const Wrapper = (onPress ? Pressable : View) as any;
   return (
-    <TouchableOpacity
-      style={styles.container}
+    <Wrapper
       onPress={onPress}
-      activeOpacity={0.7}
+      style={({ pressed }: { pressed: boolean }) => [
+        styles.wrapper,
+        pressed && styles.pressed,
+      ]}
     >
-      <View style={styles.content}>
-        <View>
-          <Text style={styles.label}>{label}</Text>
-          <Text style={styles.subtext}>Your information is safe with us</Text>
+      <Card variant="tinted" padding="md" style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.icon}>
+            <Ionicons
+              name="shield-checkmark"
+              size={18}
+              color={colors.primary}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyMedium" weight="semibold">
+              {label}
+            </Text>
+            <Text variant="caption" tone="tertiary">
+              Your information is safe with us
+            </Text>
+          </View>
+          {onPress ? (
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.iconMuted}
+            />
+          ) : null}
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#0C4A6E" />
-      </View>
-    </TouchableOpacity>
+      </Card>
+    </Wrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
+  wrapper: {
+    marginBottom: spacing[2],
   },
-  content: {
+  pressed: {
+    opacity: 0.85,
+  },
+  card: {
+    backgroundColor: colors.surface,
+  },
+  row: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing[3],
   },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0C4A6E",
-    marginBottom: 2,
-  },
-  subtext: {
-    fontSize: 12,
-    color: "#94A3B8",
+  icon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryMuted,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

@@ -3,20 +3,23 @@ import { Href, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
+  Avatar,
+  IconButton,
+  Text,
+} from "../../../shared/components/ui";
+import {
   borderRadius,
   colors,
+  shadows,
   spacing,
-  typography,
 } from "../../../shared/theme";
 import { useDeleteChild } from "../hooks/useChildren";
 import { useEntitlements } from "../hooks/useEntitlements";
@@ -63,7 +66,6 @@ export function ChildSelectorModal({
 
   const confirmDelete = () => {
     if (!childToDelete) return;
-
     deleteMutation.mutate(childToDelete.id, {
       onSuccess: () => {
         if (activeChild?.childId === childToDelete.id) {
@@ -82,112 +84,109 @@ export function ChildSelectorModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity activeOpacity={1}>
-            <View style={styles.modalContent}>
-              {/* Header */}
-              <View style={styles.header}>
-                <Text style={styles.headerTitle}>Select Child</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color="#0C4A6E" />
-                </TouchableOpacity>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.handle} />
+
+          <View style={styles.header}>
+            <Text variant="title2">Select child</Text>
+            <IconButton
+              icon="close"
+              accessibilityLabel="Close"
+              onPress={onClose}
+            />
+          </View>
+
+          <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+            {children.map((child) => {
+              const isActive = activeChild?.childId === child.childId;
+              const isDeleting =
+                deleteMutation.isPending &&
+                deleteMutation.variables === child.childId;
+
+              return (
+                <View key={child.childId} style={styles.itemContainer}>
+                  <Pressable
+                    onPress={() => handleSelectChild(child)}
+                    style={({ pressed }) => [
+                      styles.item,
+                      isActive && styles.itemActive,
+                      pressed && styles.itemPressed,
+                    ]}
+                  >
+                    <Avatar
+                      uri={child.profilePictureUrl}
+                      name={child.firstName}
+                      size="md"
+                    />
+                    <View style={styles.itemInfo}>
+                      <Text variant="body" weight="semibold">
+                        {child.firstName}
+                      </Text>
+                      <Text variant="caption" tone="secondary">
+                        {child.gender} · {calculateAge(child.dob)}
+                      </Text>
+                    </View>
+                    {isActive ? (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={22}
+                        color={colors.success}
+                      />
+                    ) : null}
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() =>
+                      handleDeleteChild(child.childId, child.firstName)
+                    }
+                    disabled={isDeleting}
+                    style={({ pressed }) => [
+                      styles.deleteBtn,
+                      pressed && styles.itemPressed,
+                    ]}
+                    hitSlop={6}
+                    accessibilityLabel={`Delete ${child.firstName}`}
+                  >
+                    {isDeleting ? (
+                      <ActivityIndicator size="small" color={colors.error} />
+                    ) : (
+                      <Ionicons
+                        name="trash-outline"
+                        size={18}
+                        color={colors.error}
+                      />
+                    )}
+                  </Pressable>
+                </View>
+              );
+            })}
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.addRow,
+                pressed && styles.itemPressed,
+              ]}
+              onPress={handleAddChild}
+            >
+              <View style={styles.addIcon}>
+                <Ionicons name="add" size={22} color={colors.primary} />
               </View>
+              <Text variant="body" weight="semibold" tone="brand">
+                Add another child
+              </Text>
+            </Pressable>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
 
-              {/* Children List */}
-              <ScrollView
-                style={styles.childrenList}
-                showsVerticalScrollIndicator={false}
-              >
-                {children.map((child) => (
-                  <View key={child.childId} style={styles.childItemContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.childItem,
-                        activeChild?.childId === child.childId &&
-                          styles.childItemActive,
-                      ]}
-                      onPress={() => handleSelectChild(child)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.childAvatar}>
-                        {child.profilePictureUrl ? (
-                          <Image
-                            source={{ uri: child.profilePictureUrl }}
-                            style={styles.childAvatarImage}
-                          />
-                        ) : (
-                          <Ionicons name="person" size={24} color="#0C4A6E" />
-                        )}
-                      </View>
-                      <View style={styles.childInfo}>
-                        <Text style={styles.childName}>{child.firstName}</Text>
-                        <Text style={styles.childDetails}>
-                          {child.gender} • {calculateAge(child.dob)}
-                        </Text>
-                      </View>
-                      {activeChild?.childId === child.childId && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={24}
-                          color="#10B981"
-                        />
-                      )}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() =>
-                        handleDeleteChild(child.childId, child.firstName)
-                      }
-                      disabled={
-                        deleteMutation.isPending &&
-                        deleteMutation.variables === child.childId
-                      }
-                    >
-                      {deleteMutation.isPending &&
-                      deleteMutation.variables === child.childId ? (
-                        <ActivityIndicator size="small" color="#EF4444" />
-                      ) : (
-                        <Ionicons
-                          name="trash-outline"
-                          size={20}
-                          color="#EF4444"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                {/* Add Child Button */}
-                <TouchableOpacity
-                  style={styles.addChildButton}
-                  onPress={handleAddChild}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.addChildIcon}>
-                    <Ionicons name="add" size={24} color="#0C4A6E" />
-                  </View>
-                  <Text style={styles.addChildText}>Add Another Child</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-
-      {/* Delete Confirmation Modal */}
       <StatusModal
         visible={deleteModalVisible}
         type="error"
-        title="Delete Child Profile"
-        message={`Are you sure you want to remove ${childToDelete?.name}? This action cannot be undone.`}
+        title="Delete child profile"
+        message={`Remove ${childToDelete?.name}? This action cannot be undone.`}
         primaryButtonText={
-          deleteMutation.isPending ? "Deleting..." : "Yes, Delete"
+          deleteMutation.isPending ? "Deleting..." : "Yes, delete"
         }
         onPrimaryPress={confirmDelete}
         secondaryButtonText="Cancel"
@@ -206,116 +205,88 @@ function calculateAge(dob: string): string {
   const months =
     (today.getFullYear() - birthDate.getFullYear()) * 12 +
     (today.getMonth() - birthDate.getMonth());
-
-  if (months < 12) {
-    return `${months} months`;
-  } else {
-    const years = Math.floor(months / 12);
-    return `${years} year${years > 1 ? "s" : ""}`;
-  }
+  if (months < 12) return `${months} mo`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years > 1 ? "s" : ""}`;
 }
 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: colors.overlay,
+    justifyContent: "flex-end",
   },
-  modalContainer: {
-    width: "85%",
-    maxHeight: "70%",
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing[2],
+    paddingBottom: spacing[8],
+    maxHeight: "80%",
+    ...shadows.lg,
   },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxl,
-    overflow: "hidden",
+  handle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.borderStrong,
+    marginBottom: spacing[3],
   },
   header: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    padding: spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8F0F5",
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[3],
   },
-  headerTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
+  list: {
+    paddingHorizontal: spacing[3],
   },
-  closeButton: {
-    padding: spacing.xs,
-  },
-  childrenList: {
-    maxHeight: 400,
-  },
-  childItemContainer: {
+  itemContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
   },
-  childItem: {
+  item: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.lg,
+    gap: spacing[3],
+    flex: 1,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
+    borderRadius: borderRadius.lg,
+  },
+  itemActive: {
+    backgroundColor: colors.primaryMuted,
+  },
+  itemPressed: {
+    opacity: 0.7,
+  },
+  itemInfo: {
     flex: 1,
   },
-  childItemActive: {
-    backgroundColor: "#F0F7FB",
-  },
-  deleteButton: {
-    padding: spacing.md,
-    justifyContent: "center",
+  deleteBtn: {
+    width: 40,
+    height: 40,
     alignItems: "center",
-  },
-  childAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E8F0F5",
     justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
+    borderRadius: 20,
   },
-  childAvatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  childInfo: {
-    flex: 1,
-  },
-  childName: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: 4,
-  },
-  childDetails: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-  },
-  addChildButton: {
+  addRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: "#E8F0F5",
+    gap: spacing[3],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
+    marginTop: spacing[2],
+    borderRadius: borderRadius.lg,
   },
-  addChildIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E8F0F5",
-    justifyContent: "center",
+  addIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryMuted,
     alignItems: "center",
-    marginRight: spacing.md,
-  },
-  addChildText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
+    justifyContent: "center",
   },
 });

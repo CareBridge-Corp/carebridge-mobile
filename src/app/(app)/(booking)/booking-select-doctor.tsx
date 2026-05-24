@@ -1,13 +1,22 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { ActivityIndicator, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { useTranslation } from "react-i18next";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Screen,
+  ScreenHeader,
+  Text,
+} from "../../../shared/components/ui";
+import { colors, layout, spacing } from "../../../shared/theme";
 import { PaywallCard } from "../components/PaywallCard";
-import { useEntitlements } from "../hooks/useEntitlements";
 import { useAssignedClinician } from "../hooks/useClinician";
-import { useChildrenStore } from "../store/childrenStore";
+import { useEntitlements } from "../hooks/useEntitlements";
 import { useBookingStore } from "../store/bookingStore";
+import { useChildrenStore } from "../store/childrenStore";
 
 export default function BookingSelectDoctorScreen() {
   const router = useRouter();
@@ -15,8 +24,13 @@ export default function BookingSelectDoctorScreen() {
   const { activeChild } = useChildrenStore();
   const { data: entitlements, isLoading: entitlementsLoading } =
     useEntitlements();
-  const { data: clinician, isLoading } = useAssignedClinician(activeChild?.childId);
+  const { data: clinician, isLoading } = useAssignedClinician(
+    activeChild?.childId,
+  );
   const { setDoctor, setChildId } = useBookingStore();
+
+  const isPaywalled =
+    !entitlementsLoading && entitlements && !entitlements.canBookAppointments;
 
   const handleNext = () => {
     if (!clinician) return;
@@ -25,22 +39,19 @@ export default function BookingSelectDoctorScreen() {
     router.push("/(app)/booking-select-date" as Href);
   };
 
+  const clinicianName = clinician
+    ? `${clinician.surname ?? ""} ${clinician.firstName} ${clinician.lastName}`.trim()
+    : "";
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title="Book appointment" subtitle="Step 1 of 3" />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Book Appointment</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {!entitlementsLoading &&
-        entitlements &&
-        !entitlements.canBookAppointments ? (
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {isPaywalled ? (
           <PaywallCard
             title={t("payment.gate.appointmentTitle")}
             description={t("payment.gate.appointmentDescription")}
@@ -48,106 +59,103 @@ export default function BookingSelectDoctorScreen() {
           />
         ) : (
           <>
-        <Text style={styles.subtitle}>Your assigned clinician</Text>
+            <Text
+              variant="bodySmall"
+              tone="secondary"
+              style={styles.eyebrow}
+            >
+              Your assigned clinician
+            </Text>
 
-        {isLoading ? (
-          <ActivityIndicator color="#0C4A6E" />
-        ) : clinician ? (
-          <View style={styles.doctorCard}>
-            <View style={styles.doctorInfo}>
-              <Text style={styles.doctorName}>
-                {clinician.surname} {clinician.firstName} {clinician.lastName}
-              </Text>
-              <Text style={styles.doctorSpecialty}>
-                {clinician.specializations?.[0]?.name ?? "Assigned clinician"}
-              </Text>
-              <Text style={styles.doctorEmail}>{clinician.email}</Text>
-            </View>
-          </View>
-        ) : (
-          <Text style={styles.emptyText}>
-            No assigned clinician found for {activeChild?.firstName ?? "this child"}.
-          </Text>
-        )}
+            {isLoading ? (
+              <View style={styles.loading}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : clinician ? (
+              <Card variant="elevated" padding="lg" style={styles.doctorCard}>
+                <View style={styles.doctorRow}>
+                  <Avatar
+                    uri={(clinician as any).profilePictureUrl}
+                    name={clinicianName}
+                    size="lg"
+                  />
+                  <View style={styles.doctorInfo}>
+                    <Text variant="title2" numberOfLines={2}>
+                      {clinicianName}
+                    </Text>
+                    <Text variant="bodySmall" tone="secondary">
+                      {clinician.specializations?.[0]?.name ??
+                        "Assigned clinician"}
+                    </Text>
+                    <Text variant="caption" tone="tertiary">
+                      {clinician.email}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.badgeRow}>
+                  <Badge
+                    label="Verified clinician"
+                    tone="success"
+                    icon="shield-checkmark"
+                  />
+                </View>
+              </Card>
+            ) : (
+              <EmptyState
+                icon="medkit-outline"
+                title="No assigned clinician"
+                description={`We couldn't find an assigned clinician for ${activeChild?.firstName ?? "this child"}. Reach out to support for help.`}
+              />
+            )}
           </>
         )}
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            (!clinician || !entitlements?.canBookAppointments) &&
-              styles.nextButtonDisabled,
-          ]}
+      <View style={styles.footer}>
+        <Button
+          label="Choose date & time"
           onPress={handleNext}
-          disabled={!clinician || !entitlements?.canBookAppointments}
-        >
-          <Text style={styles.nextButtonText}>Choose Date & Time</Text>
-          <Ionicons name="arrow-forward" size={20} color={colors.white} />
-        </TouchableOpacity>
+          disabled={!clinician || isPaywalled}
+          trailingIcon="arrow-forward"
+        />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
+  scrollContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[3],
+    paddingBottom: spacing[10],
+    gap: spacing[4],
   },
-  backButton: { padding: spacing.sm },
-  headerTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
+  eyebrow: {
+    marginBottom: spacing[1],
   },
-  scrollView: { flex: 1 },
-  content: { paddingHorizontal: spacing.xxl, paddingTop: spacing.lg },
-  subtitle: {
-    fontSize: typography.fontSize.lg,
-    color: "#5A7A8F",
-    marginBottom: spacing.xl,
+  loading: {
+    paddingVertical: spacing[8],
   },
   doctorCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
-    borderWidth: 2,
-    borderColor: "#0C4A6E",
+    gap: spacing[4],
   },
-  doctorInfo: { gap: 6 },
-  doctorName: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  doctorSpecialty: { fontSize: typography.fontSize.sm, color: "#5A7A8F" },
-  doctorEmail: { fontSize: typography.fontSize.sm, color: "#94A3B8" },
-  emptyText: { color: "#94A3B8", fontSize: 16, lineHeight: 24 },
-  buttonContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
-  },
-  nextButton: {
+  doctorRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
+    gap: spacing[4],
   },
-  nextButtonDisabled: { backgroundColor: "#C0D4E0" },
-  nextButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+  doctorInfo: {
+    flex: 1,
+    gap: spacing[1],
+  },
+  badgeRow: {
+    flexDirection: "row",
+  },
+  footer: {
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing[4],
+    backgroundColor: colors.surfaceMuted,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 });

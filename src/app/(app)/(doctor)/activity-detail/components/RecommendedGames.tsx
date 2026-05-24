@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import { borderRadius, spacing } from "../../../../../shared/theme";
+import { borderRadius, colors, spacing } from "../../../../../shared/theme";
 
 export function RecommendedGames() {
   return (
@@ -14,14 +14,14 @@ export function RecommendedGames() {
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing[3],
   },
   gamePlaceholder: {
     flex: 1,
     aspectRatio: 1,
-    backgroundColor: "#F8FAFC",
-    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: "#F1F5F9",
+    borderColor: colors.borderSubtle,
   },
 });
