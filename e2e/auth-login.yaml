@@ -1,0 +1,28 @@
+appId: com.thenm334.carebridgemobile
+env:
+  E2E_PARENT_EMAIL: ${E2E_PARENT_EMAIL}
+  E2E_PARENT_PASSWORD: ${E2E_PARENT_PASSWORD}
+---
+- launchApp
+# Navigate to login from welcome screen
+- tapOn:
+    text: "I already have an account"
+# Fill email
+- tapOn:
+    text: "Email"
+- inputText: ${E2E_PARENT_EMAIL}
+# Fill password
+- tapOn:
+    text: "Password"
+- inputText: ${E2E_PARENT_PASSWORD}
+# Submit login form
+- tapOn:
+    text: "Log in"
+    index: 1
+# Assert home screen greeting is visible (time-of-day variants)
+- assertTrue:
+    visible:
+      anyOf:
+        - text: "Good morning"
+        - text: "Good afternoon"
+        - text: "Good evening"

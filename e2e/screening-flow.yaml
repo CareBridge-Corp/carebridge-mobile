@@ -1,0 +1,27 @@
+appId: com.thenm334.carebridgemobile
+env:
+  E2E_PARENT_EMAIL: ${E2E_PARENT_EMAIL}
+  E2E_PARENT_PASSWORD: ${E2E_PARENT_PASSWORD}
+---
+- runFlow: auth-login.yaml
+# Navigate to screening from home hero CTA
+- tapOn:
+    text: "Start screening"
+# Privacy / data security screen — accept and continue
+- tapOn:
+    text: "I agree, continue"
+# Questionnaire — answer all 20 questions with "Yes"
+- repeat:
+    times: 20
+    commands:
+      - tapOn:
+          text: "Yes"
+# Supporting info screen — submit
+- tapOn:
+    text: "Submit screening"
+# Confirm submission in the modal
+- tapOn:
+    text: "Yes, submit"
+# Assert results screen is visible (auto-redirect after success screen)
+- assertVisible:
+    text: "M-CHAT results"
