@@ -74,6 +74,8 @@
     "screeningsOnFile_plural": "Madaalliin {{count}} galmaa'an",
     "screeningHistoryDesc": "Madaallii M-CHAT darbanii fi yaada ogeessaa ilaaluuf tuqi.",
     "openHistory": "Seenaa bani",
+    "developmentProgress": "Adeemsa guddina",
+    "seeFullProgress": "Adeemsa guutuu ilaali",
     "hero": {
       "step1": "Tarkaanfii 1 irraa 4",
       "step2": "Tarkaanfii 2 irraa 4",
@@ -101,6 +103,19 @@
       "dueNow": "Amma barbaachisa",
       "startRescreening": "Madaalliin irra deebi'ii jalqabi",
       "notNow": "Amma miti",
+      "nextMchatPhase": "Tarkaanfii M-CHAT itti aanu",
+      "planCompleteTitle": "Karoora torban 4 {{name}} xumurame",
+      "planCompleteTitleDefault": "Karoora torban 4 keessan xumurame",
+      "nextMchatRequiredDesc": "Sochiiwwan marsaa kanaa hunda xumurtan. M-CHAT itti aanu guutaa akkasumas ogeessni keessan karoora itti aanu maxxansuuf isin gargaaru.",
+      "nextMchatCooldownDesc": "Sochiiwwan marsaa kanaa hunda xumurameera. Tarkaanfii M-CHAT itti aanu ji'a tokko booda ni bana. Sochiiwwan xumuraman asii jala ilaaluu dandeessu.",
+      "actionRequired": "Tarkaanfiin barbaachisa",
+      "planFinished": "Karoorri xumurame",
+      "comingSoon": "Fuuldura ni bana",
+      "startNextMchat": "M-CHAT itti aanu jalqabi",
+      "reviewCompletedPlan": "Karoora xumurame ilaali",
+      "nextPhase": "Tarkaanfii itti aanu",
+      "monthNumber": "Ji'a {{month}}",
+      "mchatRescreen": "M-CHAT irra deebi'ii",
       "continuePlan": "Karoora torban kanaa itti fufi",
       "continuePlanDesc": "Sochiiwwan har'aa {{name}} ilaaluuf sagantaa bani.",
       "openSchedule": "Sagantaa bani",
@@ -119,7 +134,40 @@
   },
   "resources": {
     "title": "Waa'ee ASD baradhu",
-    "subtitle": "Odeeffannoo dhaabbilee fayyaa amanamoo irraa."
+    "subtitle": "Odeeffannoo dhaabbilee fayyaa amanamoo irraa.",
+    "items": {
+      "zemi": {
+        "eyebrow": "AUTISM ACTIVIST: ZEMI YENUS at TEDxAddis",
+        "source": "TEDxAddis",
+        "title": "Zemi Yenus",
+        "description": "Zemi Yenus hundeesaa Joy Center for Children with Autism and Related Developmental Disorders. Giddugni kun barnoota fi deeggarsa warraa daa'imman autism qabanif kenna.",
+        "url": "https://youtu.be/0k8QrkAd9TM?t=600"
+      },
+      "cdc": {
+        "source": "CDC",
+        "title": "Autism Spectrum Disorder maal?",
+        "description": "Ibsa salphaa CDC irraa mallattoo, madaallii fi deeggarsa irratti.",
+        "url": "https://www.cdc.gov/ncbddd/autism/facts.html"
+      },
+      "who": {
+        "source": "WHO",
+        "title": "Autism, World Health Organization",
+        "description": "Qajeelfama addunyaa: gargaarsa jalqabaa, deeggarsa maatii fi kunuunsa hammate.",
+        "url": "https://www.who.int/news-room/fact-sheets/detail/autism-spectrum-disorders"
+      },
+      "autismSpeaks": {
+        "source": "Autism Speaks",
+        "title": "First 100 days kit for families",
+        "description": "Karoora hojii guyyaa 100 jalqabaa madaalliin booda.",
+        "url": "https://www.autismspeaks.org/tool-kit/100-day-kit-young-children"
+      },
+      "nhs": {
+        "source": "NHS",
+        "title": "Daa'ima autism qabu walqunnamsiisuu",
+        "description": "Gorsa communication, sirna guyyaa fi fedhii sensory irratti.",
+        "url": "https://www.nhs.uk/conditions/autism/helping-your-child/"
+      }
+    }
   },
   "games": {
     "title": "Taphoota walqunnamtii",
@@ -130,8 +178,20 @@
     "editProfile": "Profaayilii gulaali",
     "careTeam": "Garee kunuunsa",
     "account": "Akkaawuntii",
+    "preferences": "Filannoo",
     "language": "Afaan",
+    "languageHint": "Afaan app keessatti fayyadamtan filadhu.",
+    "personalInfo": "Odeeffannoo dhuunfaa",
+    "personalInfoSubtitle": "Maqaa, suuraa fi qunnamtii gulaali",
+    "screeningHistory": "Seenaa madaallii",
+    "screeningHistorySubtitle": "Ergaa M-CHAT hunda ilaali",
+    "screeningHistoryCardTitle": "Seenaa M-CHAT-R/F",
+    "screeningHistoryCardSubtitle": "Madaallii darbanii ilaali",
+    "assignedClinician": "Ogeessa ramadame",
+    "settings": "Qindaa'inoota",
+    "changePhoto": "Suuraa jijjiiri",
     "logout": "Ba'i",
+    "loggingOut": "Ba'aa jira...",
     "noClinician": "Ogeessni hin ramadamne",
     "subscription": "Subscription fi kaffaltii",
     "manageChildren": "Ijoollee bulchi",
@@ -187,6 +247,7 @@
     "goBack": "Deebi'i",
     "submissionFailed": "Erguun hin milkoofne",
     "submissionFailedMessage": "Madaalliin keessan erguun dogoggora uume.",
+    "supportingInfoFailedMessage": "Madaalliin keessan kuufameera, garuu yaada, suuraa ykn sagalee hin olkaa'amne. Upload irra deebi'uuf Submit irra deebi'aa tuqi.",
     "limitReached": "Daangaa darbe",
     "limitReachedMessage": "Suuraa 5 qofa olkaa'uu dandeessu.",
     "permissionRequired": "Hayyama barbaachisa",
@@ -207,7 +268,7 @@
     "questionsLabel": "Gaaffiiwwan",
     "concernAnswers": "Deebii yaaddoo",
     "whatThisMeans": "Kana jechuun maal?",
-    "interpretation": "Qabxiin giddugaleessa daa'imni keessan autism qaba jechuun miti — qorannoo ogummaa ni gorfama. Deeggarsa jalqabaa fayyada jireenya guutuu qaba.",
+    "interpretation": "Qabxiin giddugaleessa daa'imni keessan autism qaba jechuun miti. Qorannoo ogummaa ni gorfama. Deeggarsa jalqabaa fayyada jireenya guutuu qaba.",
     "nextSteps": "Tarkaanfiiwwan itti aanu",
     "nextStep1Title": "Ogeessa daa'immanii marii",
     "nextStep1Body": "Ogeessa guddina daa'immanii qorannoo guutuuaf qopheessi.",
@@ -244,9 +305,16 @@
     "evidenceWho": "Qajeelfama WHO",
     "weekProgress": "Adeemsa torban kanaa",
     "demoVideo": "Viidiyoo demo ogeessaa",
+    "watchOnYoutube": "YouTube irratti ilaali",
+    "openMedia": "Viidiyoo bani",
+    "noMedia": "Sochii kanaaf miidiyaa hin kenname.",
     "noInstructions": "Qajeelfanni tarkaanfii kanaaf hin kenname.",
     "markCompleted": "Akka xumurame mallatteessi",
     "goToNext": "Gara sochii itti aanutti deemi",
+    "continueToWeek": "Gara torban {{week}} itti fufi",
+    "backToSchedule": "Gara sagantaa deebi'i",
+    "newWeekTitle": "Torban kun xumurame!",
+    "newWeekMessage": "Adeemsa gaarii! Sochiiwwan torban kanaa xumurtan. Yoo qophaa'an gara torban {{week}} itti fufuu dandeessu.",
     "noGames": "Taphi wal qabatan hin jiru.",
     "tryAtHome": "Mana keessatti yaali"
   },
@@ -315,6 +383,10 @@
     "growthJourney": "Imala guddina",
     "growthJourneyDesc": "Torban hunda tokkotti ilaali",
     "emptyCycle": "Gaarii! Roadmap haaraa ji'a booda ni argama.",
+    "nextMchatDue": "M-CHAT itti aanu barbaachisa",
+    "nextMchatTitle": "Tarkaanfii M-CHAT itti aanu jalqabi",
+    "nextMchatDesc": "Karoora sochii torban 4 keessan xumurame. Gaaffilee M-CHAT itti aanu guutaa akkasumas ogeessni keessan karoora itti aanu akka maxxansu taasisaa.",
+    "nextMchatCooldown": "Sochiiwwan hundi xumurameera. M-CHAT itti aanu yeroo madaallii booda ni bana.",
     "emptyWeek": "Ogeessni sochiiwwan torban kanaa hin maxxansine.",
     "emptyRoadmap": "Ogeessni roadmap qopheessaa jira."
   },
@@ -328,6 +400,7 @@
     "goVerify": "Gara mirkaneessuu deemi",
     "cycleComplete": "Marsaa xumurame",
     "cycleCompleteDesc": "Roadmap torban 4 xumurame.",
+    "cycleCompleteNextMchat": "Sochiiwwan marsaa kanaa hunda xumurtan. M-CHAT itti aanu guutaa akkasumas tarkaanfii yaalaa itti aanu ogeessaa keessan wajjin jalqabaa.",
     "noRoadmap": "Roadmap hin maxxanfame",
     "noRoadmapDesc": "Ogeessni roadmap maxxansuun asitti ni mul'ata.",
     "summaryTitle": "Imala guddina keessan",
@@ -375,7 +448,14 @@
     "carryForwardQuestions": "Deebii \"Lakki\" darban",
     "newQuestions": "Gaaffiiwwan haaraa",
     "longitudinalInfo": "Gaaffiiwwan \"Lakki\" darban irra deebi'uun + 6 haaraa.",
-    "startMonthCheckIn": "Hordoffii ji'a jalqabi"
+    "startMonthCheckIn": "Hordoffii ji'a jalqabi",
+    "comparisonSummary": "Deebiiwwan yaadaa {{previous}} keessaa {{improved}} fooyya'e",
+    "comparisonSubtitle": "Ji'a {{previousMonth}} → Ji'a {{currentMonth}}",
+    "improvedAnswers": "{{count}} fooyya'e",
+    "stillConcerning": "{{count}} ammallee yaada",
+    "newConcerns": "{{count}} yaada haaraa",
+    "areaImprovement": "{{improved}} fooyya'e · {{still}} ammallee xiyyeeffannoo barbaadu",
+    "nowYes": "Amma \"Eeyyee\" jedhame"
   },
   "payment": {
     "title": "CareBridge bani",
@@ -384,8 +464,9 @@
     "active": "Hojii irra",
     "inactive": "Hojii irra miti",
     "expires": "Yeroon ni xumurama",
-    "payNow": "Amma kaffali",
-    "unlock": "Seera bani",
+    "payNow": "Amma subscribe gochuu",
+    "renewNow": "Membership dheereffachuu",
+    "unlock": "Membership ilaali",
     "backHome": "Gara mana deebi'i",
     "verifying": "Kaffaltiin mirkaneessaa jira…",
     "verifiedRedirect": "Kaffaltiin mirkanaa'e. Deebi'aa jira…",
@@ -399,29 +480,27 @@
     "notCompletedMessage": "Kaffaltiin hin xumuramne. Kaffaltiin hin kaffalamne.",
     "pendingTitle": "Kaffaltiin eegaa jira",
     "initFailed": "Kaffaltii jalqabuu hin dandeenye.",
-    "plan": {
-      "SUBSCRIPTION": {
-        "title": "Subscription ji'a",
-        "description": "Haasaa, appointment fi kunuunsa."
-      },
-      "EXTRA_CHILD": {
-        "title": "Profaayilii daa'ima dabalataa",
-        "description": "Daa'ima biraa dabaluu."
-      },
-      "APPOINTMENT": {
-        "title": "Kaffaltii appointment",
-        "description": "Appointment mirkaneessi."
+    "membership": {
+      "title": "CareBridge Membership",
+      "description": "Ji'a tokkotti al tokko kaffaluu. Chat, appointment fi daa'imman dabalataa hundi hammate.",
+      "priceLabel": "Gatii ji'a",
+      "billingNote": "Chapa'n ji'a ji'aan kaffalama.",
+      "features": {
+        "0": "Ogeessa wajjin haasaa",
+        "1": "Appointment qopheessuu fi bulchuu",
+        "2": "Karoora kunuunsa fi sochiiwwan",
+        "3": "Akkaawuntii tokkotti profaayilii daa'imman hedduu"
       }
     },
     "gate": {
-      "chatTitle": "Chat subscription barbaachisa",
+      "membershipTitle": "Membership barbaachisa",
+      "membershipDescription": "Chat, appointment, kunuunsa fi daa'imman dabalataa banuuf al tokko subscribe gochuu.",
+      "chatTitle": "Chat membership barbaachisa",
       "chatDescription": "Ogeessaa erguuf subscribe gochuu.",
       "treatmentTitle": "Karoora kunuunsa bani",
       "treatmentDescription": "Roadmap fi sochiiwwan ilaaluuf subscribe gochuu.",
-      "appointmentTitle": "Appointment subscription barbaachisa",
-      "appointmentDescription": "Appointment qopheessuuf subscribe gochuu.",
-      "extraChildTitle": "Profaayilii daa'ima dabalataa",
-      "extraChildDescription": "Daa'ima jalqabaa bilisa. Kan biraa dabaluuf kaffali."
+      "appointmentTitle": "Appointment membership barbaachisa",
+      "appointmentDescription": "Appointment qopheessuuf subscribe gochuu."
     }
   }
 }

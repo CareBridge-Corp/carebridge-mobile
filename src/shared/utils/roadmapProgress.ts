@@ -127,18 +127,14 @@ export function canCompleteActivity(
   activityId: string,
   weekPlans: WeekPlan[],
 ): { allowed: boolean; reason?: string } {
-  const startCheck = canStartActivity(weekPlan, activityId, weekPlans);
-  if (!startCheck.allowed && startCheck.reason !== "Activity is already completed.") {
-    return startCheck;
-  }
-
   const status = getActivityStatus(weekPlan, activityId);
-  if (!status.started && !status.completed) {
-    return { allowed: false, reason: "Start this activity before marking it complete." };
-  }
-
   if (status.completed) {
     return { allowed: false, reason: "Activity is already completed." };
+  }
+
+  const startCheck = canStartActivity(weekPlan, activityId, weekPlans);
+  if (!startCheck.allowed) {
+    return startCheck;
   }
 
   return { allowed: true };
@@ -207,4 +203,29 @@ export function getCurrentWeekPlan(weekPlans: WeekPlan[]) {
     weekPlans[weekPlans.length - 1] ??
     null
   );
+}
+
+export function isRoadmapCycleFinished(weekPlans: WeekPlan[]) {
+  return (
+    weekPlans.length > 0 &&
+    weekPlans.every((wp) => wp.status === "COMPLETED")
+  );
+}
+
+export function resolveRoadmapCycleStatus(
+  weekPlans: WeekPlan[],
+  roadmap: RoadmapSummary | null,
+  progress?: {
+    roadmapCycleComplete?: boolean;
+    readyForNextScreening?: boolean;
+  },
+) {
+  const roadmapCycleComplete =
+    progress?.roadmapCycleComplete ?? isRoadmapCycleFinished(weekPlans);
+
+  const readyForNextScreening =
+    progress?.readyForNextScreening ??
+    (roadmapCycleComplete && isRoadmapCycleComplete(weekPlans, roadmap));
+
+  return { roadmapCycleComplete, readyForNextScreening };
 }
