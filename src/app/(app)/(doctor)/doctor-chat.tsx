@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -15,7 +15,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { socketService } from "../../../shared/api/socket";
 import {
   Avatar,
@@ -47,8 +50,10 @@ function formatDate(dateString: string): string {
 export default function DoctorChatScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [message, setMessage] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const textInputRef = useRef<TextInput>(null);
 
@@ -64,6 +69,7 @@ export default function DoctorChatScreen() {
   const messages = messagesData || [];
 
   useEffect(() => {
+    socketService.connect();
     socketService.setQueryClient(queryClient);
   }, [queryClient]);
 
@@ -79,6 +85,26 @@ export default function DoctorChatScreen() {
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     }
   }, [messages.length]);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSend = () => {
     if (selectedImages.length > 0) return handleSendWithImages();
@@ -136,6 +162,19 @@ export default function DoctorChatScreen() {
       new Date(prev.createdAt).toDateString()
     );
   };
+
+  const KEYBOARD_CLEARANCE = Platform.select({
+    ios: 36,
+    android: 48,
+    default: 32,
+  }) ?? 32;
+
+  const footerPaddingBottom =
+    keyboardHeight > 0 ? spacing[2] : Math.max(insets.bottom, spacing[2]);
+  const footerBottom =
+    keyboardHeight > 0 ? keyboardHeight + KEYBOARD_CLEARANCE : 0;
+  const composerAreaHeight =
+    (selectedImages.length > 0 ? 100 : 0) + 64 + footerPaddingBottom;
 
   if (!activeConversation) {
     return (
@@ -219,10 +258,7 @@ export default function DoctorChatScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <View style={styles.flex}>
         <View style={styles.header}>
           <IconButton
             icon="chevron-back"
@@ -253,82 +289,106 @@ export default function DoctorChatScreen() {
             data={messages}
             renderItem={renderMessage}
             keyExtractor={(item) => item.messageId}
-            contentContainerStyle={styles.messagesList}
+            style={styles.messagesContainer}
+            contentContainerStyle={[
+              styles.messagesList,
+              { paddingBottom: composerAreaHeight + spacing[4] },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() =>
+              flatListRef.current?.scrollToEnd({ animated: false })
+            }
           />
         )}
 
-        {selectedImages.length > 0 ? (
-          <View style={styles.previewBar}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.previewScroll}
-            >
-              {selectedImages.map((uri, idx) => (
-                <View key={idx} style={styles.previewWrap}>
-                  <Image source={{ uri }} style={styles.previewImg} />
-                  <Pressable
-                    onPress={() => handleRemoveImage(uri)}
-                    style={styles.previewRemove}
-                    hitSlop={6}
-                  >
-                    <Ionicons
-                      name="close-circle"
-                      size={24}
-                      color={colors.error}
-                    />
-                  </Pressable>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
+        <View style={[styles.inputFooter, { bottom: footerBottom }]}>
+          {selectedImages.length > 0 ? (
+            <View style={styles.previewBar}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.previewScroll}
+              >
+                {selectedImages.map((uri, idx) => (
+                  <View key={idx} style={styles.previewWrap}>
+                    <Image source={{ uri }} style={styles.previewImg} />
+                    <Pressable
+                      onPress={() => handleRemoveImage(uri)}
+                      style={styles.previewRemove}
+                      hitSlop={6}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={24}
+                        color={colors.error}
+                      />
+                    </Pressable>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
 
-        <View style={styles.composer}>
-          <Pressable
-            onPress={handleAttachmentPress}
-            hitSlop={6}
-            style={styles.attachBtn}
-            accessibilityLabel="Attach image"
-          >
-            <Ionicons name="add-circle-outline" size={26} color={colors.primary} />
-          </Pressable>
-          <TextInput
-            ref={textInputRef}
-            style={styles.input}
-            placeholder="Type a message"
-            placeholderTextColor={colors.textTertiary}
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            maxLength={1000}
-          />
-          <Pressable
-            onPress={handleSend}
-            disabled={
-              sendMessageMutation.isPending ||
-              (!message.trim() && selectedImages.length === 0)
-            }
-            style={({ pressed }) => [
-              styles.sendBtn,
-              (sendMessageMutation.isPending ||
-                (!message.trim() && selectedImages.length === 0)) &&
-                styles.sendDisabled,
-              pressed && { opacity: 0.85 },
+          <View
+            style={[
+              styles.composer,
+              { paddingBottom: footerPaddingBottom },
             ]}
-            accessibilityLabel="Send"
           >
-            {sendMessageMutation.isPending ? (
-              <ActivityIndicator size="small" color={colors.textInverse} />
-            ) : (
-              <Ionicons name="send" size={18} color={colors.textInverse} />
-            )}
-          </Pressable>
+            <Pressable
+              onPress={handleAttachmentPress}
+              hitSlop={6}
+              style={styles.attachBtn}
+              accessibilityLabel="Attach image"
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={26}
+                color={colors.primary}
+              />
+            </Pressable>
+            <TextInput
+              ref={textInputRef}
+              style={styles.input}
+              placeholder="Type a message"
+              placeholderTextColor={colors.textTertiary}
+              value={message}
+              onChangeText={setMessage}
+              onFocus={() =>
+                setTimeout(
+                  () => flatListRef.current?.scrollToEnd({ animated: true }),
+                  120,
+                )
+              }
+              multiline
+              maxLength={1000}
+            />
+            <Pressable
+              onPress={handleSend}
+              disabled={
+                sendMessageMutation.isPending ||
+                (!message.trim() && selectedImages.length === 0)
+              }
+              style={({ pressed }) => [
+                styles.sendBtn,
+                (sendMessageMutation.isPending ||
+                  (!message.trim() && selectedImages.length === 0)) &&
+                  styles.sendDisabled,
+                pressed && { opacity: 0.85 },
+              ]}
+              accessibilityLabel="Send"
+            >
+              {sendMessageMutation.isPending ? (
+                <ActivityIndicator size="small" color={colors.textInverse} />
+              ) : (
+                <Ionicons name="send" size={18} color={colors.textInverse} />
+              )}
+            </Pressable>
+          </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -368,9 +428,13 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
   },
+  messagesContainer: {
+    flex: 1,
+  },
   messagesList: {
     paddingHorizontal: spacing[4],
-    paddingVertical: spacing[4],
+    paddingTop: spacing[4],
+    flexGrow: 1,
   },
   dateRow: {
     alignItems: "center",
@@ -435,16 +499,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 12,
   },
+  inputFooter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+  },
   composer: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: spacing[2],
     paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    paddingBottom: spacing[3],
+    paddingTop: spacing[2],
     backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   attachBtn: {
     paddingBottom: spacing[2],

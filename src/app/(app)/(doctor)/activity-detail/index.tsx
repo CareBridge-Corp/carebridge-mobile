@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
   Badge,
   Button,
@@ -19,8 +20,14 @@ import {
   getActivityStatus,
   isWeekFullyCompleted,
 } from "../../../../shared/utils/roadmapProgress";
+import {
+  isYoutubeUrl,
+  persistWeekPlanId,
+  resolveMediaUrl,
+} from "../../../../shared/utils/scheduleWeekPreference";
 import { useRoadmaps } from "../../hooks/useRoadmaps";
 import { useWeekPlanActions } from "../../hooks/useWeekPlanActions";
+import { WeekPlan } from "../../types/roadmap";
 import { useChildrenStore } from "../../store/childrenStore";
 import { CompletionModal } from "./components/CompletionModal";
 import { NewWeekModal } from "./components/NewWeekModal";
@@ -40,6 +47,33 @@ function formatAreaLabel(area: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function buildActivitiesWithContext(weekPlans: WeekPlan[]) {
+  return weekPlans.flatMap((wp) =>
+    (wp.activities || []).map((a) => {
+      const statusObj = wp.activityStatuses?.find(
+        (s) => s.activityId === a.activityId,
+      );
+      return {
+        ...a,
+        weekPlanId: wp.weekPlanId,
+        weekNumber: wp.weekNumber,
+        started: statusObj?.started ?? false,
+        completed: statusObj?.completed ?? a.completed ?? false,
+      };
+    }),
+  );
+}
+
+function isAlreadyStartedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes("already started");
+}
+
+function isAlreadyCompletedError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes("already completed");
+}
+
 export default function ActivityDetailScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -53,6 +87,7 @@ export default function ActivityDetailScreen() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showNewWeekModal, setShowNewWeekModal] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const autoStartRef = useRef<string | null>(null);
 
   const { activeChild } = useChildrenStore();
   const { data: roadmapData, refetch } = useRoadmaps(activeChild?.childId);
@@ -73,32 +108,29 @@ export default function ActivityDetailScreen() {
     ? canCompleteActivity(currentWeekPlan, params.activityId, weekPlans)
     : { allowed: false };
 
-  const allActivitiesWithContext = weekPlans.flatMap((wp) =>
-    (wp.activities || []).map((a) => {
-      const statusObj = wp.activityStatuses?.find(
-        (s) => s.activityId === a.activityId,
-      );
-      return {
-        ...a,
-        weekPlanId: wp.weekPlanId,
-        weekNumber: wp.weekNumber,
-        completed: statusObj ? statusObj.completed : a.completed,
-      };
-    }),
+  const allActivitiesWithContext = useMemo(
+    () => buildActivitiesWithContext(weekPlans),
+    [weekPlans],
   );
 
   const currentIndex = allActivitiesWithContext.findIndex(
-    (a) => a.activityId === params.activityId,
+    (a) =>
+      a.activityId === params.activityId &&
+      a.weekPlanId === params.weekPlanId,
   );
   const currentActivity = allActivitiesWithContext[currentIndex];
   const nextActivity = allActivitiesWithContext[currentIndex + 1];
   const weekActivities = currentWeekPlan?.activities ?? [];
-  const activityIndexInWeek = weekActivities.findIndex(
-    (a) => a.activityId === params.activityId,
-  );
+  const isNextWeek =
+    Boolean(nextActivity) && nextActivity!.weekPlanId !== params.weekPlanId;
+  const completedInWeek = weekActivities.filter(
+    (a) =>
+      currentWeekPlan &&
+      getActivityStatus(currentWeekPlan, a.activityId).completed,
+  ).length;
   const weekProgress =
-    weekActivities.length > 0 && activityIndexInWeek >= 0
-      ? ((activityIndexInWeek + 1) / weekActivities.length) * 100
+    weekActivities.length > 0
+      ? (completedInWeek / weekActivities.length) * 100
       : 0;
 
   const [isCompleted, setIsCompleted] = useState(
@@ -109,22 +141,101 @@ export default function ActivityDetailScreen() {
   );
 
   useEffect(() => {
-    if (!currentWeekPlan || !params.activityId || isStarted || isCompleted) {
+    setIsCompleted(currentActivityStatus?.completed || false);
+    setIsStarted(currentActivityStatus?.started || false);
+  }, [
+    params.activityId,
+    currentActivityStatus?.completed,
+    currentActivityStatus?.started,
+  ]);
+
+  useEffect(() => {
+    if (activeChild?.childId && params.weekPlanId) {
+      void persistWeekPlanId(activeChild.childId, params.weekPlanId);
+    }
+  }, [activeChild?.childId, params.weekPlanId]);
+
+  useEffect(() => {
+    autoStartRef.current = null;
+  }, [params.activityId, params.weekPlanId]);
+
+  useEffect(() => {
+    if (!currentWeekPlan || !params.activityId || isCompleted) {
       return;
     }
-    if (canStart.allowed) {
-      startActivity
-        .mutateAsync({
-          weekPlanId: currentWeekPlan.weekPlanId,
-          activityId: params.activityId,
-        })
-        .then(() => {
-          setIsStarted(true);
-          refetch();
-        })
-        .catch(() => {});
+    if (currentActivityStatus?.started || currentActivityStatus?.completed) {
+      return;
     }
-  }, [currentWeekPlan?.weekPlanId, params.activityId]);
+    if (!canStart.allowed) {
+      return;
+    }
+    if (autoStartRef.current === params.activityId) {
+      return;
+    }
+
+    autoStartRef.current = params.activityId;
+    startActivity
+      .mutateAsync({
+        weekPlanId: currentWeekPlan.weekPlanId,
+        activityId: params.activityId,
+      })
+      .then(() => {
+        setIsStarted(true);
+        refetch();
+      })
+      .catch((error) => {
+        if (isAlreadyStartedError(error)) {
+          setIsStarted(true);
+        }
+      })
+      .finally(() => {
+        if (autoStartRef.current === params.activityId) {
+          autoStartRef.current = null;
+        }
+      });
+  }, [
+    currentWeekPlan?.weekPlanId,
+    params.activityId,
+    canStart.allowed,
+    currentActivityStatus?.started,
+    currentActivityStatus?.completed,
+    isCompleted,
+  ]);
+
+  const ensureActivityStarted = async (): Promise<void> => {
+    if (!currentWeekPlan) return;
+
+    const serverStarted = getActivityStatus(
+      currentWeekPlan,
+      params.activityId,
+    ).started;
+
+    if (serverStarted || isStarted) {
+      setIsStarted(true);
+      return;
+    }
+
+    try {
+      await startActivity.mutateAsync({
+        weekPlanId: params.weekPlanId,
+        activityId: params.activityId,
+      });
+      setIsStarted(true);
+    } catch (error) {
+      if (isAlreadyStartedError(error)) {
+        setIsStarted(true);
+        return;
+      }
+      throw error;
+    }
+  };
+
+  const goToSchedule = () => {
+    router.push({
+      pathname: "/(app)/schedule",
+      params: { expandWeekId: params.weekPlanId },
+    } as never);
+  };
 
   const activityData = useMemo(
     () => ({
@@ -136,67 +247,130 @@ export default function ActivityDetailScreen() {
         "",
       instruction: currentActivity?.instruction || params.description || "",
       riskCategory: currentActivity?.riskCategory,
-      mediaUrl: currentActivity?.mediaUrl,
+      mediaUrl: resolveMediaUrl(
+        currentActivity?.mediaUrl,
+        currentWeekPlan?.mediaLinks,
+      ),
     }),
-    [currentActivity, params, t],
+    [currentActivity, currentWeekPlan?.mediaLinks, params, t],
   );
+
+  const openMedia = async () => {
+    if (!activityData.mediaUrl) return;
+    try {
+      await WebBrowser.openBrowserAsync(activityData.mediaUrl);
+    } catch {
+      // ignore
+    }
+  };
+
+  const canMarkComplete = isCompleted || canComplete.allowed;
 
   const instructionSteps = useMemo(
     () => splitInstructions(activityData.instruction),
     [activityData.instruction],
   );
 
+  const primaryActionLabel = isCompleted
+    ? nextActivity
+      ? isNextWeek
+        ? t("activity.continueToWeek", { week: nextActivity.weekNumber })
+        : t("activity.goToNext")
+      : t("activity.backToSchedule")
+    : t("activity.markCompleted");
+
   const handleNext = () => {
     if (!isCompleted) {
       setShowCompletionModal(true);
-    } else if (nextActivity) {
-      if (nextActivity.weekPlanId !== params.weekPlanId) {
-        setShowNewWeekModal(true);
-      } else {
-        navigateToNext();
-      }
-    } else {
-      router.back();
+      return;
     }
+
+    if (!nextActivity) {
+      goToSchedule();
+      return;
+    }
+
+    if (isNextWeek) {
+      setShowNewWeekModal(true);
+      return;
+    }
+
+    void navigateToNext();
   };
 
-  const navigateToNext = () => {
+  const navigateToNext = async () => {
     if (!nextActivity) return;
+
+    if (activeChild?.childId) {
+      await persistWeekPlanId(activeChild.childId, nextActivity.weekPlanId);
+    }
+
     router.setParams({
       activityId: nextActivity.activityId,
       weekPlanId: nextActivity.weekPlanId,
       title: nextActivity.title,
       description: nextActivity.instruction,
     });
-    setIsCompleted(nextActivity.completed || false);
+
+    const result = await refetch();
+    const freshWeek = result.data?.weekPlans.find(
+      (wp) => wp.weekPlanId === nextActivity.weekPlanId,
+    );
+    const freshStatus = freshWeek
+      ? getActivityStatus(freshWeek, nextActivity.activityId)
+      : null;
+
+    setIsCompleted(freshStatus?.completed ?? nextActivity.completed ?? false);
+    setIsStarted(freshStatus?.started ?? nextActivity.started ?? false);
   };
 
   const handleConfirmCompletion = async () => {
     if (!params.weekPlanId || !params.activityId || !currentWeekPlan) return;
-    if (!canComplete.allowed) return;
+    if (!canMarkComplete) return;
 
     try {
       setIsCompleting(true);
+      await ensureActivityStarted();
+
       await completeActivity.mutateAsync({
         weekPlanId: params.weekPlanId,
         activityId: params.activityId,
       });
       setIsCompleted(true);
       setShowCompletionModal(false);
-      await refetch();
 
-      const latestWeekPlans = (await refetch()).data?.weekPlans ?? weekPlans;
+      const latestResult = await refetch();
+      const latestWeekPlans = latestResult.data?.weekPlans ?? weekPlans;
       const refreshedWeek = latestWeekPlans.find(
         (wp) => wp.weekPlanId === params.weekPlanId,
       );
+
       if (refreshedWeek && isWeekFullyCompleted(refreshedWeek)) {
         await completeWeekPlan.mutateAsync({
           weekPlanId: params.weekPlanId,
         });
+        await refetch();
       }
-    } catch (error: any) {
-      const message = error?.message ?? "";
-      if (message.includes("already completed")) {
+
+      const freshActivities = buildActivitiesWithContext(latestWeekPlans);
+      const freshIndex = freshActivities.findIndex(
+        (a) =>
+          a.activityId === params.activityId &&
+          a.weekPlanId === params.weekPlanId,
+      );
+      const freshNext = freshActivities[freshIndex + 1];
+      const freshWeekActivities = refreshedWeek?.activities ?? [];
+      const finishedLastInWeek =
+        freshWeekActivities[freshWeekActivities.length - 1]?.activityId ===
+        params.activityId;
+
+      if (finishedLastInWeek && freshNext) {
+        if (freshNext.weekPlanId !== params.weekPlanId) {
+          setShowNewWeekModal(true);
+        }
+      }
+    } catch (error: unknown) {
+      if (isAlreadyCompletedError(error)) {
         setIsCompleted(true);
         setShowCompletionModal(false);
       } else {
@@ -277,15 +451,43 @@ export default function ActivityDetailScreen() {
           </View>
 
           {activityData.mediaUrl ? (
-            <View style={styles.mediaPlaceholder}>
+            <Pressable
+              onPress={openMedia}
+              style={({ pressed }) => [
+                styles.mediaPlaceholder,
+                pressed && styles.mediaPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={
+                activityData.mediaUrl && isYoutubeUrl(activityData.mediaUrl)
+                  ? t("activity.watchOnYoutube")
+                  : t("activity.openMedia")
+              }
+            >
               <View style={styles.playCircle}>
                 <Ionicons name="play" size={28} color={colors.primary} />
               </View>
-              <Text variant="caption" tone="secondary">
-                {t("activity.demoVideo")}
+              <Text variant="bodyMedium" weight="semibold" tone="brand">
+                {activityData.mediaUrl && isYoutubeUrl(activityData.mediaUrl)
+                  ? t("activity.watchOnYoutube")
+                  : t("activity.openMedia")}
+              </Text>
+              <Text variant="caption" tone="secondary" numberOfLines={2}>
+                {activityData.mediaUrl}
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={styles.noMediaBox}>
+              <Ionicons
+                name="videocam-off-outline"
+                size={22}
+                color={colors.iconMuted}
+              />
+              <Text variant="bodySmall" tone="secondary">
+                {t("activity.noMedia")}
               </Text>
             </View>
-          ) : null}
+          )}
         </Card>
 
         <View style={styles.section}>
@@ -348,18 +550,18 @@ export default function ActivityDetailScreen() {
 
       <View style={styles.footer}>
         <Button
-          label={
-            isCompleted
-              ? nextActivity
-                ? t("activity.goToNext")
-                : t("common.done")
-              : t("activity.markCompleted")
-          }
+          label={primaryActionLabel}
           variant={isCompleted ? "secondary" : "primary"}
           onPress={handleNext}
           loading={isCompleting}
-          disabled={!canComplete.allowed && !isCompleted}
-          trailingIcon={isCompleted ? "checkmark-done-circle" : "checkmark-circle"}
+          disabled={!canMarkComplete}
+          trailingIcon={
+            isCompleted
+              ? nextActivity
+                ? "arrow-forward"
+                : "calendar-outline"
+              : "checkmark-circle"
+          }
         />
       </View>
 
@@ -373,10 +575,13 @@ export default function ActivityDetailScreen() {
       <NewWeekModal
         visible={showNewWeekModal}
         weekNumber={nextActivity?.weekNumber || 0}
-        onClose={() => setShowNewWeekModal(false)}
+        onClose={() => {
+          setShowNewWeekModal(false);
+          goToSchedule();
+        }}
         onContinue={() => {
           setShowNewWeekModal(false);
-          navigateToNext();
+          void navigateToNext();
         }}
       />
     </Screen>
@@ -431,6 +636,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing[2],
+    paddingHorizontal: spacing[4],
+  },
+  mediaPressed: {
+    opacity: 0.85,
+  },
+  noMediaBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: borderRadius.lg,
+    padding: spacing[4],
   },
   playCircle: {
     width: 56,
