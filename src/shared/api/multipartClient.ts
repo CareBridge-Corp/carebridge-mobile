@@ -45,10 +45,9 @@ class MultipartApiClient {
           console.log("Error reading token", error);
         }
 
-        // Let axios automatically set Content-Type for FormData
-        // Remove any Content-Type header if data is FormData
+        // React Native must set multipart boundary itself — never set Content-Type manually.
         if (config.data instanceof FormData && config.headers) {
-          config.headers["Content-Type"] = "multipart/form-data";
+          delete config.headers["Content-Type"];
           delete config.headers["content-type"];
         }
 

@@ -74,6 +74,8 @@
     "screeningsOnFile_plural": "{{count}} screenings on file",
     "screeningHistoryDesc": "Tap to review past M-CHAT submissions and clinician notes.",
     "openHistory": "Open history",
+    "developmentProgress": "Development progress",
+    "seeFullProgress": "See full progress",
     "hero": {
       "step1": "Step 1 of 4",
       "step2": "Step 2 of 4",
@@ -101,6 +103,19 @@
       "dueNow": "Due now",
       "startRescreening": "Start re-screening",
       "notNow": "Not now",
+      "nextMchatPhase": "Next M-CHAT phase",
+      "planCompleteTitle": "{{name}}'s 4-week plan is complete",
+      "planCompleteTitleDefault": "Your 4-week plan is complete",
+      "nextMchatRequiredDesc": "You've finished every activity in this cycle. Complete the next M-CHAT screening so your clinician can review progress and publish the next therapy plan.",
+      "nextMchatCooldownDesc": "All activities in this cycle are done. The next M-CHAT phase opens after the one-month review period. You can still review completed activities below.",
+      "actionRequired": "Action required",
+      "planFinished": "Plan finished",
+      "comingSoon": "Opens soon",
+      "startNextMchat": "Start next M-CHAT screening",
+      "reviewCompletedPlan": "Review completed plan",
+      "nextPhase": "Next phase",
+      "monthNumber": "Month {{month}}",
+      "mchatRescreen": "M-CHAT re-screen",
       "continuePlan": "Continue this week's plan",
       "continuePlanDesc": "Open {{name}}'s schedule to see today's activities.",
       "openSchedule": "Open schedule",
@@ -119,7 +134,40 @@
   },
   "resources": {
     "title": "Learn about ASD",
-    "subtitle": "Trusted resources from leading health organisations."
+    "subtitle": "Trusted resources from leading health organisations.",
+    "items": {
+      "zemi": {
+        "eyebrow": "AUTISM ACTIVIST: ZEMI YENUS at TEDxAddis",
+        "source": "TEDxAddis",
+        "title": "Zemi Yenus",
+        "description": "Zemi Yenus is the founder of the Joy Center for Children with Autism and Related Developmental Disorders, which provides educational and rehabilitation access to children with autism.",
+        "url": "https://youtu.be/0k8QrkAd9TM?t=600"
+      },
+      "cdc": {
+        "source": "CDC",
+        "title": "What is Autism Spectrum Disorder?",
+        "description": "Plain-language overview from the U.S. Centers for Disease Control on signs, diagnosis and support.",
+        "url": "https://www.cdc.gov/ncbddd/autism/facts.html"
+      },
+      "who": {
+        "source": "WHO",
+        "title": "Autism, World Health Organization",
+        "description": "Global guidance covering early intervention, family support and inclusive care.",
+        "url": "https://www.who.int/news-room/fact-sheets/detail/autism-spectrum-disorders"
+      },
+      "autismSpeaks": {
+        "source": "Autism Speaks",
+        "title": "First 100 days kit for families",
+        "description": "A practical action plan with checklists for the first weeks after diagnosis.",
+        "url": "https://www.autismspeaks.org/tool-kit/100-day-kit-young-children"
+      },
+      "nhs": {
+        "source": "NHS",
+        "title": "Helping a child with autism communicate",
+        "description": "Evidence-based tips for everyday communication, routines and sensory needs.",
+        "url": "https://www.nhs.uk/conditions/autism/helping-your-child/"
+      }
+    }
   },
   "games": {
     "title": "Interactive games",
@@ -130,8 +178,20 @@
     "editProfile": "Edit profile",
     "careTeam": "Care team",
     "account": "Account",
+    "preferences": "Preferences",
     "language": "Language",
+    "languageHint": "Choose the language used across the app.",
+    "personalInfo": "Personal information",
+    "personalInfoSubtitle": "Edit your name, photo and contact details",
+    "screeningHistory": "Screening history",
+    "screeningHistorySubtitle": "View all M-CHAT submissions",
+    "screeningHistoryCardTitle": "M-CHAT-R/F history",
+    "screeningHistoryCardSubtitle": "Review past screenings",
+    "assignedClinician": "Assigned clinician",
+    "settings": "Settings",
+    "changePhoto": "Change photo",
     "logout": "Log out",
+    "loggingOut": "Logging out...",
     "noClinician": "No clinician assigned yet",
     "subscription": "Subscription & billing",
     "manageChildren": "Manage children",
@@ -187,6 +247,7 @@
     "goBack": "Go back",
     "submissionFailed": "Submission failed",
     "submissionFailedMessage": "An error occurred while submitting your screening.",
+    "supportingInfoFailedMessage": "Your screening was saved, but notes, photos, or voice could not be uploaded. Tap submit again to retry the upload only.",
     "limitReached": "Limit reached",
     "limitReachedMessage": "You can only upload up to 5 pictures.",
     "permissionRequired": "Permission required",
@@ -207,7 +268,7 @@
     "questionsLabel": "Questions",
     "concernAnswers": "Concern answers",
     "whatThisMeans": "What this means",
-    "interpretation": "A medium score doesn't mean your child has autism — it suggests that a professional evaluation is recommended. Early support has lifelong benefits.",
+    "interpretation": "A medium score does not mean your child has autism. It suggests that a professional evaluation is recommended. Early support has lifelong benefits.",
     "nextSteps": "Next steps",
     "nextStep1Title": "Consult a pediatrician",
     "nextStep1Body": "Book a developmental specialist for a comprehensive evaluation.",
@@ -244,9 +305,16 @@
     "evidenceWho": "WHO guidance",
     "weekProgress": "Progress in this week",
     "demoVideo": "Clinician demo video",
+    "watchOnYoutube": "Watch on YouTube",
+    "openMedia": "Open video",
+    "noMedia": "No media was provided for this activity.",
     "noInstructions": "No step-by-step instructions were provided for this activity.",
     "markCompleted": "Mark as completed",
     "goToNext": "Go to next activity",
+    "continueToWeek": "Continue to Week {{week}}",
+    "backToSchedule": "Back to schedule",
+    "newWeekTitle": "Week complete!",
+    "newWeekMessage": "Great progress! You finished this week's activities. Continue with Week {{week}} when you're ready.",
     "noGames": "No related games for this activity yet.",
     "tryAtHome": "Try at home",
     "completeConfirmTitle": "Activity completed?",
@@ -319,6 +387,10 @@
     "growthJourney": "Growth journey",
     "growthJourneyDesc": "See all weeks at a glance",
     "emptyCycle": "Great work! A new roadmap will be available after the one-month review period.",
+    "nextMchatDue": "Next M-CHAT due",
+    "nextMchatTitle": "Start the next M-CHAT phase",
+    "nextMchatDesc": "Your 4-week activity plan is complete. Fill out the next M-CHAT questionnaire to unlock the next care plan from your clinician.",
+    "nextMchatCooldown": "All activities are complete. The next M-CHAT opens after the review period.",
     "emptyWeek": "Your clinician hasn't published activities for this week yet.",
     "emptyRoadmap": "Your clinician is preparing a personalised therapy roadmap. You'll be notified when it's ready."
   },
@@ -332,6 +404,7 @@
     "goVerify": "Go to verification",
     "cycleComplete": "Cycle complete",
     "cycleCompleteDesc": "4-week roadmap complete. Next cycle available after the review period.",
+    "cycleCompleteNextMchat": "Every activity in this cycle is done. Complete the next M-CHAT screening to start the next therapy phase with your clinician.",
     "noRoadmap": "No published roadmap yet",
     "noRoadmapDesc": "Once your clinician publishes an active roadmap, the step-by-step journey will appear here.",
     "summaryTitle": "Your growth journey",
@@ -379,17 +452,25 @@
     "carryForwardQuestions": "Prior \"No\" answers",
     "newQuestions": "New questions",
     "longitudinalInfo": "We'll re-ask questions your child answered \"No\" to last time, plus 6 new ones to track progress.",
-    "startMonthCheckIn": "Start monthly check-in"
+    "startMonthCheckIn": "Start monthly check-in",
+    "comparisonSummary": "{{improved}} of {{previous}} previously concerning answers improved",
+    "comparisonSubtitle": "Month {{previousMonth}} → Month {{currentMonth}}",
+    "improvedAnswers": "{{count}} improved",
+    "stillConcerning": "{{count}} still concerning",
+    "newConcerns": "{{count}} new concerns",
+    "areaImprovement": "{{improved}} improved · {{still}} still need focus",
+    "nowYes": "Now answered Yes"
   },
   "payment": {
     "title": "Unlock CareBridge",
-    "subtitle": "Subscribe to access chat, appointments, and treatment activities.",
-    "subscriptionStatus": "Subscription",
+    "subtitle": "One membership unlocks everything in CareBridge.",
+    "subscriptionStatus": "Membership",
     "active": "Active",
     "inactive": "Not active",
-    "expires": "Expires",
-    "payNow": "Pay now",
-    "unlock": "Unlock access",
+    "expires": "Renews / expires",
+    "payNow": "Subscribe now",
+    "renewNow": "Extend membership",
+    "unlock": "View membership",
     "backHome": "Back to home",
     "verifying": "Verifying payment…",
     "verifiedRedirect": "Payment verified. Redirecting…",
@@ -403,29 +484,27 @@
     "notCompletedMessage": "Payment was not completed. No charge was applied.",
     "pendingTitle": "Payment pending",
     "initFailed": "Unable to initialize payment.",
-    "plan": {
-      "SUBSCRIPTION": {
-        "title": "Monthly subscription",
-        "description": "Chat with clinicians, book appointments, and follow treatment plans."
-      },
-      "EXTRA_CHILD": {
-        "title": "Additional child profile",
-        "description": "Add another child to your account."
-      },
-      "APPOINTMENT": {
-        "title": "Appointment fee",
-        "description": "Confirm a doctor appointment booking."
+    "membership": {
+      "title": "CareBridge Membership",
+      "description": "Pay once per month for full access. No separate fees for chat, appointments, or extra children.",
+      "priceLabel": "Monthly price",
+      "billingNote": "Billed monthly via Chapa. Cancel anytime before renewal.",
+      "features": {
+        "0": "Chat with your assigned clinician",
+        "1": "Book and manage appointments",
+        "2": "Personalized therapy roadmap & activities",
+        "3": "Multiple child profiles on one account"
       }
     },
     "gate": {
-      "chatTitle": "Chat requires subscription",
+      "membershipTitle": "Membership required",
+      "membershipDescription": "Subscribe once to unlock chat, appointments, therapy plans, and additional child profiles.",
+      "chatTitle": "Chat requires membership",
       "chatDescription": "Subscribe to message your child's clinician.",
       "treatmentTitle": "Unlock therapy plan",
       "treatmentDescription": "Subscribe to view your child's personalized therapy roadmap and activities.",
-      "appointmentTitle": "Appointments require subscription",
-      "appointmentDescription": "Subscribe to book appointments with your clinician.",
-      "extraChildTitle": "Additional child profile",
-      "extraChildDescription": "Your first child is free. Pay to add another child profile."
+      "appointmentTitle": "Appointments require membership",
+      "appointmentDescription": "Subscribe to book appointments with your clinician."
     }
   }
 }
