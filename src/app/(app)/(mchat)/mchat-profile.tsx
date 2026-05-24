@@ -1,6 +1,9 @@
 import { useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { getDateLocale } from "../../../shared/localization/language";
+import { useLanguageStore } from "../../../shared/store/languageStore";
 import {
   Avatar,
   Badge,
@@ -16,8 +19,8 @@ import { ChildSelectorModal } from "../components/ChildSelectorModal";
 import { useChildScreenings } from "../hooks/useScreenings";
 import { useChildrenStore } from "../store/childrenStore";
 
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
+function formatDate(dateString: string, locale: string) {
+  return new Date(dateString).toLocaleDateString(getDateLocale(locale), {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -37,14 +40,14 @@ function statusTone(status: string) {
   }
 }
 
-function statusLabel(status: string) {
+function statusLabel(status: string, t: (key: string) => string) {
   switch (status) {
     case "COMPLETE":
-      return "Complete";
+      return t("common.done");
     case "UNDER_REVIEW":
-      return "Under review";
+      return t("common.pending");
     case "PENDING":
-      return "Pending";
+      return t("common.pending");
     default:
       return status;
   }
@@ -52,6 +55,8 @@ function statusLabel(status: string) {
 
 export default function MChatProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
   const { activeChild, children } = useChildrenStore();
   const [selectorVisible, setSelectorVisible] = React.useState(false);
 
@@ -61,7 +66,7 @@ export default function MChatProfileScreen() {
   return (
     <Screen padded={false} background={colors.surfaceMuted} scroll>
       <ScreenHeader
-        title="Screening history"
+        title={t("mchat.profileTitle")}
         subtitle={activeChild?.firstName}
         rightSlot={
           <Avatar
@@ -86,10 +91,10 @@ export default function MChatProfileScreen() {
             />
           </View>
           <Text variant="title2" align="center">
-            M-CHAT-R/F profile
+            {t("mchat.mchatProfileTitle")}
           </Text>
           <Text variant="bodySmall" tone="secondary" align="center" style={styles.introBody}>
-            Review previous developmental screenings and clinician notes.
+            {t("mchat.profileIntro")}
           </Text>
         </Card>
 
@@ -100,17 +105,17 @@ export default function MChatProfileScreen() {
         ) : screenings.length === 0 ? (
           <EmptyState
             icon="folder-open-outline"
-            title="No screenings yet"
-            description="Submit an M-CHAT-R/F to see results here."
+            title={t("mchat.noScreenings")}
+            description={t("mchat.noScreeningsDesc")}
             primaryAction={{
-              label: "Start new screening",
+              label: t("mchat.startNewScreening"),
               onPress: () => router.push("/(app)/(mchat)/mchat-privacy" as any),
             }}
           />
         ) : (
           <View style={styles.list}>
             <Text variant="title3" style={styles.listHeader}>
-              Recent screenings
+              {t("mchat.recentScreenings")}
             </Text>
             {screenings.map((screening: any) => (
               <Card
@@ -125,11 +130,11 @@ export default function MChatProfileScreen() {
               >
                 <View style={styles.itemTop}>
                   <Badge
-                    label={statusLabel(screening.status)}
+                    label={statusLabel(screening.status, t)}
                     tone={statusTone(screening.status)}
                   />
                   <Text variant="caption" tone="secondary">
-                    {formatDate(screening.date)}
+                    {formatDate(screening.date, language)}
                   </Text>
                 </View>
                 <Text
@@ -137,7 +142,7 @@ export default function MChatProfileScreen() {
                   tone="tertiary"
                   style={styles.tapHint}
                 >
-                  Tap to view details
+                  {t("mchat.tapToView")}
                 </Text>
               </Card>
             ))}

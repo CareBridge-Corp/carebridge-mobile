@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import {
   Avatar,
   Badge,
@@ -12,14 +12,37 @@ import {
   Text,
 } from "../../../shared/components/ui";
 import { colors, layout, spacing } from "../../../shared/theme";
+import { useClinicianById } from "../hooks/useClinician";
 import { useClinicianStore } from "../store/clinicianStore";
 
 export default function DoctorDetailsScreen() {
   const router = useRouter();
-  const { childId } = useLocalSearchParams<{ childId: string }>();
-  const clinician = useClinicianStore((state) =>
+  const { childId, doctorId } = useLocalSearchParams<{
+    childId?: string;
+    doctorId?: string;
+  }>();
+
+  // Prefer the assigned clinician kept in the store when arriving from "your
+  // care team" via childId. Otherwise fetch by doctorId.
+  const cachedClinician = useClinicianStore((state) =>
     childId ? state.cliniciansByChild[childId] : null,
   );
+
+  const { data: fetchedClinician, isLoading } = useClinicianById(
+    !cachedClinician ? doctorId : undefined,
+  );
+
+  const clinician = cachedClinician || fetchedClinician;
+
+  if (isLoading) {
+    return (
+      <Screen background={colors.surfaceMuted}>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </Screen>
+    );
+  }
 
   if (!clinician) {
     return (

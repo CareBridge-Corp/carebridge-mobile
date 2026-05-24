@@ -1,5 +1,6 @@
 import { Href, useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import {
   Button,
@@ -11,33 +12,31 @@ import {
 } from "../../../shared/components/ui";
 import { colors, spacing } from "../../../shared/theme";
 
-const PRIVACY_POINTS = [
-  {
-    icon: "shield-checkmark" as const,
-    title: "Your data stays private",
-    body: "Only you and your assigned clinician can view this screening.",
-  },
-  {
-    icon: "lock-closed" as const,
-    title: "Encrypted end-to-end",
-    body: "All answers are encrypted in transit and at rest.",
-  },
-  {
-    icon: "person-remove" as const,
-    title: "Delete anytime",
-    body: "You can withdraw consent and delete a screening at any time.",
-  },
-];
-
 export default function MChatPrivacyScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+
+  const privacyPoints = [
+    {
+      title: t("mchat.privacyPoint1Title"),
+      body: t("mchat.privacyPoint1Body"),
+    },
+    {
+      title: t("mchat.privacyPoint2Title"),
+      body: t("mchat.privacyPoint2Body"),
+    },
+    {
+      title: t("mchat.privacyPoint3Title"),
+      body: t("mchat.privacyPoint3Body"),
+    },
+  ];
 
   return (
     <Screen padded={false} background={colors.surfaceMuted}>
       <View style={styles.header}>
         <IconButton
           icon="close"
-          accessibilityLabel="Close"
+          accessibilityLabel={t("common.cancel")}
           onPress={() => router.back()}
         />
         <View style={styles.progressWrap}>
@@ -48,17 +47,17 @@ export default function MChatPrivacyScreen() {
 
       <View style={styles.body}>
         <Text variant="label" tone="brand">
-          Step 1 of 5
+          {t("mchat.privacyStep")}
         </Text>
         <Text variant="display" style={styles.title}>
-          Data security & privacy
+          {t("mchat.dataSecurityTitle")}
         </Text>
         <Text variant="body" tone="secondary" style={styles.subtitle}>
-          {`Before we begin, here's how we protect what you share with us.`}
+          {t("mchat.privacyIntro")}
         </Text>
 
         <View style={styles.list}>
-          {PRIVACY_POINTS.map((pt) => (
+          {privacyPoints.map((pt) => (
             <Card key={pt.title} variant="flat" padding="md" style={styles.point}>
               <View style={styles.pointIcon}>
                 <Text variant="title2" tone="brand">
@@ -80,7 +79,7 @@ export default function MChatPrivacyScreen() {
 
       <View style={styles.footer}>
         <Button
-          label="I agree, continue"
+          label={t("mchat.agreeContinue")}
           onPress={() =>
             router.push("/(app)/mchat-questionnaire" as Href)
           }

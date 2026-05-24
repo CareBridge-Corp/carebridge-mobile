@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -19,46 +20,37 @@ import {
   SectionHeader,
   Text,
 } from "../../../shared/components/ui";
+import { getDateLocale } from "../../../shared/localization/language";
+import { useLanguageStore } from "../../../shared/store/languageStore";
 import { borderRadius, colors, layout, spacing } from "../../../shared/theme";
 import {
+  useAvailableDays,
+  useAvailableSlots,
   useCreateAppointment,
-  useDoctorAppointments,
 } from "../hooks/useAppointments";
 import { useProfile } from "../hooks/useProfile";
 import { useClinicianStore } from "../store/clinicianStore";
 
-const generateDates = () => {
-  const dates = [];
-  const today = new Date();
-  for (let i = 0; i < 14; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    dates.push({
-      id: d.toISOString().split("T")[0],
-      dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
-      dayNumber: d.getDate(),
-      month: d.toLocaleDateString("en-US", { month: "short" }),
-    });
-  }
-  return dates;
-};
+const RANGE_DAYS = 30;
 
-const TIME_SLOTS = [
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "14:00",
-  "14:30",
-  "15:00",
-  "15:30",
-  "16:00",
-];
+function toIsoDate(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function formatDay(dateStr: string, locale: string) {
+  const date = new Date(`${dateStr}T00:00:00`);
+  return {
+    dayName: date.toLocaleDateString(locale, { weekday: "short" }),
+    dayNumber: date.getDate(),
+    month: date.toLocaleDateString(locale, { month: "short" }),
+  };
+}
 
 export default function DoctorConsultationScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+  const dateLocale = getDateLocale(language);
   const { childId } = useLocalSearchParams<{ childId: string }>();
 
   const clinician = useClinicianStore((state) =>
@@ -67,58 +59,78 @@ export default function DoctorConsultationScreen() {
 
   const { data: profile } = useProfile();
   const createAppointment = useCreateAppointment();
-  const { data: appointments, isLoading: isAppointmentsLoading } =
-    useDoctorAppointments(clinician?.userId);
 
-  const dates = useState(generateDates())[0];
-  const [selectedDate, setSelectedDate] = useState(dates[0].id);
-  const [selectedTime, setSelectedTime] = useState("");
-  const [meetingType, setMeetingType] = useState<"in_person" | "video">(
+  const range = useMemo(() => {
+    const today = new Date();
+    const end = new Date(today);
+    end.setDate(today.getDate() + RANGE_DAYS - 1);
+    return { from: toIsoDate(today), to: toIsoDate(end) };
+  }, []);
+
+  const [meetingType, setMeetingType] = useState<"in_person" | "online">(
     "in_person",
   );
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
 
-  const bookedSlots = useMemo(() => {
-    if (!appointments) return [];
-    return appointments
-      .filter(
-        (app) =>
-          app.appointmentDate === selectedDate && app.status !== "cancelled",
-      )
-      .map((app) => app.startTime);
-  }, [appointments, selectedDate]);
+  const { data: availableDays = [], isLoading: daysLoading } = useAvailableDays(
+    clinician?.userId,
+    range.from,
+    range.to,
+    meetingType,
+  );
+
+  useEffect(() => {
+    if (!selectedDate && availableDays.length > 0) {
+      const firstOpen =
+        availableDays.find((day) => day.is_available)?.date ||
+        availableDays[0]?.date;
+      if (firstOpen) setSelectedDate(firstOpen);
+    }
+  }, [availableDays, selectedDate]);
+
+  const { data: slots = [], isLoading: slotsLoading } = useAvailableSlots(
+    clinician?.userId,
+    selectedDate || undefined,
+    meetingType,
+  );
 
   const handleBookMeeting = () => {
-    if (!selectedDate || !selectedTime || !clinician || !profile?.id) {
+    const slot = slots.find(
+      (item) => `${item.schedule_id}-${item.start_time}` === selectedSlotKey,
+    );
+
+    if (!selectedDate || !slot || !clinician || !profile?.id) {
       Alert.alert(
-        "Missing information",
-        "Please ensure all details are selected.",
+        t("booking.missingInfoTitle"),
+        t("booking.missingInfoMessage"),
       );
       return;
     }
 
-    const payload: any = {
-      appointment_date: selectedDate,
-      start_time: selectedTime,
-      meeting_type: meetingType,
-      parent_id: profile.id,
-      child_id: childId,
-      schedule_id: "schedule-uuid-placeholder",
-    };
-
     createAppointment.mutate(
-      { doctorId: clinician.userId, payload },
+      {
+        doctorId: clinician.userId,
+        payload: {
+          appointment_date: selectedDate,
+          start_time: slot.start_time.slice(0, 5),
+          meeting_type: meetingType,
+          parent_id: profile.id,
+          schedule_id: slot.schedule_id,
+        },
+      },
       {
         onSuccess: () => {
-          Alert.alert("Success", "Appointment successfully booked!", [
-            { text: "OK", onPress: () => router.back() },
+          Alert.alert(t("common.success"), t("booking.bookSuccess"), [
+            { text: t("common.ok"), onPress: () => router.back() },
           ]);
         },
         onError: (err: any) => {
           Alert.alert(
-            "Error",
-            err.response?.data?.message ||
+            t("common.error"),
+            err.response?.data?.error ||
               err.message ||
-              "Failed to book appointment",
+              t("booking.bookFailed"),
           );
         },
       },
@@ -130,10 +142,10 @@ export default function DoctorConsultationScreen() {
       <Screen background={colors.surfaceMuted}>
         <View style={styles.center}>
           <Text variant="title2" align="center">
-            Doctor information not found
+            {t("doctor.notFound")}
           </Text>
           <Button
-            label="Go back"
+            label={t("common.back")}
             variant="ghost"
             onPress={() => router.back()}
             style={{ marginTop: spacing[4] }}
@@ -149,7 +161,7 @@ export default function DoctorConsultationScreen() {
 
   return (
     <Screen padded={false} background={colors.surfaceMuted}>
-      <ScreenHeader title="Doctor consultation" />
+      <ScreenHeader title={t("doctor.consultationTitle")} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -165,7 +177,7 @@ export default function DoctorConsultationScreen() {
             {fullName}
           </Text>
           <Text variant="body" tone="secondary" align="center">
-            {clinician.specializations[0]?.name || "Specialist"}
+            {clinician.specializations[0]?.name || t("doctor.specialist")}
           </Text>
           <Badge
             label={clinician.status}
@@ -175,23 +187,21 @@ export default function DoctorConsultationScreen() {
           />
         </View>
 
-        <SectionHeader title="Consultation type" />
+        <SectionHeader title={t("booking.consultationType")} />
         <View style={styles.typeRow}>
-          {(
-            [
-              { value: "in_person", label: "In person", icon: "business" },
-              { value: "video", label: "Video call", icon: "videocam" },
-            ] as const
-          ).map((option) => {
-            const active = meetingType === option.value;
+          {(["in_person", "online"] as const).map((type) => {
+            const active = meetingType === type;
             return (
               <Pressable
-                key={option.value}
+                key={type}
                 style={[styles.typeChip, active && styles.typeChipActive]}
-                onPress={() => setMeetingType(option.value)}
+                onPress={() => {
+                  setMeetingType(type);
+                  setSelectedSlotKey(null);
+                }}
               >
                 <Ionicons
-                  name={option.icon as any}
+                  name={type === "in_person" ? "business" : "videocam"}
                   size={20}
                   color={active ? colors.textInverse : colors.primary}
                 />
@@ -202,131 +212,138 @@ export default function DoctorConsultationScreen() {
                     color: active ? colors.textInverse : colors.textPrimary,
                   }}
                 >
-                  {option.label}
+                  {type === "in_person"
+                    ? t("booking.inPerson")
+                    : t("booking.online")}
                 </Text>
               </Pressable>
             );
           })}
         </View>
 
-        <SectionHeader title="Select a day" />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.datesScroll}
-        >
-          {dates.map((date) => {
-            const isActiveDate = selectedDate === date.id;
-            return (
-              <Pressable
-                key={date.id}
-                style={[
-                  styles.dateCard,
-                  isActiveDate && styles.dateCardActive,
-                ]}
-                onPress={() => setSelectedDate(date.id)}
-              >
-                <Text
-                  variant="caption"
-                  tone={isActiveDate ? "inverse" : "secondary"}
-                >
-                  {date.month.toUpperCase()}
-                </Text>
-                <Text
-                  variant="title1"
-                  style={{
-                    color: isActiveDate
-                      ? colors.textInverse
-                      : colors.textPrimary,
+        <SectionHeader title={t("booking.availableDays")} />
+        {daysLoading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : availableDays.length === 0 ? (
+          <Card variant="tinted" padding="md">
+            <Text variant="body" tone="secondary" align="center">
+              {t("booking.noAvailability")}
+            </Text>
+          </Card>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.datesScroll}
+          >
+            {availableDays.map((day) => {
+              const formatted = formatDay(day.date, dateLocale);
+              const isActiveDate = selectedDate === day.date;
+              const disabled = !day.is_available;
+              return (
+                <Pressable
+                  key={day.date}
+                  disabled={disabled}
+                  style={[
+                    styles.dateCard,
+                    isActiveDate && styles.dateCardActive,
+                    disabled && styles.dateCardDisabled,
+                  ]}
+                  onPress={() => {
+                    setSelectedDate(day.date);
+                    setSelectedSlotKey(null);
                   }}
                 >
-                  {date.dayNumber}
-                </Text>
-                <Text
-                  variant="caption"
-                  tone={isActiveDate ? "inverse" : "secondary"}
-                >
-                  {date.dayName}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    variant="caption"
+                    tone={isActiveDate ? "inverse" : "secondary"}
+                  >
+                    {formatted.month.toUpperCase()}
+                  </Text>
+                  <Text
+                    variant="title1"
+                    style={{
+                      color: disabled
+                        ? colors.textTertiary
+                        : isActiveDate
+                          ? colors.textInverse
+                          : colors.textPrimary,
+                    }}
+                  >
+                    {formatted.dayNumber}
+                  </Text>
+                  <Text
+                    variant="caption"
+                    tone={isActiveDate ? "inverse" : "secondary"}
+                  >
+                    {formatted.dayName}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
-        <SectionHeader title="Available times" />
-        {isAppointmentsLoading ? (
+        <SectionHeader title={t("booking.availableTimes")} />
+        {slotsLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator color={colors.primary} />
             <Text variant="caption" tone="secondary">
-              Fetching available slots...
+              {t("booking.loadingSlots")}
             </Text>
           </View>
+        ) : slots.length === 0 ? (
+          <Card variant="tinted" padding="md">
+            <Text variant="body" tone="secondary" align="center">
+              {t("booking.noSlotsForDay")}
+            </Text>
+          </Card>
         ) : (
           <View style={styles.timeGrid}>
-            {TIME_SLOTS.map((time) => {
-              const active = selectedTime === time;
-              const booked = bookedSlots.includes(time);
-
+            {slots.map((slot) => {
+              const key = `${slot.schedule_id}-${slot.start_time}`;
+              const label = slot.start_time.slice(0, 5);
+              const active = selectedSlotKey === key;
               return (
                 <Pressable
-                  key={time}
-                  style={[
-                    styles.timeSlot,
-                    active && styles.timeSlotActive,
-                    booked && styles.timeSlotBooked,
-                  ]}
-                  onPress={() => !booked && setSelectedTime(time)}
-                  disabled={booked}
+                  key={key}
+                  style={[styles.timeSlot, active && styles.timeSlotActive]}
+                  onPress={() => setSelectedSlotKey(key)}
                 >
                   <Text
                     variant="bodyMedium"
                     weight="semibold"
                     style={{
-                      color: booked
-                        ? colors.textTertiary
-                        : active
-                          ? colors.textInverse
-                          : colors.textPrimary,
-                      textDecorationLine: booked ? "line-through" : "none",
+                      color: active
+                        ? colors.textInverse
+                        : colors.textPrimary,
                     }}
                   >
-                    {time}
+                    {label}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
         )}
-
-        <Card variant="tinted" padding="md" style={styles.tipCard}>
-          <View style={styles.tipRow}>
-            <Ionicons
-              name="information-circle"
-              size={20}
-              color={colors.primary}
-            />
-            <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
-              Booked slots are unavailable. Choose a free time to confirm your
-              appointment.
-            </Text>
-          </View>
-        </Card>
       </ScrollView>
 
       <View style={styles.footer}>
         <Button
           label={
             createAppointment.isPending
-              ? "Confirming..."
-              : "Confirm appointment"
+              ? t("booking.confirming")
+              : t("booking.confirmAppointment")
           }
           loading={createAppointment.isPending}
           onPress={handleBookMeeting}
           leadingIcon="calendar-outline"
-          disabled={!selectedDate || !selectedTime}
+          disabled={!selectedSlotKey}
         />
         <Button
-          label="Message doctor"
+          label={t("doctor.messageDoctor")}
           variant="secondary"
           leadingIcon="chatbubble-outline"
           onPress={() => router.push("/(app)/doctor-chat" as Href)}
@@ -401,6 +418,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  dateCardDisabled: {
+    opacity: 0.55,
+    backgroundColor: colors.surfaceMuted,
+  },
   loadingBox: {
     paddingVertical: spacing[6],
     alignItems: "center",
@@ -424,19 +445,6 @@ const styles = StyleSheet.create({
   timeSlotActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-  },
-  timeSlotBooked: {
-    backgroundColor: colors.surfaceSunken,
-    borderColor: colors.borderSubtle,
-    opacity: 0.7,
-  },
-  tipCard: {
-    marginTop: spacing[2],
-  },
-  tipRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing[2],
   },
   footer: {
     paddingHorizontal: layout.screenPadding,
