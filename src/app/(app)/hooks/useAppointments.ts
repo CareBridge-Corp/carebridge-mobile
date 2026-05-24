@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../../../shared/api/client";
 import {
   Appointment,
@@ -6,17 +6,48 @@ import {
   CreateAppointmentPayload,
   UpdateAppointmentStatusPayload,
 } from "../types/appointment";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+/** Local calendar date as YYYY-MM-DD (avoids UTC shift from toISOString). */
+export function toLocalIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export function useAvailableSlots(
-  doctorId: string | undefined,
-  date: string | undefined,
-  meetingType: "in_person" | "online" = "in_person",
+  options: {
+    childId?: string;
+    doctorId?: string;
+    date?: string;
+    meetingType?: "in_person" | "online";
+  },
 ) {
+  const {
+    childId,
+    doctorId,
+    date,
+    meetingType = "in_person",
+  } = options;
+
   return useQuery({
-    queryKey: ["available-slots", doctorId, date, meetingType],
+    queryKey: ["available-slots", childId, doctorId, date, meetingType],
     queryFn: async () => {
-      if (!doctorId || !date) return [] as AvailableSlot[];
+      if (!date) return [] as AvailableSlot[];
+
+      if (childId) {
+        const response = await apiClient.get<{
+          date: string;
+          meeting_type: string;
+          appointment_duration_min: number;
+          slots: AvailableSlot[];
+        }>(
+          `/users/children/${childId}/assigned-clinician/available-slots?date=${date}&meeting_type=${meetingType}`,
+        );
+        return (response.slots ?? []).filter((slot) => slot.is_available);
+      }
+
+      if (!doctorId) return [] as AvailableSlot[];
 
       const response = await apiClient.get<{
         date: string;
@@ -29,7 +60,7 @@ export function useAvailableSlots(
 
       return (response.slots ?? []).filter((slot) => slot.is_available);
     },
-    enabled: !!doctorId && !!date,
+    enabled: !!date && (!!childId || !!doctorId),
   });
 }
 
@@ -44,15 +75,42 @@ export interface AvailableDay {
 }
 
 export function useAvailableDays(
-  doctorId: string | undefined,
-  from: string | undefined,
-  to: string | undefined,
-  meetingType: "in_person" | "online" = "in_person",
+  options: {
+    childId?: string;
+    doctorId?: string;
+    from?: string;
+    to?: string;
+    meetingType?: "in_person" | "online";
+  },
 ) {
+  const {
+    childId,
+    doctorId,
+    from,
+    to,
+    meetingType = "in_person",
+  } = options;
+
   return useQuery({
-    queryKey: ["available-days", doctorId, from, to, meetingType],
+    queryKey: ["available-days", childId, doctorId, from, to, meetingType],
     queryFn: async () => {
-      if (!doctorId || !from || !to) return [] as AvailableDay[];
+      if (!from || !to) return [] as AvailableDay[];
+
+      if (childId) {
+        const response = await apiClient.get<{
+          child_id: string;
+          doctor_id: string;
+          from: string;
+          to: string;
+          meeting_type: string;
+          days: AvailableDay[];
+        }>(
+          `/users/children/${childId}/assigned-clinician/available-days?from=${from}&to=${to}&meeting_type=${meetingType}`,
+        );
+        return response.days ?? [];
+      }
+
+      if (!doctorId) return [] as AvailableDay[];
 
       const response = await apiClient.get<{
         doctor_id: string;
@@ -66,7 +124,7 @@ export function useAvailableDays(
 
       return response.days ?? [];
     },
-    enabled: !!doctorId && !!from && !!to,
+    enabled: !!from && !!to && (!!childId || !!doctorId),
   });
 }
 
@@ -150,6 +208,7 @@ export function useCreateAppointment() {
         queryKey: ["doctor-appointments", variables.doctorId],
       });
       queryClient.invalidateQueries({ queryKey: ["available-slots"] });
+      queryClient.invalidateQueries({ queryKey: ["available-days"] });
     },
   });
 }

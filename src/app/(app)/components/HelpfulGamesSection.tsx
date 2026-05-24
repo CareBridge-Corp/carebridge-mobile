@@ -5,79 +5,12 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
   Badge,
+  Card,
   SectionHeader,
   Text,
 } from "../../../shared/components/ui";
+import { GAMES_CATALOG } from "../../../shared/data/gamesCatalog";
 import { borderRadius, colors, shadows, spacing } from "../../../shared/theme";
-
-interface GameItem {
-  id: string;
-  title: string;
-  focus: string;
-  ageRange: string;
-  description: string;
-  icon: keyof typeof import("@expo/vector-icons/build/Ionicons").default.glyphMap;
-  accent: string;
-  url?: string;
-}
-
-const GAMES: GameItem[] = [
-  {
-    id: "feelings-match",
-    title: "Feelings Match",
-    focus: "Emotion recognition",
-    ageRange: "3+ years",
-    description:
-      "Match faces with simple feelings — happy, sad, curious — to build social-emotional awareness.",
-    icon: "happy-outline",
-    accent: "#FDE68A",
-    url: "https://www.understood.org/en/articles/games-that-teach-social-emotional-skills",
-  },
-  {
-    id: "shape-sorter",
-    title: "Shape Sorter",
-    focus: "Visual reasoning",
-    ageRange: "2+ years",
-    description:
-      "Calming sorting tasks that strengthen pattern recognition and fine motor control.",
-    icon: "shapes-outline",
-    accent: "#BFDBFE",
-    url: "https://www.gamesforyoungminds.com/",
-  },
-  {
-    id: "sound-safari",
-    title: "Sound Safari",
-    focus: "Auditory focus",
-    ageRange: "3+ years",
-    description:
-      "Listen for animal sounds and tap the picture that matches — supports listening attention.",
-    icon: "musical-notes-outline",
-    accent: "#C7F0DB",
-    url: "https://www.do2learn.com/games/auditory.htm",
-  },
-  {
-    id: "story-builder",
-    title: "Story Builder",
-    focus: "Communication",
-    ageRange: "4+ years",
-    description:
-      "Drag pictures to build short stories — encourages narrative skills and turn-taking.",
-    icon: "book-outline",
-    accent: "#FBCFE8",
-    url: "https://www.autismparentingmagazine.com/best-autism-games/",
-  },
-  {
-    id: "breath-buddy",
-    title: "Breath Buddy",
-    focus: "Self-regulation",
-    ageRange: "3+ years",
-    description:
-      "Guided breathing animations that help regulate big feelings during transitions.",
-    icon: "leaf-outline",
-    accent: "#DDD6FE",
-    url: "https://childmind.org/article/breathing-exercises-for-kids/",
-  },
-];
 
 export function HelpfulGamesSection() {
   const { t } = useTranslation();
@@ -101,7 +34,7 @@ export function HelpfulGamesSection() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.list}
       >
-        {GAMES.map((game) => (
+        {GAMES_CATALOG.map((game) => (
           <Pressable
             key={game.id}
             onPress={() => openGame(game.url)}

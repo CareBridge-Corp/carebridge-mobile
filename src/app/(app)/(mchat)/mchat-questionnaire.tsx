@@ -101,13 +101,15 @@ export default function MChatQuestionnaireScreen() {
     questionsData?.questions?.map((q) => ({
       id: q.id,
       question: q.question,
+      description: q.description ?? "",
+      example: q.example ?? "",
       area: q.area,
-      example: "",
     })) ??
     MCHAT_QUESTIONS.map((q) => ({
       id: q.id,
       question: q.question,
       area: "general_monitoring",
+      description: "",
       example: q.example ?? "",
     }));
 
@@ -225,10 +227,27 @@ export default function MChatQuestionnaireScreen() {
             <Text variant="title1" style={styles.questionText}>
               {question.question}
             </Text>
+
+            {question.description ? (
+              <View style={styles.helpBlock}>
+                <Text variant="label" tone="brand">
+                  {t("mchat.whatWeAreChecking")}
+                </Text>
+                <Text variant="bodySmall" tone="secondary">
+                  {question.description}
+                </Text>
+              </View>
+            ) : null}
+
             {question.example ? (
-              <Text variant="bodySmall" tone="secondary" style={styles.example}>
-                {question.example}
-              </Text>
+              <View style={[styles.helpBlock, styles.exampleBlock]}>
+                <Text variant="label" tone="secondary">
+                  {t("mchat.exampleAnswer")}
+                </Text>
+                <Text variant="bodySmall" tone="secondary">
+                  {question.example}
+                </Text>
+              </View>
             ) : null}
 
             {answer !== undefined ? (
@@ -342,8 +361,16 @@ const styles = StyleSheet.create({
   questionText: {
     marginBottom: spacing[3],
   },
-  example: {
+  helpBlock: {
+    gap: spacing[1],
     marginBottom: spacing[3],
+  },
+  exampleBlock: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: borderRadius.lg,
+    padding: spacing[3],
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
   },
   answerBadge: {
     marginTop: spacing[3],
