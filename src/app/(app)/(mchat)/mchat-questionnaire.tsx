@@ -98,20 +98,15 @@ export default function MChatQuestionnaireScreen() {
   const { answers, setAnswer, setSessionMeta } = useMChatStore();
 
   const questions =
-    questionsData?.questions?.map((q) => ({
-      id: q.id,
-      question: q.question,
-      description: q.description ?? "",
-      example: q.example ?? "",
-      area: q.area,
-    })) ??
-    MCHAT_QUESTIONS.map((q) => ({
-      id: q.id,
-      question: q.question,
-      area: "general_monitoring",
-      description: "",
-      example: q.example ?? "",
-    }));
+    questionsData?.questions?.length
+      ? questionsData.questions
+      : MCHAT_QUESTIONS.map((q) => ({
+          id: q.id,
+          question: q.question,
+          area: "general_monitoring",
+          description: "",
+          example: q.example ?? "",
+        }));
 
   useEffect(() => {
     if (questionsData?.questionIds?.length) {

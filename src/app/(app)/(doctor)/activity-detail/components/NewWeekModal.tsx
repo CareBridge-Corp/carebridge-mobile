@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { Modal, StyleSheet, View } from "react-native";
 import { Button, Text } from "../../../../../shared/components/ui";
 import { borderRadius, colors, shadows, spacing } from "../../../../../shared/theme";
@@ -16,6 +17,8 @@ export function NewWeekModal({
   onContinue,
   weekNumber,
 }: NewWeekModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -30,7 +33,7 @@ export function NewWeekModal({
           </View>
 
           <Text variant="title1" align="center" style={styles.title}>
-            Next week unlocked!
+            {t("activity.newWeekTitle")}
           </Text>
           <Text
             variant="body"
@@ -38,14 +41,21 @@ export function NewWeekModal({
             align="center"
             style={styles.subtitle}
           >
-            {`Great progress! You've completed your current tasks and are now moving to Week ${weekNumber}.`}
+            {t("activity.newWeekMessage", { week: weekNumber })}
           </Text>
 
-          <Button
-            label="Let's go"
-            onPress={onContinue}
-            trailingIcon="arrow-forward"
-          />
+          <View style={styles.actions}>
+            <Button
+              label={t("activity.continueToWeek", { week: weekNumber })}
+              onPress={onContinue}
+              trailingIcon="arrow-forward"
+            />
+            <Button
+              label={t("activity.backToSchedule")}
+              variant="secondary"
+              onPress={onClose}
+            />
+          </View>
         </View>
       </View>
     </Modal>
@@ -82,5 +92,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginBottom: spacing[6],
+  },
+  actions: {
+    width: "100%",
+    gap: spacing[3],
   },
 });

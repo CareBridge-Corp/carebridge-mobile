@@ -3,7 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Badge, Card, Text } from "../../../../../shared/components/ui";
+import { Badge, Text } from "../../../../../shared/components/ui";
 import {
   getGamesForActivity,
   type GameItem,
@@ -47,34 +47,43 @@ export function RecommendedGames({ riskCategory }: RecommendedGamesProps) {
           onPress={() => openGame(game)}
           disabled={!game.url}
           style={({ pressed }) => [
-            styles.card,
+            styles.cardOuter,
             pressed && game.url && styles.cardPressed,
             !game.url && styles.cardStatic,
           ]}
           accessibilityRole="button"
           accessibilityLabel={game.title}
         >
-          <View style={[styles.iconWrap, { backgroundColor: game.accent }]}>
-            <Ionicons name={game.icon} size={22} color={colors.textPrimary} />
-          </View>
-          <Text variant="bodyMedium" weight="semibold" numberOfLines={1}>
-            {game.title}
-          </Text>
-          <Text variant="caption" tone="secondary" numberOfLines={2}>
-            {game.description}
-          </Text>
-          <View style={styles.meta}>
-            <Badge label={game.focus} tone="brand" size="sm" />
-            {game.url ? (
-              <View style={styles.openRow}>
-                <Text variant="caption" tone="brand" weight="semibold">
-                  {t("common.open")}
-                </Text>
-                <Ionicons name="open-outline" size={14} color={colors.primary} />
-              </View>
-            ) : (
-              <Badge label={t("activity.tryAtHome")} tone="neutral" size="sm" />
-            )}
+          <View style={styles.cardInner}>
+            <View style={[styles.iconWrap, { backgroundColor: game.accent }]}>
+              <Ionicons name={game.icon} size={22} color={colors.textPrimary} />
+            </View>
+            <Text variant="bodyMedium" weight="semibold" numberOfLines={2}>
+              {game.title}
+            </Text>
+            <Text variant="caption" tone="secondary" numberOfLines={3}>
+              {game.description}
+            </Text>
+            <View style={styles.meta}>
+              <Badge
+                label={game.focus}
+                tone="brand"
+                size="sm"
+                style={styles.focusBadge}
+              />
+              {game.url ? (
+                <View style={styles.actionRow}>
+                  <Text variant="caption" tone="brand" weight="semibold">
+                    {t("common.open")}
+                  </Text>
+                  <Ionicons name="open-outline" size={14} color={colors.primary} />
+                </View>
+              ) : (
+                <View style={styles.actionRow}>
+                  <Badge label={t("activity.tryAtHome")} tone="neutral" size="sm" />
+                </View>
+              )}
+            </View>
           </View>
         </Pressable>
       ))}
@@ -106,15 +115,20 @@ const styles = StyleSheet.create({
     gap: spacing[3],
     paddingRight: spacing[2],
   },
-  card: {
-    width: 200,
-    backgroundColor: colors.surface,
+  cardOuter: {
+    width: 220,
     borderRadius: borderRadius.xl,
-    padding: spacing[4],
-    gap: spacing[2],
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+    overflow: "hidden",
     ...shadows.sm,
+  },
+  cardInner: {
+    padding: spacing[4],
+    gap: spacing[2],
+    minHeight: 188,
+    justifyContent: "flex-start",
   },
   cardPressed: {
     opacity: 0.9,
@@ -131,16 +145,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   meta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    marginTop: "auto",
+    paddingTop: spacing[2],
     gap: spacing[2],
-    marginTop: spacing[1],
   },
-  openRow: {
+  focusBadge: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+  },
+  actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    alignSelf: "flex-start",
+    gap: spacing[1],
   },
   chips: {
     flexDirection: "row",

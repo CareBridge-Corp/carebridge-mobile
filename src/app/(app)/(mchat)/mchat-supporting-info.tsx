@@ -1,20 +1,19 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { Href, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Image,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 import apiClient from "../../../shared/api/client";
-import multipartApiClient from "../../../shared/api/multipartClient";
+import { uploadScreeningSupportingInfo } from "../../../shared/api/uploadScreeningSupportingInfo";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
   Button,
@@ -61,71 +60,68 @@ export default function MChatSupportingInfoScreen() {
     title: "",
     message: "",
   });
+  const createdScreeningIdRef = useRef<string | null>(null);
+  const queryClient = useQueryClient();
 
   const submitMutation = useMutation({
+    retry: false,
     mutationFn: async () => {
       if (!activeChild?.childId) throw new Error("No active child selected");
 
-      const screeningRes = await apiClient.post("/screenings", {
-        childId: activeChild.childId,
-        answers,
-        questionIds: useMChatStore.getState().questionIds,
-      });
-      const screeningId =
-        screeningRes.data?.screeningId ||
-        screeningRes.screeningId ||
-        screeningRes.screening?.screeningId;
-      if (!screeningId)
-        throw new Error("Failed to retrieve screening ID from server");
+      let screeningId = createdScreeningIdRef.current;
 
-      if (description.trim() || pictures.length > 0 || audioUri) {
-        const formData = new FormData();
-        if (description.trim())
-          formData.append("parentDescription", description.trim());
-        pictures.forEach((uri, index) => {
-          const filename = uri.split("/").pop() || `child_image_${index}.jpg`;
-          const match = /\.(\w+)$/.exec(filename);
-          const type = match ? `image/${match[1]}` : "image/jpeg";
-          formData.append("childPictures", {
-            uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
-            name: filename,
-            type,
-          } as any);
+      if (!screeningId) {
+        const screeningRes = await apiClient.post("/screenings", {
+          childId: activeChild.childId,
+          answers,
+          questionIds: useMChatStore.getState().questionIds,
         });
-        if (audioUri) {
-          const audioFilename = audioUri.split("/").pop() || "audio_note.m4a";
-          formData.append("audioNote", {
-            uri:
-              Platform.OS === "android"
-                ? audioUri
-                : audioUri.replace("file://", ""),
-            name: audioFilename,
-            type: "audio/m4a",
-          } as any);
+        screeningId =
+          screeningRes.data?.screeningId ||
+          screeningRes.screeningId ||
+          screeningRes.screening?.screeningId ||
+          null;
+        if (!screeningId) {
+          throw new Error("Failed to retrieve screening ID from server");
         }
-        await multipartApiClient.post(
-          `/screenings/${screeningId}/supporting-info`,
-          formData,
-        );
+        createdScreeningIdRef.current = screeningId;
       }
-      return true;
+
+      await uploadScreeningSupportingInfo({
+        screeningId,
+        parentDescription: description,
+        pictureUris: pictures,
+        audioUri,
+      });
+
+      return screeningId;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      createdScreeningIdRef.current = null;
       setConfirmModalVisible(false);
       clearStore();
+      await queryClient.invalidateQueries({ queryKey: ["screenings"] });
+      await queryClient.invalidateQueries({ queryKey: ["screening-progress"] });
       router.replace("/(app)/(mchat)/mchat-success" as Href);
     },
     onError: (error: any) => {
       setConfirmModalVisible(false);
+      const screeningCreated = !!createdScreeningIdRef.current;
       setStatusConfig({
         type: "error",
         title: t("mchat.submissionFailed"),
-        message:
-          error.message || t("mchat.submissionFailedMessage"),
+        message: screeningCreated
+          ? t("mchat.supportingInfoFailedMessage")
+          : error.message || t("mchat.submissionFailedMessage"),
       });
       setStatusModalVisible(true);
     },
   });
+
+  const handleConfirmSubmit = () => {
+    if (submitMutation.isPending) return;
+    submitMutation.mutate();
+  };
 
   const handleAddPicture = async () => {
     if (pictures.length >= 5) {
@@ -431,7 +427,7 @@ export default function MChatSupportingInfoScreen() {
         primaryButtonText={
           submitMutation.isPending ? t("mchat.submitting") : t("mchat.yesSubmit")
         }
-        onPrimaryPress={() => submitMutation.mutate()}
+        onPrimaryPress={handleConfirmSubmit}
         secondaryButtonText={t("mchat.goBack")}
         onSecondaryPress={() => setConfirmModalVisible(false)}
       />
