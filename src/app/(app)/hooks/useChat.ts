@@ -1,16 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../../../shared/api/client";
 import {
-    ChatConversation,
-    ChatMessage,
-    useChatStore,
+  ChatConversation,
+  ChatMessage,
+  useChatStore,
 } from "../store/chatStore";
 
 export function useConversations(childId?: string) {
   return useQuery({
     queryKey: ["chat-conversations", childId],
     queryFn: async () => {
-      // If childId is provided, fetch conversation for that specific child
       if (childId) {
         const response: any = await apiClient.get(
           `/chat/conversations/${childId}`,
@@ -22,14 +21,13 @@ export function useConversations(childId?: string) {
         return [];
       }
 
-      // Otherwise fetch all conversations
       const response: any = await apiClient.get("/chat/conversations");
       const conversations = response.conversations || [];
       return conversations as ChatConversation[];
     },
     enabled: true,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60,
   });
 }
 
@@ -59,7 +57,6 @@ export function useChatMessages(childId: string, conversationId?: string) {
     queryFn: async () => {
       if (!childId) return [];
 
-      // If conversationId is provided, use the new endpoint structure
       const endpoint = conversationId
         ? `/chat/${childId}/conversations/${conversationId}/messages?limit=50`
         : `/chat/children/${childId}/messages?limit=50`;
@@ -70,7 +67,7 @@ export function useChatMessages(childId: string, conversationId?: string) {
     },
     enabled: !!childId,
     refetchOnWindowFocus: true,
-    refetchInterval: false, // Don't poll, rely on socket updates
+    staleTime: 0,
   });
 }
 
@@ -87,16 +84,17 @@ export function useSendMessage() {
       conversationId?: string;
       content: string;
     }) => {
-      // Always use the children endpoint
       const endpoint = `/chat/children/${childId}/messages`;
 
       const response: any = await apiClient.post(endpoint, { content });
       return response.chatMessage as ChatMessage;
     },
-    onSuccess: (message, variables) => {
-      // Invalidate and refetch messages immediately
+    onSuccess: (_message, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["chat-messages", variables.childId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["chat-conversations", variables.childId],
       });
       queryClient.invalidateQueries({
         queryKey: ["chat-conversations"],
