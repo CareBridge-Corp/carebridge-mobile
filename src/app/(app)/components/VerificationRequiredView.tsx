@@ -1,95 +1,80 @@
-import { colors, spacing } from "@/shared/theme";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet, View } from "react-native";
 import {
-  Dimensions,
-  StyleSheet,
+  Button,
+  Card,
   Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+} from "../../../shared/components/ui";
+import { colors, spacing } from "../../../shared/theme";
 
-const { width } = Dimensions.get("window");
+const BENEFITS = [
+  { key: "benefit1", fallback: "Personalized activity plans" },
+  { key: "benefit2", fallback: "Progress tracking" },
+  { key: "benefit3", fallback: "Clinician guidance" },
+];
 
+/**
+ * Empty-state shown on Schedule before verification + screening.
+ */
 export const VerificationRequiredView = () => {
   const router = useRouter();
   const { t } = useTranslation();
 
-  const handleMChat = () => {
-    router.push("/(app)/mchat-privacy" as Href);
-  };
-
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
+      <Card variant="elevated" padding="lg">
         <View style={styles.iconCircle}>
-          <MaterialCommunityIcons
-            name="shield-lock"
-            size={44}
-            color={colors.primary}
-          />
+          <Ionicons name="lock-closed" size={28} color={colors.primary} />
         </View>
 
-        <Text style={styles.title}>
-          {t("verification.title", "Verification Required")}
+        <Text variant="title1" align="center">
+          {t("verification.title", "Verification required")}
         </Text>
-        <Text style={styles.subtitle}>
+        <Text
+          variant="body"
+          tone="secondary"
+          align="center"
+          style={styles.subtitle}
+        >
           {t(
             "verification.subtitle",
-            "To unlock your personalized schedule and therapy roadmap, we need to complete a brief assessment.",
+            "Complete a brief assessment to unlock your personalized schedule.",
           )}
         </Text>
 
-        <View style={styles.benefitsList}>
-          <View style={styles.benefitItem}>
-            <Ionicons
-              name="checkmark-circle"
-              size={20}
-              color={colors.primary}
-            />
-            <Text style={styles.benefitText}>
-              {t("verification.benefit1", "Personalized activity plans")}
-            </Text>
-          </View>
-          <View style={styles.benefitItem}>
-            <Ionicons
-              name="checkmark-circle"
-              size={20}
-              color={colors.primary}
-            />
-            <Text style={styles.benefitText}>
-              {t("verification.benefit2", "Progress tracking")}
-            </Text>
-          </View>
-          <View style={styles.benefitItem}>
-            <Ionicons
-              name="checkmark-circle"
-              size={20}
-              color={colors.primary}
-            />
-            <Text style={styles.benefitText}>
-              {t("verification.benefit3", "Clinician guidance")}
-            </Text>
-          </View>
+        <View style={styles.benefits}>
+          {BENEFITS.map((b) => (
+            <View key={b.key} style={styles.benefitRow}>
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color={colors.success}
+              />
+              <Text variant="bodySmall" tone="primary">
+                {t(`verification.${b.key}`, b.fallback)}
+              </Text>
+            </View>
+          ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleMChat}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>
-            {t("verification.startButton", "Start M-CHAT Assessment")}
-          </Text>
-          <Ionicons name="arrow-forward" size={20} color={colors.white} />
-        </TouchableOpacity>
+        <Button
+          label={t("verification.startButton", "Start M-CHAT assessment")}
+          onPress={() => router.push("/(app)/mchat-privacy" as Href)}
+          trailingIcon="arrow-forward"
+        />
 
-        <Text style={styles.infoText}>
-          {t("verification.duration", "Takes about 5-10 minutes")}
+        <Text
+          variant="caption"
+          tone="tertiary"
+          align="center"
+          style={styles.info}
+        >
+          {t("verification.duration", "Takes about 10 minutes")}
         </Text>
-      </View>
+      </Card>
     </View>
   );
 };
@@ -98,81 +83,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    padding: spacing.xl,
-    backgroundColor: colors.backgroundBlue,
-  },
-  card: {
-    backgroundColor: colors.white,
-    borderRadius: 28,
-    padding: spacing.xxxl,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 3,
+    paddingHorizontal: spacing[5],
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#F0F9FF",
-    justifyContent: "center",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryMuted,
     alignItems: "center",
-    marginBottom: spacing.xl,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#0C4A6E",
-    textAlign: "center",
-    marginBottom: spacing.sm,
-    letterSpacing: -0.5,
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: spacing[4],
   },
   subtitle: {
-    fontSize: 16,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: spacing.xxl,
+    marginTop: spacing[2],
+    marginBottom: spacing[5],
   },
-  benefitsList: {
-    width: "100%",
-    marginBottom: spacing.xxl,
-    gap: spacing.md,
+  benefits: {
+    gap: spacing[2],
+    marginBottom: spacing[5],
   },
-  benefitItem: {
+  benefitRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: "#F8FAFC",
-    padding: spacing.md,
+    gap: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    backgroundColor: colors.surfaceMuted,
     borderRadius: 12,
   },
-  benefitText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#334155",
-  },
-  button: {
-    backgroundColor: colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    height: 60,
-    borderRadius: 18,
-    gap: 10,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  infoText: {
-    fontSize: 12,
-    color: "#94A3B8",
-    marginTop: spacing.lg,
-    fontWeight: "500",
+  info: {
+    marginTop: spacing[3],
   },
 });

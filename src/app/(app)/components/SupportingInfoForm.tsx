@@ -10,20 +10,20 @@ import {
   Image,
   Keyboard,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "../../../shared/theme";
+  Button,
+  IconButton,
+  SectionHeader,
+  Text,
+  TextField,
+} from "../../../shared/components/ui";
+import { borderRadius, colors, layout, spacing } from "../../../shared/theme";
 
 interface SupportingInfoFormProps {
   screeningId: string;
@@ -53,7 +53,6 @@ export function SupportingInfoForm({
     message: "",
   });
 
-  // Animated value for keyboard height
   const [keyboardHeight] = useState(new Animated.Value(0));
 
   const submitMutation = useMutation({
@@ -94,10 +93,8 @@ export function SupportingInfoForm({
         } as any);
       }
 
-      // Get auth token
       const token = await SecureStore.getItemAsync("authToken");
 
-      // Use fetch instead of axios for better React Native FormData support
       const apiUrl =
         process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
       const response = await fetch(
@@ -129,13 +126,11 @@ export function SupportingInfoForm({
       });
       setStatusModalVisible(true);
 
-      // Reset form
       setDescription("");
       setPictures([]);
       setAudioUri(null);
       setRecordingDuration(0);
 
-      // Call onSuccess callback after a short delay
       setTimeout(() => {
         setStatusModalVisible(false);
         onSuccess?.();
@@ -144,7 +139,7 @@ export function SupportingInfoForm({
     onError: (error: any) => {
       setStatusConfig({
         type: "error",
-        title: "Submission Failed",
+        title: "Submission failed",
         message:
           error.message ||
           "An error occurred while submitting supporting information.",
@@ -157,7 +152,7 @@ export function SupportingInfoForm({
     if (pictures.length >= 5) {
       setStatusConfig({
         type: "info",
-        title: "Limit Reached",
+        title: "Limit reached",
         message: "You can only upload up to 5 pictures.",
       });
       setStatusModalVisible(true);
@@ -168,7 +163,7 @@ export function SupportingInfoForm({
     if (status !== "granted") {
       setStatusConfig({
         type: "error",
-        title: "Permission Required",
+        title: "Permission required",
         message: "Please grant camera roll permissions to upload images.",
       });
       setStatusModalVisible(true);
@@ -213,12 +208,12 @@ export function SupportingInfoForm({
       } else {
         setStatusConfig({
           type: "error",
-          title: "Permission Required",
+          title: "Permission required",
           message: "Please grant microphone permissions to record audio.",
         });
         setStatusModalVisible(true);
       }
-    } catch (err) {
+    } catch {
       // Silent error handling
     }
   };
@@ -237,7 +232,7 @@ export function SupportingInfoForm({
       const uri = recording.getURI();
       setAudioUri(uri);
       setRecording(null);
-    } catch (error) {
+    } catch {
       setIsRecording(false);
       setRecording(null);
     }
@@ -270,7 +265,7 @@ export function SupportingInfoForm({
           setSound(null);
         }
       });
-    } catch (error) {
+    } catch {
       setIsPlaying(false);
       setSound(null);
     }
@@ -293,7 +288,6 @@ export function SupportingInfoForm({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Keyboard event listeners for smooth button transitions
   useEffect(() => {
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
@@ -333,7 +327,7 @@ export function SupportingInfoForm({
             if (status.canRecord) {
               await recording.stopAndUnloadAsync();
             }
-          } catch (e) {}
+          } catch {}
         }
         if (sound) {
           sound.stopAsync().catch(() => {});
@@ -353,139 +347,134 @@ export function SupportingInfoForm({
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
-        <Text style={styles.title}>Add Supporting Information</Text>
-        <Text style={styles.subtitle}>
+        <Text variant="display" style={styles.title}>
+          Add supporting info
+        </Text>
+        <Text variant="body" tone="secondary" style={styles.subtitle}>
           Provide additional details to help clinicians with their analysis.
         </Text>
 
-        {/* Additional Comments */}
-        <Text style={styles.label}>Additional Comments</Text>
-        <TextInput
-          style={styles.textArea}
-          placeholder="e.g. I noticed my child making less eye contact recently..."
-          placeholderTextColor="#A0B8C8"
+        <SectionHeader title="Additional comments" />
+        <TextField
           multiline
-          numberOfLines={4}
+          placeholder="e.g. I noticed my child making less eye contact recently..."
           value={description}
           onChangeText={setDescription}
-          textAlignVertical="top"
         />
 
-        {/* Voice Note */}
-        <Text style={styles.label}>Voice Note (Optional)</Text>
-        <View style={styles.audioContainer}>
+        <View style={styles.spacer} />
+
+        <SectionHeader title="Voice note" />
+        <View>
           {!audioUri ? (
-            <TouchableOpacity
+            <Pressable
               style={[styles.recordBtn, isRecording && styles.recordingActive]}
               onPress={isRecording ? stopRecording : startRecording}
             >
               <Ionicons
                 name={isRecording ? "stop" : "mic"}
-                size={24}
-                color={isRecording ? colors.white : "#0C4A6E"}
+                size={20}
+                color={isRecording ? colors.textInverse : colors.primary}
               />
               <Text
-                style={[
-                  styles.recordBtnText,
-                  isRecording && { color: colors.white },
-                ]}
+                variant="bodyMedium"
+                weight="semibold"
+                style={{
+                  color: isRecording
+                    ? colors.textInverse
+                    : colors.textPrimary,
+                }}
               >
                 {isRecording
                   ? `Recording... ${formatDuration(recordingDuration)}`
-                  : "Tap to Record"}
+                  : "Tap to record"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             <View style={styles.audioPlayer}>
-              <TouchableOpacity style={styles.playBtn} onPress={playAudio}>
-                <Ionicons
-                  name={isPlaying ? "pause" : "play"}
-                  size={24}
-                  color="#0C4A6E"
-                />
+              <Pressable style={styles.playBtn} onPress={playAudio}>
+                <View style={styles.playIconCircle}>
+                  <Ionicons
+                    name={isPlaying ? "pause" : "play"}
+                    size={20}
+                    color={colors.primary}
+                  />
+                </View>
                 <View>
-                  <Text style={styles.playBtnText}>
-                    {isPlaying ? "Pause Recording" : "Play Recording"}
+                  <Text variant="bodyMedium" weight="semibold">
+                    {isPlaying ? "Pause recording" : "Play recording"}
                   </Text>
-                  <Text style={styles.durationText}>
+                  <Text variant="caption" tone="secondary">
                     {formatDuration(recordingDuration)}
                   </Text>
                 </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.removeAudioBtn}
+              </Pressable>
+              <IconButton
+                icon="trash-outline"
+                accessibilityLabel="Remove audio"
                 onPress={removeAudio}
-              >
-                <Ionicons name="trash-outline" size={24} color="#EF4444" />
-              </TouchableOpacity>
+                tint={colors.error}
+              />
             </View>
           )}
         </View>
 
-        {/* Child Pictures */}
-        <Text style={styles.label}>Child Pictures (Up to 5)</Text>
+        <View style={styles.spacer} />
+
+        <SectionHeader title="Child pictures" eyebrow="Up to 5 photos" />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.imagesScroll}
+          contentContainerStyle={styles.imagesScroll}
         >
           {pictures.map((uri, index) => (
             <View key={index} style={styles.imageWrapper}>
               <Image source={{ uri }} style={styles.imageThumb} />
-              <TouchableOpacity
+              <Pressable
                 style={styles.removeImageBtn}
                 onPress={() =>
                   setPictures(pictures.filter((_, i) => i !== index))
                 }
               >
-                <Ionicons name="close-circle" size={24} color="#EF4444" />
-              </TouchableOpacity>
+                <Ionicons
+                  name="close-circle"
+                  size={22}
+                  color={colors.error}
+                />
+              </Pressable>
             </View>
           ))}
-          {pictures.length < 5 && (
-            <TouchableOpacity
-              style={styles.addImageBtn}
-              onPress={handleAddPicture}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={32} color="#0C4A6E" />
-            </TouchableOpacity>
-          )}
+          {pictures.length < 5 ? (
+            <Pressable style={styles.addImageBtn} onPress={handleAddPicture}>
+              <Ionicons name="add" size={28} color={colors.primary} />
+            </Pressable>
+          ) : null}
         </ScrollView>
       </ScrollView>
 
-      {/* Action Buttons */}
       <Animated.View
         style={[styles.buttonContainer, { bottom: keyboardHeight }]}
       >
-        {onCancel && (
-          <TouchableOpacity
-            style={styles.secondaryButton}
+        {onCancel ? (
+          <Button
+            label="Cancel"
+            variant="secondary"
             onPress={onCancel}
             disabled={submitMutation.isPending}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.secondaryButtonText}>Cancel</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[
-            styles.primaryButton,
-            submitMutation.isPending && styles.primaryButtonDisabled,
-            !onCancel && styles.primaryButtonFull,
-          ]}
+            fullWidth={false}
+            style={{ flex: 1 }}
+          />
+        ) : null}
+        <Button
+          label={submitMutation.isPending ? "Submitting..." : "Submit"}
           onPress={() => submitMutation.mutate()}
-          disabled={submitMutation.isPending}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.primaryButtonText}>
-            {submitMutation.isPending ? "Submitting..." : "Submit"}
-          </Text>
-          <Ionicons name="checkmark-circle" size={20} color={colors.white} />
-        </TouchableOpacity>
+          loading={submitMutation.isPending}
+          trailingIcon="checkmark-circle"
+          fullWidth={false}
+          style={{ flex: 1 }}
+        />
       </Animated.View>
 
-      {/* Status Modal */}
       <StatusModal
         visible={statusModalVisible}
         type={statusConfig.type}
@@ -500,119 +489,92 @@ export function SupportingInfoForm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceMuted,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    paddingBottom: spacing.huge,
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[8],
+    paddingBottom: spacing[10],
   },
   title: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-    marginTop: spacing.huge,
+    marginBottom: spacing[2],
   },
   subtitle: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
-    marginBottom: spacing.xl,
-    lineHeight: 20,
+    marginBottom: spacing[5],
   },
-  label: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  textArea: {
-    backgroundColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    height: 120,
-  },
-  audioContainer: {
-    marginVertical: spacing.sm,
+  spacer: {
+    height: spacing[4],
   },
   recordBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E8F0F5",
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xl,
-    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing[4],
+    borderRadius: borderRadius.lg,
+    gap: spacing[2],
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   recordingActive: {
-    backgroundColor: "#EF4444",
-  },
-  recordBtnText: {
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    fontWeight: typography.fontWeight.semibold,
+    backgroundColor: colors.error,
+    borderColor: colors.error,
   },
   audioPlayer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#E8F0F5",
-    padding: spacing.md,
-    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surface,
+    padding: spacing[3],
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   playBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing[3],
+    flex: 1,
   },
-  playBtnText: {
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    fontWeight: typography.fontWeight.semibold,
-  },
-  durationText: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    marginTop: 2,
-  },
-  removeAudioBtn: {
-    padding: spacing.xs,
+  playIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
   },
   imagesScroll: {
-    flexDirection: "row",
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing[2],
+    gap: spacing[3],
   },
   imageWrapper: {
-    marginRight: spacing.md,
     position: "relative",
   },
   imageThumb: {
     width: 100,
     height: 100,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
   },
   removeImageBtn: {
     position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: colors.white,
+    top: -6,
+    right: -6,
+    backgroundColor: colors.surface,
     borderRadius: 12,
   },
   addImageBtn: {
     width: 100,
     height: 100,
-    borderRadius: borderRadius.xl,
-    backgroundColor: "#E8F0F5",
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#D1DFE8",
+    borderWidth: 1.5,
+    borderColor: colors.border,
     borderStyle: "dashed",
   },
   buttonContainer: {
@@ -621,45 +583,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: "row",
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
-    backgroundColor: colors.background,
-  },
-  secondaryButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#E8F0F5",
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xxxl,
-  },
-  secondaryButtonText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  primaryButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
-  },
-  primaryButtonFull: {
-    flex: 1,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: "#C0D4E0",
-  },
-  primaryButtonText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+    gap: spacing[3],
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: spacing[10],
+    paddingTop: spacing[3],
+    backgroundColor: colors.surfaceMuted,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 });

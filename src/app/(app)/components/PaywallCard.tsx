@@ -1,8 +1,14 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import { StyleSheet, View } from "react-native";
+import {
+  Badge,
+  Button,
+  Card,
+  Text,
+} from "../../../shared/components/ui";
+import { spacing } from "../../../shared/theme";
 
 interface PaywallCardProps {
   title: string;
@@ -15,70 +21,42 @@ export function PaywallCard({ title, description, purpose }: PaywallCardProps) {
   const { t } = useTranslation();
 
   return (
-    <View style={styles.card}>
-      <View style={styles.iconCircle}>
-        <Ionicons name="lock-closed" size={22} color={colors.white} />
+    <Card variant="elevated" padding="lg" style={styles.card}>
+      <Badge label="Premium" tone="warning" icon="star" />
+      <Text variant="title2" style={styles.title}>
+        {title}
+      </Text>
+      <Text variant="body" tone="secondary" style={styles.description}>
+        {description}
+      </Text>
+      <View style={styles.actions}>
+        <Button
+          label={t("payment.unlock", "Unlock access")}
+          onPress={() =>
+            router.push(
+              purpose
+                ? (`/(app)/payment?purpose=${purpose}` as Href)
+                : ("/(app)/payment" as Href),
+            )
+          }
+          leadingIcon="lock-open-outline"
+        />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() =>
-          router.push(
-            purpose
-              ? (`/(app)/payment?purpose=${purpose}` as Href)
-              : ("/(app)/payment" as Href),
-          )
-        }
-      >
-        <Text style={styles.buttonText}>{t("payment.unlock")}</Text>
-      </TouchableOpacity>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#FFF7ED",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xxl,
-    marginHorizontal: spacing.xxl,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: "#FDBA74",
-    alignItems: "center",
-  },
-  iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F59E0B",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: spacing.lg,
+    alignSelf: "stretch",
   },
   title: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    textAlign: "center",
-    marginBottom: spacing.sm,
+    marginTop: spacing[3],
   },
   description: {
-    fontSize: typography.fontSize.sm,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: spacing.xl,
+    marginTop: spacing[2],
   },
-  button: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xxxl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xxl,
-  },
-  buttonText: {
-    color: colors.white,
-    fontWeight: typography.fontWeight.semibold,
+  actions: {
+    marginTop: spacing[5],
   },
 });

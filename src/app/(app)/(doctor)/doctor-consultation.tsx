@@ -4,20 +4,22 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
+  Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "../../../shared/theme";
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
+  Text,
+} from "../../../shared/components/ui";
+import { borderRadius, colors, layout, spacing } from "../../../shared/theme";
 import {
   useCreateAppointment,
   useDoctorAppointments,
@@ -25,7 +27,6 @@ import {
 import { useProfile } from "../hooks/useProfile";
 import { useClinicianStore } from "../store/clinicianStore";
 
-// Mock data for dates and times
 const generateDates = () => {
   const dates = [];
   const today = new Date();
@@ -36,7 +37,7 @@ const generateDates = () => {
       id: d.toISOString().split("T")[0],
       dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
       dayNumber: d.getDate(),
-      fullDate: d,
+      month: d.toLocaleDateString("en-US", { month: "short" }),
     });
   }
   return dates;
@@ -89,25 +90,25 @@ export default function DoctorConsultationScreen() {
   const handleBookMeeting = () => {
     if (!selectedDate || !selectedTime || !clinician || !profile?.id) {
       Alert.alert(
-        "Missing Information",
+        "Missing information",
         "Please ensure all details are selected.",
       );
       return;
     }
 
-    const payload = {
+    const payload: any = {
       appointment_date: selectedDate,
       start_time: selectedTime,
       meeting_type: meetingType,
       parent_id: profile.id,
       child_id: childId,
-      schedule_id: "schedule-uuid-placeholder", // In a real flow, you'll pick this from doctor's schedules
+      schedule_id: "schedule-uuid-placeholder",
     };
 
     createAppointment.mutate(
       { doctorId: clinician.userId, payload },
       {
-        onSuccess: (data) => {
+        onSuccess: () => {
           Alert.alert("Success", "Appointment successfully booked!", [
             { text: "OK", onPress: () => router.back() },
           ]);
@@ -124,528 +125,325 @@ export default function DoctorConsultationScreen() {
     );
   };
 
-  const handleChat = () => {
-    router.push("/(app)/doctor-chat" as Href);
-  };
-
   if (!clinician) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <Text style={{ color: "#0C4A6E" }}>Doctor information not found</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{ marginTop: 20 }}
-        >
-          <Text style={{ color: "#4A9FD8" }}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <Screen background={colors.surfaceMuted}>
+        <View style={styles.center}>
+          <Text variant="title2" align="center">
+            Doctor information not found
+          </Text>
+          <Button
+            label="Go back"
+            variant="ghost"
+            onPress={() => router.back()}
+            style={{ marginTop: spacing[4] }}
+          />
+        </View>
+      </Screen>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+  const fullName =
+    `${clinician.surname ?? ""} ${clinician.firstName} ${clinician.lastName}`.trim();
+  const isActive = clinician.status === "ACTIVE";
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Doctor Consultation</Text>
-        <View style={{ width: 40 }} />
-      </View>
+  return (
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title="Doctor consultation" />
 
       <ScrollView
-        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Doctor Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.doctorImageContainer}>
-            {clinician.profilePictureUrl ? (
-              <Image
-                source={{ uri: clinician.profilePictureUrl }}
-                style={styles.doctorImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={[
-                  styles.doctorImage,
-                  {
-                    backgroundColor: colors.primary,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  },
-                ]}
-              >
-                <Ionicons name="person" size={60} color={colors.white} />
-              </View>
-            )}
-          </View>
-
-          <Text style={styles.doctorName}>
-            {clinician.surname} {clinician.firstName} {clinician.lastName}
+        <View style={styles.hero}>
+          <Avatar
+            uri={clinician.profilePictureUrl}
+            name={fullName}
+            size="xl"
+          />
+          <Text variant="display" align="center" style={styles.name}>
+            {fullName}
           </Text>
-          <Text style={styles.doctorSpecialty}>
+          <Text variant="body" tone="secondary" align="center">
             {clinician.specializations[0]?.name || "Specialist"}
           </Text>
-
-          <View style={styles.statusBadge}>
-            <View
-              style={[
-                styles.statusDot,
-                {
-                  backgroundColor:
-                    clinician.status === "ACTIVE" ? "#10B981" : "#9E9E9E",
-                },
-              ]}
-            />
-            <Text style={styles.statusText}>{clinician.status}</Text>
-          </View>
+          <Badge
+            label={clinician.status}
+            tone={isActive ? "success" : "neutral"}
+            icon={isActive ? "checkmark-circle" : "ellipse"}
+            style={styles.statusBadge}
+          />
         </View>
 
-        {/* Consultation Types */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Consultation Type</Text>
-          <View style={styles.typeSelector}>
-            <TouchableOpacity
-              style={[
-                styles.typeOption,
-                meetingType === "in_person" && styles.typeOptionActive,
-              ]}
-              onPress={() => setMeetingType("in_person")}
-            >
-              <Ionicons
-                name="business"
-                size={24}
-                color={meetingType === "in_person" ? colors.white : "#0C4A6E"}
-              />
-              <Text
-                style={[
-                  styles.typeOptionText,
-                  meetingType === "in_person" && styles.typeOptionTextActive,
-                ]}
+        <SectionHeader title="Consultation type" />
+        <View style={styles.typeRow}>
+          {(
+            [
+              { value: "in_person", label: "In person", icon: "business" },
+              { value: "video", label: "Video call", icon: "videocam" },
+            ] as const
+          ).map((option) => {
+            const active = meetingType === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                style={[styles.typeChip, active && styles.typeChipActive]}
+                onPress={() => setMeetingType(option.value)}
               >
-                In Person
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.typeOption,
-                meetingType === "video" && styles.typeOptionActive,
-              ]}
-              onPress={() => setMeetingType("video")}
-            >
-              <Ionicons
-                name="videocam"
-                size={24}
-                color={meetingType === "video" ? colors.white : "#0C4A6E"}
-              />
-              <Text
-                style={[
-                  styles.typeOptionText,
-                  meetingType === "video" && styles.typeOptionTextActive,
-                ]}
-              >
-                Video Call
-              </Text>
-            </TouchableOpacity>
-          </View>
+                <Ionicons
+                  name={option.icon as any}
+                  size={20}
+                  color={active ? colors.textInverse : colors.primary}
+                />
+                <Text
+                  variant="bodyMedium"
+                  weight="semibold"
+                  style={{
+                    color: active ? colors.textInverse : colors.textPrimary,
+                  }}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        {/* Date Selection */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Select Date</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.datesScrollContent}
-          >
-            {dates.map((date) => {
-              const isActive = selectedDate === date.id;
+        <SectionHeader title="Select a day" />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.datesScroll}
+        >
+          {dates.map((date) => {
+            const isActiveDate = selectedDate === date.id;
+            return (
+              <Pressable
+                key={date.id}
+                style={[
+                  styles.dateCard,
+                  isActiveDate && styles.dateCardActive,
+                ]}
+                onPress={() => setSelectedDate(date.id)}
+              >
+                <Text
+                  variant="caption"
+                  tone={isActiveDate ? "inverse" : "secondary"}
+                >
+                  {date.month.toUpperCase()}
+                </Text>
+                <Text
+                  variant="title1"
+                  style={{
+                    color: isActiveDate
+                      ? colors.textInverse
+                      : colors.textPrimary,
+                  }}
+                >
+                  {date.dayNumber}
+                </Text>
+                <Text
+                  variant="caption"
+                  tone={isActiveDate ? "inverse" : "secondary"}
+                >
+                  {date.dayName}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <SectionHeader title="Available times" />
+        {isAppointmentsLoading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator color={colors.primary} />
+            <Text variant="caption" tone="secondary">
+              Fetching available slots...
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.timeGrid}>
+            {TIME_SLOTS.map((time) => {
+              const active = selectedTime === time;
+              const booked = bookedSlots.includes(time);
+
               return (
-                <TouchableOpacity
-                  key={date.id}
-                  style={[styles.dateCard, isActive && styles.dateCardActive]}
-                  onPress={() => setSelectedDate(date.id)}
+                <Pressable
+                  key={time}
+                  style={[
+                    styles.timeSlot,
+                    active && styles.timeSlotActive,
+                    booked && styles.timeSlotBooked,
+                  ]}
+                  onPress={() => !booked && setSelectedTime(time)}
+                  disabled={booked}
                 >
                   <Text
-                    style={[styles.dayName, isActive && styles.dateTextActive]}
+                    variant="bodyMedium"
+                    weight="semibold"
+                    style={{
+                      color: booked
+                        ? colors.textTertiary
+                        : active
+                          ? colors.textInverse
+                          : colors.textPrimary,
+                      textDecorationLine: booked ? "line-through" : "none",
+                    }}
                   >
-                    {date.dayName}
+                    {time}
                   </Text>
-                  <Text
-                    style={[
-                      styles.dayNumber,
-                      isActive && styles.dateTextActive,
-                    ]}
-                  >
-                    {date.dayNumber}
-                  </Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
-          </ScrollView>
-        </View>
-
-        {/* Time Selection */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Select Time</Text>
-          <View style={styles.timeGrid}>
-            {isAppointmentsLoading ? (
-              <View
-                style={{
-                  flex: 1,
-                  paddingVertical: spacing.xl,
-                  alignItems: "center",
-                }}
-              >
-                <ActivityIndicator color={colors.primary} size="small" />
-                <Text
-                  style={{ marginTop: spacing.sm, color: colors.textLight }}
-                >
-                  Fetching available slots...
-                </Text>
-              </View>
-            ) : (
-              TIME_SLOTS.map((time) => {
-                const isActive = selectedTime === time;
-                const isBooked = bookedSlots.includes(time);
-
-                return (
-                  <TouchableOpacity
-                    key={time}
-                    style={[
-                      styles.timeSlot,
-                      isActive && styles.timeSlotActive,
-                      isBooked && styles.timeSlotBooked,
-                    ]}
-                    onPress={() => setSelectedTime(time)}
-                    disabled={isBooked}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.timeSlotText,
-                        isActive && styles.timeSlotTextActive,
-                        isBooked && styles.timeSlotTextBooked,
-                      ]}
-                    >
-                      {time}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })
-            )}
           </View>
-        </View>
+        )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity
-            style={[
-              styles.primaryActionButton,
-              (!selectedDate || !selectedTime || createAppointment.isPending) &&
-                styles.buttonDisabled,
-            ]}
-            onPress={handleBookMeeting}
-            activeOpacity={0.8}
-            disabled={
-              !selectedDate || !selectedTime || createAppointment.isPending
-            }
-          >
-            {createAppointment.isPending ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={colors.white}
-              />
-            )}
-            <Text style={styles.primaryActionButtonText}>
-              {createAppointment.isPending
-                ? "Confirming..."
-                : "Confirm Appointment"}
+        <Card variant="tinted" padding="md" style={styles.tipCard}>
+          <View style={styles.tipRow}>
+            <Ionicons
+              name="information-circle"
+              size={20}
+              color={colors.primary}
+            />
+            <Text variant="bodySmall" tone="secondary" style={{ flex: 1 }}>
+              Booked slots are unavailable. Choose a free time to confirm your
+              appointment.
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryActionButton}
-            onPress={handleChat}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color="#0C4A6E" />
-            <Text style={styles.secondaryActionButtonText}>Message Doctor</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: 100 }} />
+          </View>
+        </Card>
       </ScrollView>
-    </View>
+
+      <View style={styles.footer}>
+        <Button
+          label={
+            createAppointment.isPending
+              ? "Confirming..."
+              : "Confirm appointment"
+          }
+          loading={createAppointment.isPending}
+          onPress={handleBookMeeting}
+          leadingIcon="calendar-outline"
+          disabled={!selectedDate || !selectedTime}
+        />
+        <Button
+          label="Message doctor"
+          variant="secondary"
+          leadingIcon="chatbubble-outline"
+          onPress={() => router.push("/(app)/doctor-chat" as Href)}
+        />
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  center: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
+    paddingHorizontal: layout.screenPadding,
   },
-  backButton: {
-    padding: spacing.sm,
+  scrollContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[3],
+    paddingBottom: spacing[10],
+    gap: spacing[3],
   },
-  headerTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  profileCard: {
+  hero: {
     alignItems: "center",
-    paddingVertical: spacing.xxxl,
-    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing[4],
+    gap: spacing[1],
   },
-  doctorImageContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "#E8F0F5",
-    overflow: "hidden",
-    marginBottom: spacing.lg,
-  },
-  doctorImage: {
-    width: "100%",
-    height: "100%",
-  },
-  doctorName: {
-    fontSize: 28,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.xs,
-  },
-  doctorSpecialty: {
-    fontSize: typography.fontSize.md,
-    color: "#A0B8C8",
-    marginBottom: spacing.lg,
+  name: {
+    marginTop: spacing[2],
   },
   statusBadge: {
+    marginTop: spacing[2],
+  },
+  typeRow: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F5F5F5",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.xl,
-    gap: spacing.sm,
+    gap: spacing[3],
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#9E9E9E",
-  },
-  statusText: {
-    fontSize: typography.fontSize.sm,
-    color: "#757575",
-    fontWeight: typography.fontWeight.medium,
-  },
-  sectionContainer: {
-    paddingHorizontal: spacing.xxl,
-    marginBottom: spacing.xl,
-  },
-  typeSelector: {
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  typeOption: {
+  typeChip: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    gap: spacing.sm,
+    borderColor: colors.border,
+    gap: spacing[2],
   },
-  typeOptionActive: {
-    backgroundColor: "#0C4A6E",
-    borderColor: "#0C4A6E",
+  typeChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  typeOptionText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
-  },
-  typeOptionTextActive: {
-    color: colors.white,
-  },
-  datesScrollContent: {
-    paddingRight: spacing.xxl,
-    gap: spacing.sm,
+  datesScroll: {
+    paddingRight: spacing[4],
+    gap: spacing[2],
+    paddingBottom: spacing[2],
   },
   dateCard: {
-    width: 64,
-    height: 80,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
     alignItems: "center",
-    justifyContent: "center",
+    minWidth: 72,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing[1],
   },
   dateCardActive: {
-    backgroundColor: "#0C4A6E",
-    borderColor: "#0C4A6E",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  dayName: {
-    fontSize: typography.fontSize.sm,
-    color: "#64748B",
-    marginBottom: 4,
-  },
-  dayNumber: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-  },
-  dateTextActive: {
-    color: colors.white,
+  loadingBox: {
+    paddingVertical: spacing[6],
+    alignItems: "center",
+    gap: spacing[2],
   },
   timeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing[2],
   },
   timeSlot: {
-    width: "30%",
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
+    minWidth: 88,
+    paddingVertical: spacing[3],
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: colors.border,
     alignItems: "center",
+    flexGrow: 1,
   },
   timeSlotActive: {
-    backgroundColor: "#0C4A6E",
-    borderColor: "#0C4A6E",
-  },
-  timeSlotText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
-  },
-  timeSlotTextActive: {
-    color: colors.white,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   timeSlotBooked: {
-    backgroundColor: "#F1F5F9",
-    borderColor: "#E2E8F0",
-    opacity: 0.6,
+    backgroundColor: colors.surfaceSunken,
+    borderColor: colors.borderSubtle,
+    opacity: 0.7,
   },
-  timeSlotTextBooked: {
-    color: "#94A3B8",
-    textDecorationLine: "line-through",
+  tipCard: {
+    marginTop: spacing[2],
   },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  actionButtonsContainer: {
-    paddingHorizontal: spacing.xxl,
-    gap: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  primaryActionButton: {
+  tipRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxl,
-    gap: spacing.sm,
+    alignItems: "flex-start",
+    gap: spacing[2],
   },
-  primaryActionButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
-  },
-  secondaryActionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.white,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxl,
-    gap: spacing.sm,
-    borderWidth: 2,
-    borderColor: "#0C4A6E",
-  },
-  secondaryActionButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  recommendationsSection: {
-    paddingHorizontal: spacing.xxl,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.lg,
-  },
-  recommendationCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  recommendationIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#E3F2FD",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  recommendationInfo: {
-    flex: 1,
-  },
-  recommendationName: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: 4,
-  },
-  recommendationRole: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
+  footer: {
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing[4],
+    backgroundColor: colors.surfaceMuted,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    gap: spacing[2],
   },
 });

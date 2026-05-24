@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { colors, spacing } from "../../../../../shared/theme";
+import { Modal, StyleSheet, View } from "react-native";
+import { Button, Text } from "../../../../../shared/components/ui";
+import { borderRadius, colors, shadows, spacing } from "../../../../../shared/theme";
 
 interface NewWeekModalProps {
   visible: boolean;
@@ -25,23 +26,26 @@ export function NewWeekModal({
       <View style={styles.overlay}>
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Ionicons name="sparkles" size={48} color="#0C4A6E" />
+            <Ionicons name="sparkles" size={36} color={colors.primary} />
           </View>
 
-          <Text style={styles.title}>Next Week Plan!</Text>
-          <Text style={styles.subtitle}>
-            Great progress! You've completed your current tasks and are now
-            moving to Week {weekNumber}.
+          <Text variant="title1" align="center" style={styles.title}>
+            Next week unlocked!
+          </Text>
+          <Text
+            variant="body"
+            tone="secondary"
+            align="center"
+            style={styles.subtitle}
+          >
+            {`Great progress! You've completed your current tasks and are now moving to Week ${weekNumber}.`}
           </Text>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.confirmButton]}
-              onPress={onContinue}
-            >
-              <Text style={styles.confirmButtonText}>Let's go</Text>
-            </TouchableOpacity>
-          </View>
+          <Button
+            label="Let's go"
+            onPress={onContinue}
+            trailingIcon="arrow-forward"
+          />
         </View>
       </View>
     </Modal>
@@ -51,60 +55,32 @@ export function NewWeekModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(12, 74, 110, 0.4)",
+    backgroundColor: colors.overlay,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.xl,
+    padding: spacing[5],
   },
   content: {
-    backgroundColor: colors.white,
-    borderRadius: 32,
-    padding: spacing.xxxl,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xxl,
+    padding: spacing[6],
     width: "100%",
     alignItems: "center",
-    shadowColor: "#0C4A6E",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
+    ...shadows.lg,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#DBEAFE",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primaryMuted,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: spacing.xl,
+    marginBottom: spacing[4],
   },
   title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
+    marginBottom: spacing[2],
   },
   subtitle: {
-    fontSize: 16,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: spacing.xxxl,
-  },
-  buttonContainer: {
-    width: "100%",
-  },
-  button: {
-    width: "100%",
-    paddingVertical: 18,
-    borderRadius: 40,
-    alignItems: "center",
-  },
-  confirmButton: {
-    backgroundColor: "#0C4A6E",
-  },
-  confirmButtonText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: "700",
+    marginBottom: spacing[6],
   },
 });

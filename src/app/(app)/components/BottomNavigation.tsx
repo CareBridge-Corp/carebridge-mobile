@@ -1,136 +1,186 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, usePathname, useRouter } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import {
-    borderRadius,
-    colors,
-    spacing,
-    typography,
-} from "../../../shared/theme";
+import React, { useMemo } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text } from "../../../shared/components/ui";
+import { borderRadius, colors, shadows, spacing } from "../../../shared/theme";
 
 type NavItem = "home" | "schedule" | "chat" | "profile";
 
+interface TabConfig {
+  key: NavItem;
+  label: string;
+  icon: keyof typeof import("@expo/vector-icons/Ionicons").default.glyphMap;
+  iconFilled: keyof typeof import("@expo/vector-icons/Ionicons").default.glyphMap;
+  path: string;
+}
+
+const TABS: TabConfig[] = [
+  { key: "home", label: "Home", icon: "home-outline", iconFilled: "home", path: "/" },
+  {
+    key: "schedule",
+    label: "Schedule",
+    icon: "calendar-outline",
+    iconFilled: "calendar",
+    path: "/schedule",
+  },
+  {
+    key: "chat",
+    label: "Chat",
+    icon: "chatbubble-outline",
+    iconFilled: "chatbubble",
+    path: "/chat",
+  },
+  {
+    key: "profile",
+    label: "Profile",
+    icon: "person-outline",
+    iconFilled: "person",
+    path: "/profile",
+  },
+];
+
+/**
+ * Pathnames where the tab bar should be hidden. These are immersive flows
+ * (forms, questionnaires, chat threads, payment) where the tab bar competes
+ * with the primary on-screen action.
+ *
+ * Order matters slightly — more specific matches first.
+ */
+const IMMERSIVE_PATH_FRAGMENTS = [
+  "/mchat-",
+  "/screening-detail",
+  "/verify",
+  "/create-child",
+  "/update-profile",
+  "/booking-",
+  "/payment",
+  "/doctor-chat",
+  "/doctor-details",
+  "/doctor-consultation",
+  "/activity-detail",
+  "/growth-journey",
+];
+
+/**
+ * Persistent bottom tab bar. Only renders on the four root tab routes.
+ */
 export default function BottomNavigation() {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
-  const getActiveTab = (): NavItem => {
-    if (pathname.includes("/schedule")) return "schedule";
-    if (pathname.includes("/chat")) return "chat";
-    if (pathname.includes("/profile")) return "profile";
-    return "home";
-  };
+  const isImmersive = useMemo(
+    () => IMMERSIVE_PATH_FRAGMENTS.some((fragment) => pathname.includes(fragment)),
+    [pathname],
+  );
 
-  const activeTab = getActiveTab();
+  if (isImmersive) {
+    return null;
+  }
 
-  const handlePress = (tab: NavItem) => {
-    if (tab === "home") {
-      router.push("/" as Href);
-    } else if (tab === "schedule") {
-      router.push("/schedule" as Href);
-    } else if (tab === "chat") {
-      router.push("/chat" as Href);
-    } else if (tab === "profile") {
-      router.push("/profile" as Href);
-    }
-  };
+  const activeTab: NavItem = pathname.includes("/schedule")
+    ? "schedule"
+    : pathname.includes("/chat")
+      ? "chat"
+      : pathname.includes("/profile")
+        ? "profile"
+        : "home";
 
   return (
-    <View style={styles.bottomNav}>
-      <TouchableOpacity
-        style={[styles.navItem, activeTab === "home" && styles.navItemActive]}
-        onPress={() => handlePress("home")}
-      >
-        <Ionicons
-          name={activeTab === "home" ? "home" : "home-outline"}
-          size={24}
-          color={activeTab === "home" ? colors.primary : colors.iconLight}
-        />
-        {activeTab === "home" && <Text style={styles.navTextActive}>Home</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.navItem,
-          activeTab === "schedule" && styles.navItemActive,
-        ]}
-        onPress={() => handlePress("schedule")}
-      >
-        <Ionicons
-          name={activeTab === "schedule" ? "calendar" : "calendar-outline"}
-          size={24}
-          color={activeTab === "schedule" ? colors.primary : colors.iconLight}
-        />
-        {activeTab === "schedule" && (
-          <Text style={styles.navTextActive}>Schedule</Text>
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.navItem, activeTab === "chat" && styles.navItemActive]}
-        onPress={() => handlePress("chat")}
-      >
-        <Ionicons
-          name={activeTab === "chat" ? "chatbubble" : "chatbubble-outline"}
-          size={24}
-          color={activeTab === "chat" ? colors.primary : colors.iconLight}
-        />
-        {activeTab === "chat" && <Text style={styles.navTextActive}>Chat</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.navItem,
-          activeTab === "profile" && styles.navItemActive,
-        ]}
-        onPress={() => handlePress("profile")}
-      >
-        <Ionicons
-          name={activeTab === "profile" ? "person" : "person-outline"}
-          size={24}
-          color={activeTab === "profile" ? colors.primary : colors.iconLight}
-        />
-        {activeTab === "profile" && (
-          <Text style={styles.navTextActive}>Profile</Text>
-        )}
-      </TouchableOpacity>
+    <View
+      style={[
+        styles.wrapper,
+        { paddingBottom: Math.max(insets.bottom, spacing[3]) },
+      ]}
+    >
+      <View style={styles.bar}>
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              accessibilityRole="button"
+              accessibilityLabel={tab.label}
+              accessibilityState={{ selected: isActive }}
+              onPress={() => router.push(tab.path as Href)}
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.tab,
+                pressed && styles.tabPressed,
+              ]}
+            >
+              <View
+                style={[
+                  styles.iconContainer,
+                  isActive && styles.iconContainerActive,
+                ]}
+              >
+                <Ionicons
+                  name={isActive ? tab.iconFilled : tab.icon}
+                  size={22}
+                  color={isActive ? colors.primary : colors.navInactiveTint}
+                />
+              </View>
+              <Text
+                variant="label"
+                style={[
+                  styles.label,
+                  { color: isActive ? colors.primary : colors.navInactiveTint },
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    paddingBottom: spacing.xxl,
+  wrapper: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius.xxl,
     borderTopRightRadius: borderRadius.xxl,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-    justifyContent: "space-around",
-    alignItems: "center",
+    paddingTop: spacing[2],
+    paddingHorizontal: spacing[3],
+    ...shadows.md,
   },
-  navItem: {
-    padding: spacing.md,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  navItemActive: {
+  bar: {
     flexDirection: "row",
-    backgroundColor: colors.navActiveBackground,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
+    justifyContent: "space-around",
+    alignItems: "stretch",
   },
-  navTextActive: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.primary,
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing[1],
+    gap: 2,
+    minHeight: 48,
+  },
+  tabPressed: {
+    opacity: 0.7,
+  },
+  iconContainer: {
+    width: 36,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+  },
+  iconContainerActive: {
+    backgroundColor: colors.navActiveBackground,
+  },
+  label: {
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
 });

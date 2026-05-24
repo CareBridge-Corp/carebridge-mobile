@@ -5,29 +5,70 @@ import { Href, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Image,
-  KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
-import StatusModal from "../../../shared/components/StatusModal";
+import { useTranslation } from "react-i18next";
 import { isPaymentRequiredError } from "../../../shared/api/client";
+import StatusModal from "../../../shared/components/StatusModal";
+import {
+  Button,
+  IconButton,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
+  Text,
+  TextField,
+} from "../../../shared/components/ui";
 import {
   borderRadius,
   colors,
+  shadows,
   spacing,
-  typography,
 } from "../../../shared/theme";
+import { PaywallCard } from "../components/PaywallCard";
 import { useCreateChild } from "../hooks/useChildren";
 import { useEntitlements } from "../hooks/useEntitlements";
-import { PaywallCard } from "../components/PaywallCard";
-import { useTranslation } from "react-i18next";
+
+const REGIONS = [
+  "Addis Ababa",
+  "Afar",
+  "Amhara",
+  "Benishangul-Gumuz",
+  "Dire Dawa",
+  "Gambela",
+  "Harari",
+  "Oromia",
+  "Sidama",
+  "Somali",
+  "South Ethiopia",
+  "South West Ethiopia Peoples",
+  "Tigray",
+];
+
+function calculateAge(birthDate: Date): string {
+  const today = new Date();
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let months = today.getMonth() - birthDate.getMonth();
+  if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+    years--;
+    months = months + 12;
+  }
+  if (today.getDate() < birthDate.getDate()) months--;
+  if (years > 0)
+    return years === 1 ? `${years} year old` : `${years} years old`;
+  if (months > 0)
+    return months === 1 ? `${months} month old` : `${months} months old`;
+  return "Less than a month old";
+}
+
+function formatDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
 export default function CreateChildScreen() {
   const router = useRouter();
@@ -43,209 +84,98 @@ export default function CreateChildScreen() {
   const [gender, setGender] = useState<"Male" | "Female" | "">("");
   const [region, setRegion] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const [birthCertificateImage, setBirthCertificateImage] = useState<
-    string | null
-  >(null);
-  const [showRegionDropdown, setShowRegionDropdown] = useState(false);
+  const [birthCertImage, setBirthCertImage] = useState<string | null>(null);
+  const [showRegionSheet, setShowRegionSheet] = useState(false);
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
-  const [statusModalConfig, setStatusModalConfig] = useState({
+  const [statusConfig, setStatusConfig] = useState({
     type: "success" as "success" | "error" | "info",
     title: "",
     message: "",
     onPrimaryPress: () => {},
   });
 
-  const regions = [
-    "Addis Ababa",
-    "Afar",
-    "Amhara",
-    "Benishangul-Gumuz",
-    "Dire Dawa",
-    "Gambela",
-    "Harari",
-    "Oromia",
-    "Sidama",
-    "Somali",
-    "South Ethiopia",
-    "South West Ethiopia Peoples",
-    "Tigray",
-  ];
-
-  const calculateAge = (birthDate: Date): string => {
-    const today = new Date();
-    const years = today.getFullYear() - birthDate.getFullYear();
-    const months = today.getMonth() - birthDate.getMonth();
-    const days = today.getDate() - birthDate.getDate();
-
-    let ageYears = years;
-    let ageMonths = months;
-
-    if (months < 0 || (months === 0 && days < 0)) {
-      ageYears--;
-      ageMonths = months + 12;
-    }
-
-    if (days < 0) {
-      ageMonths--;
-    }
-
-    if (ageYears > 0) {
-      return ageYears === 1 ? `${ageYears} year old` : `${ageYears} years old`;
-    } else if (ageMonths > 0) {
-      return ageMonths === 1
-        ? `${ageMonths} month old`
-        : `${ageMonths} months old`;
-    } else {
-      return "Less than a month old";
-    }
+  const showStatus = (
+    type: "success" | "error" | "info",
+    title: string,
+    message: string,
+    onPrimaryPress: () => void = () => setStatusModalVisible(false),
+  ) => {
+    setStatusConfig({ type, title, message, onPrimaryPress });
+    setStatusModalVisible(true);
   };
 
-  const formatDate = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (event.type === "set" && selectedDate) {
-      setDob(selectedDate);
-    }
-    if (Platform.OS === "android") {
-      setShowDatePicker(false);
-    }
-  };
-
-  const handleImageUpload = async () => {
+  const handleProfilePic = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      setStatusModalConfig({
-        type: "error",
-        title: "Permission Required",
-        message: "Please grant camera roll permissions to upload an image.",
-        onPrimaryPress: () => setStatusModalVisible(false),
-      });
-      setStatusModalVisible(true);
+      showStatus("error", "Permission required", "Please grant camera roll access.");
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets?.[0]) {
       setProfileImage(result.assets[0].uri);
     }
   };
 
-  const handleBirthCertificateUpload = async () => {
+  const handleBirthCert = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      setStatusModalConfig({
-        type: "error",
-        title: "Permission Required",
-        message:
-          "Please grant camera roll permissions to upload a certificate.",
-        onPrimaryPress: () => setStatusModalVisible(false),
-      });
-      setStatusModalVisible(true);
+      showStatus("error", "Permission required", "Please grant camera roll access.");
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: false,
       quality: 0.8,
     });
-
     if (!result.canceled && result.assets?.[0]) {
-      setBirthCertificateImage(result.assets[0].uri);
+      setBirthCertImage(result.assets[0].uri);
     }
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (event.type === "set" && selectedDate) setDob(selectedDate);
+    if (Platform.OS === "android") setShowDatePicker(false);
+  };
+
   const handleNext = () => {
-    if (!firstName.trim()) {
-      setStatusModalConfig({
-        type: "error",
-        title: "Validation Error",
-        message: "Please enter first name",
-        onPrimaryPress: () => setStatusModalVisible(false),
-      });
-      setStatusModalVisible(true);
-      return;
-    }
+    if (!firstName.trim())
+      return showStatus("error", "Missing info", "Please enter first name");
+    if (!lastName.trim())
+      return showStatus("error", "Missing info", "Please enter last name");
+    if (!dob)
+      return showStatus("error", "Missing info", "Please select date of birth");
+    if (!gender)
+      return showStatus("error", "Missing info", "Please select gender");
+    if (!region)
+      return showStatus("error", "Missing info", "Please select region");
 
-    if (!lastName.trim()) {
-      setStatusModalConfig({
-        type: "error",
-        title: "Validation Error",
-        message: "Please enter last name",
-        onPrimaryPress: () => setStatusModalVisible(false),
-      });
-      setStatusModalVisible(true);
-      return;
-    }
-
-    if (!dob) {
-      setStatusModalConfig({
-        type: "error",
-        title: "Validation Error",
-        message: "Please select date of birth",
-        onPrimaryPress: () => setStatusModalVisible(false),
-      });
-      setStatusModalVisible(true);
-      return;
-    }
-
-    if (!gender) {
-      setStatusModalConfig({
-        type: "error",
-        title: "Validation Error",
-        message: "Please select gender",
-        onPrimaryPress: () => setStatusModalVisible(false),
-      });
-      setStatusModalVisible(true);
-      return;
-    }
-
-    if (!region) {
-      setStatusModalConfig({
-        type: "error",
-        title: "Validation Error",
-        message: "Please select region",
-        onPrimaryPress: () => setStatusModalVisible(false),
-      });
-      setStatusModalVisible(true);
-      return;
-    }
-
-    // Create child profile
     createChildMutation.mutate(
       {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         dob: formatDate(dob),
-        gender: gender,
-        region: region,
+        gender,
+        region,
         profilePicture: profileImage || undefined,
-        birthCertificate: birthCertificateImage || undefined,
+        birthCertificate: birthCertImage || undefined,
       },
       {
         onSuccess: () => {
-          setStatusModalConfig({
-            type: "success",
-            title: "Success",
-            message: "Child profile created successfully.",
-            onPrimaryPress: () => {
+          showStatus(
+            "success",
+            "Success",
+            "Child profile created successfully.",
+            () => {
               setStatusModalVisible(false);
               router.replace("/(app)" as Href);
             },
-          });
-          setStatusModalVisible(true);
+          );
         },
         onError: (error: unknown) => {
           if (isPaymentRequiredError(error)) {
@@ -256,547 +186,450 @@ export default function CreateChildScreen() {
             error instanceof Error
               ? error.message
               : "Failed to create child profile.";
-          setStatusModalConfig({
-            type: "error",
-            title: "Error",
-            message,
-            onPrimaryPress: () => setStatusModalVisible(false),
-          });
-          setStatusModalVisible(true);
+          showStatus("error", "Error", message);
         },
       },
     );
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+  const isPaywalled =
+    !entitlementsLoading && entitlements && !entitlements.canAddChild;
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-      </View>
+  return (
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title="Add child" />
 
       <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {!entitlementsLoading &&
-          entitlements &&
-          !entitlements.canAddChild && (
-            <PaywallCard
-              title={t("payment.gate.extraChildTitle")}
-              description={t("payment.gate.extraChildDescription")}
-              purpose="EXTRA_CHILD"
-            />
-          )}
-
-        <Text style={styles.title}>Child's Info</Text>
-
-        <View style={styles.imageUploadWrapper}>
-          <TouchableOpacity
-            style={styles.imageUploadContainer}
-            onPress={handleImageUpload}
-            activeOpacity={0.7}
-          >
-            {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons name="camera" size={32} color="#A0B8C8" />
-              </View>
+        {isPaywalled ? (
+          <PaywallCard
+            title={t("payment.gate.extraChildTitle", "Add another child")}
+            description={t(
+              "payment.gate.extraChildDescription",
+              "Subscribe to add additional child profiles.",
             )}
-          </TouchableOpacity>
-          <Text style={styles.optionalText}>Profile Picture (Optional)</Text>
-        </View>
-
-        {/* First Name Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="First name"
-          placeholderTextColor="#A0B8C8"
-          value={firstName}
-          onChangeText={setFirstName}
-        />
-
-        {/* Last Name Input */}
-        <TextInput
-          style={styles.input}
-          placeholder="Last name"
-          placeholderTextColor="#A0B8C8"
-          value={lastName}
-          onChangeText={setLastName}
-        />
-
-        {/* Date of Birth Picker */}
-        <TouchableOpacity
-          style={styles.datePickerButton}
-          onPress={() => setShowDatePicker(true)}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={[
-              styles.datePickerText,
-              !dob && styles.datePickerPlaceholder,
-            ]}
-          >
-            {dob ? formatDate(dob) : "Select Date of Birth"}
-          </Text>
-          <Ionicons name="calendar-outline" size={24} color="#A0B8C8" />
-        </TouchableOpacity>
-
-        {/* Age Display */}
-        {dob && (
-          <View style={styles.ageInfoContainer}>
-            <Ionicons
-              name="information-circle-outline"
-              size={20}
-              color="#0C4A6E"
-            />
-            <Text style={styles.ageInfoText}>{calculateAge(dob)}</Text>
-          </View>
-        )}
-
-        {/* Date Picker */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={dob || new Date()}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleDateChange}
-            maximumDate={new Date()}
+            purpose="EXTRA_CHILD"
           />
-        )}
+        ) : null}
 
-        {/* Gender Selection */}
-        <View style={styles.genderContainer}>
-          <TouchableOpacity
-            style={[
-              styles.genderButton,
-              gender === "Male" && styles.genderButtonSelected,
-            ]}
-            onPress={() => setGender("Male")}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.genderText,
-                gender === "Male" && styles.genderTextSelected,
-              ]}
-            >
-              Male
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.genderButton,
-              gender === "Female" && styles.genderButtonSelected,
-            ]}
-            onPress={() => setGender("Female")}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.genderText,
-                gender === "Female" && styles.genderTextSelected,
-              ]}
-            >
-              Female
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Region Dropdown */}
-        <TouchableOpacity
-          style={styles.dropdownSelector}
-          onPress={() => setShowRegionDropdown(true)}
-          activeOpacity={0.7}
-        >
-          <Text
-            style={[
-              styles.dropdownSelectorText,
-              !region && styles.dropdownPlaceholderText,
-            ]}
-          >
-            {region || "Select Region"}
-          </Text>
-          <Ionicons name="chevron-down" size={24} color="#A0B8C8" />
-        </TouchableOpacity>
-
-        {/* Upload Birth Certificate */}
-        <TouchableOpacity
-          style={styles.uploadCertificateContainer}
-          activeOpacity={0.7}
-          onPress={handleBirthCertificateUpload}
-        >
-          <View style={styles.uploadIconCircle}>
-            <Ionicons name="cloud-upload-outline" size={28} color="#0C4A6E" />
-          </View>
-          <Text style={styles.uploadTitle}>
-            Upload Birth Certificate (Optional)
-          </Text>
-          <Text style={styles.uploadSubtitle}>
-            Max file size should be 100 GB
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Next Button */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            (createChildMutation.isPending ||
-              (!entitlementsLoading && entitlements && !entitlements.canAddChild)) &&
-              styles.nextButtonDisabled,
+        <Pressable
+          onPress={handleProfilePic}
+          style={({ pressed }) => [
+            styles.avatarBox,
+            pressed && { opacity: 0.85 },
           ]}
-          onPress={handleNext}
-          disabled={
-            createChildMutation.isPending ||
-            (!entitlementsLoading && !!entitlements && !entitlements.canAddChild)
-          }
-          activeOpacity={0.8}
         >
-          <Text style={styles.nextButtonText}>
-            {createChildMutation.isPending ? "Creating..." : "Next"}
-          </Text>
-          <Ionicons name="arrow-forward" size={20} color={colors.white} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Region Bottom Sheet */}
-      <Modal
-        visible={showRegionDropdown}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowRegionDropdown(false)}
-      >
-        <TouchableOpacity
-          style={styles.bottomSheetOverlay}
-          activeOpacity={1}
-          onPress={() => setShowRegionDropdown(false)}
-        >
-          <View style={styles.bottomSheetContent}>
-            <View style={styles.bottomSheetHandle} />
-            <View style={styles.bottomSheetHeader}>
-              <Text style={styles.bottomSheetTitle}>Select Region</Text>
+          {profileImage ? (
+            <Image source={{ uri: profileImage }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons name="camera" size={28} color={colors.iconMuted} />
             </View>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              style={styles.regionScrollView}
-            >
-              {regions.map((item) => (
-                <TouchableOpacity
-                  key={item}
-                  style={[
-                    styles.regionOption,
-                    region === item && styles.regionOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setRegion(item);
-                    setShowRegionDropdown(false);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.regionOptionText,
-                      region === item && styles.regionOptionTextSelected,
+          )}
+          <Text variant="caption" tone="secondary" style={styles.avatarHint}>
+            Profile picture (optional)
+          </Text>
+        </Pressable>
+
+        <View style={styles.form}>
+          <View style={styles.nameRow}>
+            <View style={styles.flex}>
+              <TextField
+                label="First name"
+                placeholder="Aman"
+                value={firstName}
+                onChangeText={setFirstName}
+                autoCapitalize="words"
+              />
+            </View>
+            <View style={styles.flex}>
+              <TextField
+                label="Last name"
+                placeholder="Bekele"
+                value={lastName}
+                onChangeText={setLastName}
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+
+          <Pressable
+            onPress={() => setShowDatePicker(true)}
+            style={({ pressed }) => [
+              styles.pickerInput,
+              pressed && { opacity: 0.9 },
+            ]}
+          >
+            <Text variant="caption" tone="secondary">
+              Date of birth
+            </Text>
+            <View style={styles.pickerRow}>
+              <Text variant="body" tone={dob ? "primary" : "tertiary"}>
+                {dob ? formatDate(dob) : "Select date of birth"}
+              </Text>
+              <Ionicons
+                name="calendar-outline"
+                size={18}
+                color={colors.iconMuted}
+              />
+            </View>
+          </Pressable>
+
+          {dob ? (
+            <View style={styles.ageHint}>
+              <Ionicons
+                name="information-circle"
+                size={16}
+                color={colors.primary}
+              />
+              <Text variant="caption" tone="brand">
+                {calculateAge(dob)}
+              </Text>
+            </View>
+          ) : null}
+
+          {showDatePicker ? (
+            <DateTimePicker
+              value={dob || new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+            />
+          ) : null}
+
+          <View>
+            <Text variant="caption" tone="secondary" style={styles.fieldLabel}>
+              Gender
+            </Text>
+            <View style={styles.segmentRow}>
+              {(["Male", "Female"] as const).map((g) => {
+                const isActive = gender === g;
+                return (
+                  <Pressable
+                    key={g}
+                    onPress={() => setGender(g)}
+                    style={({ pressed }) => [
+                      styles.segment,
+                      isActive && styles.segmentActive,
+                      pressed && { opacity: 0.85 },
                     ]}
                   >
-                    {item}
-                  </Text>
-                  {region === item && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color="#0C4A6E"
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                    <Text
+                      variant="bodyMedium"
+                      style={{
+                        color: isActive ? colors.textInverse : colors.textPrimary,
+                      }}
+                    >
+                      {g}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
-        </TouchableOpacity>
+
+          <Pressable
+            onPress={() => setShowRegionSheet(true)}
+            style={({ pressed }) => [
+              styles.pickerInput,
+              pressed && { opacity: 0.9 },
+            ]}
+          >
+            <Text variant="caption" tone="secondary">
+              Region
+            </Text>
+            <View style={styles.pickerRow}>
+              <Text variant="body" tone={region ? "primary" : "tertiary"}>
+                {region || "Select region"}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={18}
+                color={colors.iconMuted}
+              />
+            </View>
+          </Pressable>
+
+          <SectionHeader
+            title="Birth certificate"
+            style={{ marginTop: spacing[2] }}
+          />
+          {birthCertImage ? (
+            <View style={styles.certPreview}>
+              <Image
+                source={{ uri: birthCertImage }}
+                style={styles.certImage}
+              />
+              <View style={styles.certRemove}>
+                <IconButton
+                  icon="close"
+                  accessibilityLabel="Remove certificate"
+                  variant="tinted"
+                  onPress={() => setBirthCertImage(null)}
+                />
+              </View>
+            </View>
+          ) : (
+            <Pressable
+              onPress={handleBirthCert}
+              style={({ pressed }) => [
+                styles.uploadBox,
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <View style={styles.uploadIcon}>
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={24}
+                  color={colors.primary}
+                />
+              </View>
+              <Text variant="body" weight="semibold">
+                Upload (optional)
+              </Text>
+              <Text variant="caption" tone="secondary">
+                JPG or PNG · max 5 MB
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <Button
+          label={createChildMutation.isPending ? "Creating..." : "Create profile"}
+          onPress={handleNext}
+          loading={createChildMutation.isPending}
+          disabled={isPaywalled === true}
+          trailingIcon="arrow-forward"
+        />
+      </View>
+
+      {/* Region bottom sheet */}
+      <Modal
+        visible={showRegionSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowRegionSheet(false)}
+      >
+        <Pressable
+          style={styles.overlay}
+          onPress={() => setShowRegionSheet(false)}
+        >
+          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <Text variant="title2" align="center" style={styles.sheetTitle}>
+              Select region
+            </Text>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {REGIONS.map((r) => {
+                const isActive = region === r;
+                return (
+                  <Pressable
+                    key={r}
+                    onPress={() => {
+                      setRegion(r);
+                      setShowRegionSheet(false);
+                    }}
+                    style={({ pressed }) => [
+                      styles.regionRow,
+                      isActive && styles.regionRowActive,
+                      pressed && { opacity: 0.8 },
+                    ]}
+                  >
+                    <Text
+                      variant="body"
+                      weight={isActive ? "semibold" : "regular"}
+                      tone={isActive ? "brand" : "primary"}
+                    >
+                      {r}
+                    </Text>
+                    {isActive ? (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color={colors.primary}
+                      />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
       </Modal>
 
-      {/* Reusable Custom Status Modal */}
       <StatusModal
         visible={statusModalVisible}
-        type={statusModalConfig.type}
-        title={statusModalConfig.title}
-        message={statusModalConfig.message}
-        onPrimaryPress={statusModalConfig.onPrimaryPress}
+        type={statusConfig.type}
+        title={statusConfig.title}
+        message={statusConfig.message}
+        onPrimaryPress={statusConfig.onPrimaryPress}
       />
-    </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[10],
   },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.md,
+  avatarBox: {
+    alignItems: "center",
+    marginBottom: spacing[6],
+    marginTop: spacing[3],
   },
-  backButton: {
-    padding: spacing.sm,
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  avatarPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarHint: {
+    marginTop: spacing[2],
+  },
+  form: {
+    gap: spacing[4],
+  },
+  nameRow: {
+    flexDirection: "row",
+    gap: spacing[3],
+  },
+  flex: { flex: 1 },
+  pickerInput: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+  },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing[1],
+  },
+  ageHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    backgroundColor: colors.primaryMuted,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: 12,
     alignSelf: "flex-start",
   },
-  scrollView: {
-    flex: 1,
+  fieldLabel: {
+    marginBottom: spacing[2],
   },
-  scrollContent: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.huge,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.md,
-    color: "#A0B8C8",
-    marginBottom: spacing.xxxl,
-    lineHeight: typography.lineHeight.relaxed * typography.fontSize.md,
-  },
-  imageUploadWrapper: {
-    alignItems: "center",
-    marginBottom: spacing.xxxl,
-  },
-  imageUploadContainer: {
-    alignSelf: "center",
-    marginBottom: spacing.sm,
-  },
-  imagePlaceholder: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "#E8F0F5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profileImage: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-  },
-  optionalText: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
-    marginTop: spacing.xs,
-  },
-  input: {
-    backgroundColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    marginBottom: spacing.md,
-  },
-  genderContainer: {
+  segmentRow: {
     flexDirection: "row",
-    gap: spacing.md,
-    marginBottom: spacing.xl,
+    gap: spacing[2],
   },
-  genderButton: {
+  segment: {
     flex: 1,
-    backgroundColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing[3],
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "transparent",
   },
-  genderButtonSelected: {
-    backgroundColor: "#0C4A6E",
-    borderColor: "#0C4A6E",
+  segmentActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  genderText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: "#5A7A8F",
-  },
-  genderTextSelected: {
-    color: colors.white,
-  },
-  uploadCertificateContainer: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxl,
-    borderWidth: 2,
-    borderColor: "#E8F0F5",
+  uploadBox: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
     borderStyle: "dashed",
-    paddingVertical: spacing.xxxl,
+    paddingVertical: spacing[6],
     alignItems: "center",
-    marginTop: spacing.lg,
+    gap: spacing[1],
+    ...shadows.xs,
   },
-  uploadIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#E8F0F5",
+  uploadIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: spacing.md,
+    marginBottom: spacing[2],
   },
-  uploadTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.xs,
+  certPreview: {
+    position: "relative",
+    width: "100%",
+    height: 200,
+    borderRadius: borderRadius.xl,
+    overflow: "hidden",
+    ...shadows.sm,
   },
-  uploadSubtitle: {
-    fontSize: typography.fontSize.sm,
-    color: "#A0B8C8",
+  certImage: {
+    width: "100%",
+    height: "100%",
   },
-  dropdownSelector: {
-    backgroundColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
+  certRemove: {
+    position: "absolute",
+    top: spacing[2],
+    right: spacing[2],
   },
-  dropdownSelectorText: {
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
+  footer: {
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[5],
+    backgroundColor: colors.surfaceMuted,
   },
-  dropdownPlaceholderText: {
-    color: "#A0B8C8",
-  },
-  bottomSheetOverlay: {
+  overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.overlay,
     justifyContent: "flex-end",
   },
-  bottomSheetContent: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xxxl,
-    borderTopRightRadius: borderRadius.xxxl,
-    paddingBottom: Platform.OS === "ios" ? 40 : 20,
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    paddingTop: spacing[2],
+    paddingBottom: spacing[6],
+    paddingHorizontal: spacing[4],
     maxHeight: "70%",
   },
-  bottomSheetHandle: {
+  sheetHandle: {
+    alignSelf: "center",
     width: 40,
     height: 4,
-    backgroundColor: "#E8F0F5",
     borderRadius: 2,
-    alignSelf: "center",
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
+    backgroundColor: colors.borderStrong,
+    marginBottom: spacing[2],
   },
-  bottomSheetHeader: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8F0F5",
+  sheetTitle: {
+    marginBottom: spacing[3],
   },
-  bottomSheetTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    textAlign: "center",
-  },
-  regionScrollView: {
-    paddingHorizontal: spacing.xl,
-  },
-  regionOption: {
+  regionRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F4F8FA",
-  },
-  regionOptionSelected: {
-    backgroundColor: "#F0F7FB",
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
     borderRadius: borderRadius.lg,
-    marginVertical: spacing.xs,
-    borderBottomWidth: 0,
   },
-  regionOptionText: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-  },
-  regionOptionTextSelected: {
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-  },
-  buttonContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
-    backgroundColor: colors.background,
-  },
-  nextButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
-  },
-  nextButtonDisabled: {
-    backgroundColor: "#C0D4E0",
-  },
-  nextButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
-  },
-  datePickerButton: {
-    backgroundColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  datePickerText: {
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-  },
-  datePickerPlaceholder: {
-    color: "#A0B8C8",
-  },
-  ageInfoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E8F0F5",
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-  ageInfoText: {
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    fontWeight: typography.fontWeight.medium,
+  regionRowActive: {
+    backgroundColor: colors.primaryMuted,
   },
 });

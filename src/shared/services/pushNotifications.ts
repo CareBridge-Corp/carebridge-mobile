@@ -64,13 +64,14 @@ export async function initializePushNotifications(): Promise<string | null> {
       return null;
     }
 
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+    const permissionsResponse =
+      (await Notifications.getPermissionsAsync()) as { status: string };
+    let finalStatus = permissionsResponse.status;
 
-    if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
+    if (permissionsResponse.status !== "granted") {
+      const requested =
+        (await Notifications.requestPermissionsAsync()) as { status: string };
+      finalStatus = requested.status;
     }
 
     if (finalStatus !== "granted") {

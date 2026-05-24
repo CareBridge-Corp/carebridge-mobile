@@ -1,18 +1,26 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { Href, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   Dimensions,
-  Image,
+  Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { spacing } from "../../shared/theme";
+import {
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  ProgressBar,
+  Screen,
+  Text,
+} from "../../shared/components/ui";
+import { borderRadius, colors, shadows, spacing } from "../../shared/theme";
 import {
   calculateRoadmapProgress,
   canStartActivity,
@@ -21,7 +29,6 @@ import {
   resolveActiveRoadmap,
 } from "../../shared/utils/roadmapProgress";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
-import VerificationTracker from "./components/VerificationTracker";
 import { useProfile } from "./hooks/useProfile";
 import { useRoadmaps } from "./hooks/useRoadmaps";
 import { useChildrenStore } from "./store/childrenStore";
@@ -48,9 +55,7 @@ export default function GrowthJourneyScreen() {
     weekPlans,
   );
 
-  // Flatten activities with metadata for path rendering
-  const rawNodes = weekPlans.flatMap((wp, weekIdx) => {
-    // Add a Week Header node
+  const rawNodes = weekPlans.flatMap((wp) => {
     const headerNode = {
       type: "week-header" as const,
       id: wp.weekPlanId,
@@ -62,7 +67,7 @@ export default function GrowthJourneyScreen() {
       status: wp.status,
     };
 
-    const activityNodes = (wp.activities || []).map((activity, actIdx) => {
+    const activityNodes = (wp.activities || []).map((activity) => {
       const status = getActivityStatus(wp, activity.activityId);
       const access = canStartActivity(wp, activity.activityId, weekPlans);
       return {
@@ -82,18 +87,16 @@ export default function GrowthJourneyScreen() {
     return [headerNode, ...activityNodes];
   });
 
-  // Reverse path for bottom-to-top progression
   const pathNodes = [...rawNodes].reverse();
 
   const pathShape = useMemo(() => {
     const segmentHeight = 140;
     const nodesCount = Math.max(pathNodes.length, 4);
-    const totalHeight = nodesCount * segmentHeight + segmentHeight; // Add extra for the bottom curve
+    const totalHeight = nodesCount * segmentHeight + segmentHeight;
     const centerX = width / 2;
     const leftX = width * 0.25;
     const rightX = width * 0.75;
 
-    // Start slightly above the top
     let d = `M ${centerX} -50`;
 
     for (let i = 0; i < nodesCount; i += 1) {
@@ -104,14 +107,13 @@ export default function GrowthJourneyScreen() {
       d += ` C ${controlX} ${y + segmentHeight * 0.3}, ${targetX} ${y + segmentHeight * 0.7}, ${targetX} ${nextY}`;
     }
 
-    // Curve back to the center bottom so it looks like it originates from the bottom center
     const lastY = nodesCount * segmentHeight;
     const lastControlX =
       (nodesCount - 1) % 2 === 0 ? centerX + 60 : centerX - 60;
     d += ` C ${lastControlX} ${lastY + segmentHeight * 0.3}, ${centerX} ${lastY + segmentHeight * 0.7}, ${centerX} ${lastY + segmentHeight + 600}`;
 
     return { d, totalHeight: totalHeight + 500 };
-  }, [pathNodes.length, width]);
+  }, [pathNodes.length]);
 
   const totalProgress = activeRoadmap
     ? calculateRoadmapProgress(weekPlans)
@@ -122,7 +124,6 @@ export default function GrowthJourneyScreen() {
     activeRoadmap,
   );
 
-  // Verification Logic Check
   const { data: profile } = useProfile();
   const parentStatus = profile?.status || "UNVERIFIED";
   const childStatus = activeChild?.status || "UNVERIFIED";
@@ -133,263 +134,324 @@ export default function GrowthJourneyScreen() {
 
   if (!bothVerified) {
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="dark-content" />
-
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
+      <Screen padded={false} background={colors.surfaceMuted}>
+        <View style={styles.headerBar}>
+          <IconButton
+            icon="chevron-back"
+            accessibilityLabel="Back"
             onPress={() => router.back()}
-          >
-            <Ionicons name="chevron-back" size={24} color="#0C4A6E" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Journey Blocked</Text>
-          <View style={styles.headerSpacer} />
+          />
+          <Text variant="title2" align="center" style={styles.headerTitle}>
+            Journey blocked
+          </Text>
+          <View style={styles.headerSide} />
         </View>
 
-        <View
-          style={{ flex: 1, padding: spacing.xl, justifyContent: "center" }}
-        >
-          <VerificationTracker
-            parentStatus={parentStatus}
-            childStatus={childStatus}
-          />
+        <View style={styles.gateBody}>
+          <Card variant="elevated" padding="lg">
+            <View style={styles.gateIconCircle}>
+              <Ionicons
+                name="shield-checkmark"
+                size={28}
+                color={colors.primary}
+              />
+            </View>
+            <Text variant="title1" align="center" style={styles.gateTitle}>
+              Complete verification first
+            </Text>
+            <Text
+              variant="body"
+              tone="secondary"
+              align="center"
+              style={styles.gateSubtitle}
+            >
+              Verify both the parent and child profiles to unlock the growth
+              journey.
+            </Text>
+
+            <View style={styles.gateStatusList}>
+              <GateStatusRow label="Parent" verified={parentVerified} />
+              <GateStatusRow label="Child" verified={childVerified} />
+            </View>
+
+            <Button
+              label="Go to verification"
+              onPress={() => router.push("/(app)/(verification)/verify" as Href)}
+              trailingIcon="arrow-forward"
+            />
+          </Card>
         </View>
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      {/* Modern Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <View style={styles.headerBar}>
+        <IconButton
+          icon="chevron-back"
+          accessibilityLabel="Back"
           onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={24} color="#0C4A6E" />
-        </TouchableOpacity>
+        />
 
-        <View style={styles.headerCenter}>
-          <TouchableOpacity
-            style={styles.childAvatarContainer}
-            onPress={() => children.length > 0 && setShowChildSelector(true)}
-          >
-            <View style={styles.childAvatarInner}>
-              {activeChild?.profilePictureUrl ? (
-                <Image
-                  source={{ uri: activeChild.profilePictureUrl }}
-                  style={styles.childAvatar}
-                />
-              ) : (
-                <View style={styles.childAvatarFallback}>
-                  <Ionicons name="person" size={20} color="#0C4A6E" />
-                </View>
-              )}
-            </View>
-            <View style={styles.profileEditBadge}>
-              <Ionicons name="swap-horizontal" size={12} color="#0C4A6E" />
-            </View>
-          </TouchableOpacity>
+        <Pressable
+          onPress={() => children.length > 0 && setShowChildSelector(true)}
+          style={styles.headerCenter}
+          hitSlop={6}
+        >
+          <Avatar
+            uri={activeChild?.profilePictureUrl}
+            name={activeChild?.firstName}
+            size="sm"
+          />
           <View style={styles.headerTextBlock}>
-            <Text style={styles.headerTitle}>
-              {`${activeChild?.firstName || "Child"}’s Journey`}
+            <Text variant="title3" numberOfLines={1}>
+              {`${activeChild?.firstName || "Child"}'s journey`}
             </Text>
             <View style={styles.progressRow}>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[styles.progressFill, { width: `${totalProgress}%` }]}
-                />
-              </View>
-              <Text style={styles.progressValue}>{totalProgress}%</Text>
-            </View>
-            {roadmapCycleComplete ? (
-              <Text style={styles.cycleCompleteText}>
-                4-week roadmap complete. Next cycle available after the one-month review period.
+              <ProgressBar
+                value={totalProgress}
+                height={6}
+                style={styles.progressTrack}
+              />
+              <Text
+                variant="caption"
+                weight="semibold"
+                tone="brand"
+                style={styles.progressValue}
+              >
+                {totalProgress}%
               </Text>
-            ) : null}
+            </View>
           </View>
-        </View>
+        </Pressable>
 
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerSide} />
       </View>
 
-      {weekPlans.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No published roadmap yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Once your clinician publishes an active roadmap, the step-by-step journey will appear here.
+      {roadmapCycleComplete ? (
+        <View style={styles.cycleBanner}>
+          <Badge
+            tone="success"
+            label="Cycle complete"
+            icon="checkmark-circle"
+          />
+          <Text
+            variant="caption"
+            tone="secondary"
+            style={styles.cycleBannerText}
+          >
+            4-week roadmap complete. Next cycle available after the review
+            period.
           </Text>
         </View>
+      ) : null}
+
+      {weekPlans.length === 0 ? (
+        <EmptyState
+          icon="map-outline"
+          title="No published roadmap yet"
+          description="Once your clinician publishes an active roadmap, the step-by-step journey will appear here."
+        />
       ) : (
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        ref={(ref) => ref?.scrollToEnd({ animated: false })}
-      >
-        <View
-          style={styles.pathContainer}
-          onLayout={(event) => setPathHeight(event.nativeEvent.layout.height)}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          ref={(ref) => ref?.scrollToEnd({ animated: false })}
         >
-          {/* SVG Road Path Background */}
-          <View style={styles.svgBackgroundContainer}>
-            <Svg
-              width={width}
-              height={Math.max(pathHeight, pathShape.totalHeight)}
-              style={styles.journeySvg}
-            >
-              <Path
-                d={pathShape.d}
-                stroke="#93C5FD"
-                strokeWidth={18}
-                strokeOpacity={0.35}
-                fill="none"
-                strokeLinecap="round"
-              />
-              <Path
-                d={pathShape.d}
-                stroke="#0C4A6E"
-                strokeWidth={8}
-                strokeOpacity={0.55}
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray="18 12"
-              />
-            </Svg>
-          </View>
-
-          {pathNodes.map((node, index) => {
-            const isLeft = index % 2 === 1;
-            const activityNode = node as any;
-
-            return (
-              <View
-                key={node.id}
-                style={
-                  node.type === "week-header"
-                    ? styles.weekRow
-                    : [
-                        styles.nodeRow,
-                        isLeft ? styles.nodeRowLeft : styles.nodeRowRight,
-                      ]
-                }
+          <View
+            style={styles.pathContainer}
+            onLayout={(event) =>
+              setPathHeight(event.nativeEvent.layout.height)
+            }
+          >
+            <View style={styles.svgBackgroundContainer} pointerEvents="none">
+              <Svg
+                width={width}
+                height={Math.max(pathHeight, pathShape.totalHeight)}
+                style={styles.journeySvg}
               >
-                {/* Visual Path Connection between nodes - Now handled by SVG background but kept for specific spacing if needed */}
-                {/* {index < pathNodes.length - 1 && (
-                  <View 
-                    style={[
-                      styles.pathLine,
-                      isVertical ? styles.pathLineVertical : (isLeft ? styles.pathLineLeft : styles.pathLineRight),
-                      { top: isVertical ? -110 : -90 }
-                    ]} 
-                  />
-                ) */}
+                <Path
+                  d={pathShape.d}
+                  stroke={colors.primaryMuted}
+                  strokeWidth={18}
+                  strokeOpacity={0.5}
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                <Path
+                  d={pathShape.d}
+                  stroke={colors.primary}
+                  strokeWidth={6}
+                  strokeOpacity={0.45}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray="18 12"
+                />
+              </Svg>
+            </View>
 
-                {node.type === "week-header" ? (
-                  <>
-                    <View style={styles.weekSeparator} />
-                    <View style={styles.weekLabel}>
-                      <Text style={styles.weekLabelText}>{node.title}</Text>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    {activityNode.isActive && (
-                      <View
-                        style={[
-                          styles.activeTooltip,
-                          isLeft ? styles.tooltipLeft : styles.tooltipRight,
-                        ]}
-                      >
-                        <Text style={styles.tooltipLabel}>
-                          CURRENT ACTIVITY
+            {pathNodes.map((node, index) => {
+              const isLeft = index % 2 === 1;
+              const activityNode = node as any;
+
+              return (
+                <View
+                  key={node.id}
+                  style={
+                    node.type === "week-header"
+                      ? styles.weekRow
+                      : [
+                          styles.nodeRow,
+                          isLeft ? styles.nodeRowLeft : styles.nodeRowRight,
+                        ]
+                  }
+                >
+                  {node.type === "week-header" ? (
+                    <>
+                      <View style={styles.weekSeparator} />
+                      <View style={styles.weekLabel}>
+                        <Text variant="title3" weight="semibold" tone="brand">
+                          {node.title}
                         </Text>
-                        <Text style={styles.tooltipTitle}>
-                          {activityNode.title}
-                        </Text>
-                        <View style={styles.tooltipTime}>
-                          <Ionicons
-                            name="time-outline"
-                            size={14}
-                            color="#64748B"
-                          />
-                          <Text style={styles.tooltipTimeText}>5 mins</Text>
-                        </View>
                       </View>
-                    )}
+                    </>
+                  ) : (
+                    <>
+                      {activityNode.isActive ? (
+                        <View
+                          style={[
+                            styles.activeTooltip,
+                            isLeft ? styles.tooltipLeft : styles.tooltipRight,
+                          ]}
+                        >
+                          <Text variant="label" tone="secondary">
+                            CURRENT ACTIVITY
+                          </Text>
+                          <Text variant="title3" style={styles.tooltipTitle}>
+                            {activityNode.title}
+                          </Text>
+                          <View style={styles.tooltipMeta}>
+                            <Ionicons
+                              name="time-outline"
+                              size={14}
+                              color={colors.textSecondary}
+                            />
+                            <Text variant="caption" tone="secondary">
+                              5 mins
+                            </Text>
+                          </View>
+                        </View>
+                      ) : null}
 
-                    <TouchableOpacity
-                      style={[
-                        styles.nodeCircle,
-                        activityNode.completed && styles.nodeCircleCompleted,
-                        activityNode.isActive && styles.nodeCircleActive,
-                        activityNode.locked && styles.nodeCircleLocked,
-                      ]}
-                      disabled={activityNode.locked}
-                      onPress={() => {
-                        if (activityNode.locked) return;
-                        router.push({
-                          pathname: "/(app)/(doctor)/activity-detail",
-                          params: {
-                            activityId: activityNode.activityId,
-                            weekPlanId: activityNode.weekPlanId,
-                          },
-                        } as any);
-                      }}
-                    >
-                      {activityNode.completed ? (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={32}
-                          color="white"
-                        />
-                      ) : activityNode.isActive ? (
-                        <Ionicons name="happy" size={32} color="white" />
-                      ) : (
-                        <View style={styles.nodeStandardInner} />
-                      )}
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.nodeCircle,
+                          activityNode.completed && styles.nodeCircleCompleted,
+                          activityNode.isActive && styles.nodeCircleActive,
+                          activityNode.locked && styles.nodeCircleLocked,
+                          pressed && !activityNode.locked && styles.nodePressed,
+                        ]}
+                        disabled={activityNode.locked}
+                        onPress={() => {
+                          if (activityNode.locked) return;
+                          router.push({
+                            pathname: "/(app)/(doctor)/activity-detail",
+                            params: {
+                              activityId: activityNode.activityId,
+                              weekPlanId: activityNode.weekPlanId,
+                            },
+                          } as any);
+                        }}
+                      >
+                        {activityNode.completed ? (
+                          <Ionicons
+                            name="checkmark"
+                            size={28}
+                            color={colors.textInverse}
+                          />
+                        ) : activityNode.isActive ? (
+                          <Ionicons
+                            name="sparkles"
+                            size={28}
+                            color={colors.textInverse}
+                          />
+                        ) : activityNode.locked ? (
+                          <Ionicons
+                            name="lock-closed"
+                            size={20}
+                            color={colors.surface}
+                          />
+                        ) : (
+                          <View style={styles.nodeStandardInner} />
+                        )}
+                      </Pressable>
+                    </>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
       )}
 
-      {/* Child Selector Modal */}
       <ChildSelectorModal
         visible={showChildSelector}
         onClose={() => setShowChildSelector(false)}
+      />
+    </Screen>
+  );
+}
+
+function GateStatusRow({
+  label,
+  verified,
+}: {
+  label: string;
+  verified: boolean;
+}) {
+  return (
+    <View style={styles.gateStatusRow}>
+      <View style={styles.gateStatusLeft}>
+        <Ionicons
+          name={verified ? "checkmark-circle" : "ellipse-outline"}
+          size={20}
+          color={verified ? colors.success : colors.iconMuted}
+        />
+        <Text variant="body" weight="medium">
+          {label}
+        </Text>
+      </View>
+      <Badge
+        label={verified ? "Verified" : "Pending"}
+        tone={verified ? "success" : "warning"}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F9F9FD",
-  },
-  header: {
+  headerBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
-    backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.05)",
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    backgroundColor: colors.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+    gap: spacing[2],
+  },
+  headerSide: {
+    width: 40,
+  },
+  headerTitle: {
+    flex: 1,
   },
   headerCenter: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-    paddingHorizontal: spacing.md,
+    gap: spacing[3],
   },
   headerTextBlock: {
     flex: 1,
@@ -397,126 +459,65 @@ const styles = StyleSheet.create({
   progressRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
-    gap: 8,
+    marginTop: 4,
+    gap: spacing[2],
   },
   progressTrack: {
     flex: 1,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: "#E2E8F0",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: "#0C4A6E",
   },
   progressValue: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#0C4A6E",
+    minWidth: 32,
+    textAlign: "right",
   },
-  cycleCompleteText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: "#64748B",
-    lineHeight: 18,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 120,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    lineHeight: 22,
-  },
-  headerSpacer: {
-    width: 36,
-    height: 36,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerInfo: {
+  cycleBanner: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing[3],
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[3],
+    backgroundColor: colors.successBackground,
+  },
+  cycleBannerText: {
+    flex: 1,
+  },
+  gateBody: {
     flex: 1,
     justifyContent: "center",
+    paddingHorizontal: spacing[5],
   },
-  childAvatarContainer: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    overflow: "visible",
-    marginRight: 12,
-    backgroundColor: "#F1F5F9",
+  gateIconCircle: {
+    alignSelf: "center",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: colors.primaryMuted,
+    marginBottom: spacing[4],
   },
-  childAvatarInner: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    overflow: "hidden",
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
+  gateTitle: {
+    marginBottom: spacing[2],
   },
-  profileEditBadge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#E0F2FE",
-    borderWidth: 1,
-    borderColor: "white",
-    alignItems: "center",
-    justifyContent: "center",
+  gateSubtitle: {
+    marginBottom: spacing[5],
   },
-  childAvatar: {
-    width: "100%",
-    height: "100%",
+  gateStatusList: {
+    gap: spacing[2],
+    marginBottom: spacing[5],
   },
-  childAvatarFallback: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    fontFamily: "Plus Jakarta Sans",
-  },
-  progressBadge: {
+  gateStatusRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#E2E8F0",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
+    justifyContent: "space-between",
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: borderRadius.lg,
   },
-  progressText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0C4A6E",
+  gateStatusLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
   },
   scrollContent: {
     paddingBottom: 100,
@@ -535,12 +536,11 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 0,
     alignItems: "center",
-    pointerEvents: "none",
   },
   journeySvg: {
     width: "100%",
     height: "100%",
-    opacity: 0.5,
+    opacity: 0.55,
   },
   weekRow: {
     width: "100%",
@@ -556,32 +556,22 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     borderBottomWidth: 2,
-    borderBottomColor: "#CBD5E1",
+    borderBottomColor: colors.borderStrong,
     borderStyle: "dashed",
     zIndex: -1,
   },
   weekLabel: {
-    backgroundColor: "white",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 40,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[3],
+    borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  weekLabelText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    fontFamily: "Plus Jakarta Sans",
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   nodeRow: {
     width: "100%",
-    paddingHorizontal: 40,
+    paddingHorizontal: spacing[5],
     marginVertical: 30,
     alignItems: "center",
     position: "relative",
@@ -596,50 +586,46 @@ const styles = StyleSheet.create({
     paddingRight: width * 0.25,
   },
   nodeCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#E2E8F0",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.borderStrong,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 4,
-    borderColor: "white",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 5,
+    borderColor: colors.surface,
+    ...shadows.md,
   },
   nodeCircleCompleted: {
-    backgroundColor: "#0C4A6E",
+    backgroundColor: colors.success,
   },
   nodeCircleActive: {
-    backgroundColor: "#0C4A6E",
+    backgroundColor: colors.primary,
     transform: [{ scale: 1.1 }],
   },
   nodeCircleLocked: {
-    backgroundColor: "#CBD5E1",
+    backgroundColor: colors.borderStrong,
     opacity: 0.7,
   },
+  nodePressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
   nodeStandardInner: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "white",
-    opacity: 0.5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.surface,
+    opacity: 0.6,
   },
   activeTooltip: {
     position: "absolute",
     bottom: 90,
-    backgroundColor: "white",
-    borderRadius: 24,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xl,
+    padding: spacing[4],
     width: 200,
-    shadowColor: "#0C4A6E",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 5,
+    ...shadows.lg,
     zIndex: 10,
   },
   tooltipLeft: {
@@ -648,48 +634,12 @@ const styles = StyleSheet.create({
   tooltipRight: {
     right: width * 0.25 - 60,
   },
-  pathLine: {
-    position: "absolute",
-    width: 6,
-    height: 120,
-    backgroundColor: "#DBEAFE",
-    zIndex: -1,
-    borderRadius: 3,
-  },
-  pathLineLeft: {
-    left: width * 0.25 + 37,
-    transform: [{ rotate: "25deg" }],
-  },
-  pathLineRight: {
-    right: width * 0.25 + 37,
-    transform: [{ rotate: "-25deg" }],
-  },
-  pathLineVertical: {
-    left: "50%",
-    marginLeft: -3,
-    height: 80,
-    transform: [{ rotate: "0deg" }],
-  },
-  tooltipLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#64748B",
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
   tooltipTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    marginBottom: 8,
+    marginVertical: spacing[1],
   },
-  tooltipTime: {
+  tooltipMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-  },
-  tooltipTimeText: {
-    fontSize: 12,
-    color: "#64748B",
   },
 });

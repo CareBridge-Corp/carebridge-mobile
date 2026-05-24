@@ -3,14 +3,19 @@ import { Href, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import {
+  Button,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
+  Text,
+} from "../../../shared/components/ui";
+import { borderRadius, colors, layout, spacing } from "../../../shared/theme";
 import { useAvailableSlots } from "../hooks/useAppointments";
 import { useBookingStore } from "../store/bookingStore";
 
@@ -59,253 +64,238 @@ export default function BookingSelectDateScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title="Date & time" subtitle="Step 2 of 3" />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Date & Time</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Select Date</Text>
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <SectionHeader title="Select a day" />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.datesContainer}
         >
-          {dates.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.dateCard,
-                selectedDate === item.id && styles.dateCardSelected,
-              ]}
-              onPress={() => {
-                setSelectedDate(item.id);
-                setSelectedSlotKey(null);
-              }}
-            >
-              <Text
-                style={[
-                  styles.dateMonth,
-                  selectedDate === item.id && styles.dateTextSelected,
-                ]}
+          {dates.map((item) => {
+            const selected = selectedDate === item.id;
+            return (
+              <Pressable
+                key={item.id}
+                style={[styles.dateCard, selected && styles.dateCardSelected]}
+                onPress={() => {
+                  setSelectedDate(item.id);
+                  setSelectedSlotKey(null);
+                }}
               >
-                {item.month}
-              </Text>
-              <Text
-                style={[
-                  styles.dateNumber,
-                  selectedDate === item.id && styles.dateTextSelected,
-                ]}
-              >
-                {item.dayNumber}
-              </Text>
-              <Text
-                style={[
-                  styles.dateDay,
-                  selectedDate === item.id && styles.dateTextSelected,
-                ]}
-              >
-                {item.dayName}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  variant="caption"
+                  tone={selected ? "inverse" : "secondary"}
+                >
+                  {item.month.toUpperCase()}
+                </Text>
+                <Text
+                  variant="title1"
+                  style={{
+                    color: selected ? colors.textInverse : colors.textPrimary,
+                  }}
+                >
+                  {item.dayNumber}
+                </Text>
+                <Text
+                  variant="caption"
+                  tone={selected ? "inverse" : "secondary"}
+                >
+                  {item.dayName}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
-        <Text style={styles.sectionTitle}>Consultation Type</Text>
+        <SectionHeader title="Consultation type" />
         <View style={styles.typeRow}>
-          {(["in_person", "online"] as const).map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.typeChip,
-                meetingType === type && styles.typeChipSelected,
-              ]}
-              onPress={() => {
-                setMeetingType(type);
-                setSelectedSlotKey(null);
-              }}
-            >
-              <Text
-                style={[
-                  styles.typeChipText,
-                  meetingType === type && styles.typeChipTextSelected,
-                ]}
+          {(["in_person", "online"] as const).map((type) => {
+            const active = meetingType === type;
+            return (
+              <Pressable
+                key={type}
+                style={[styles.typeChip, active && styles.typeChipSelected]}
+                onPress={() => {
+                  setMeetingType(type);
+                  setSelectedSlotKey(null);
+                }}
               >
-                {type === "in_person" ? "In Person" : "Online"}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Ionicons
+                  name={type === "in_person" ? "business" : "videocam"}
+                  size={18}
+                  color={active ? colors.primary : colors.iconMuted}
+                />
+                <Text
+                  variant="bodyMedium"
+                  weight="semibold"
+                  style={{
+                    color: active ? colors.primary : colors.textSecondary,
+                  }}
+                >
+                  {type === "in_person" ? "In person" : "Online"}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        <Text style={styles.sectionTitle}>Available Times</Text>
+        <SectionHeader title="Available times" />
         {isLoading ? (
-          <ActivityIndicator color="#0C4A6E" style={{ marginVertical: 24 }} />
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
         ) : slots.length === 0 ? (
-          <Text style={styles.emptyText}>No available slots for this date.</Text>
+          <View style={styles.emptyBox}>
+            <Ionicons
+              name="time-outline"
+              size={28}
+              color={colors.iconMuted}
+            />
+            <Text variant="body" tone="secondary" align="center">
+              No available slots for this date. Try another day.
+            </Text>
+          </View>
         ) : (
           <View style={styles.timeSlotsContainer}>
             {slots.map((slot) => {
               const key = `${slot.schedule_id}-${slot.start_time}`;
               const label = slot.start_time.slice(0, 5);
+              const selected = selectedSlotKey === key;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={key}
                   style={[
                     styles.timeSlot,
-                    selectedSlotKey === key && styles.timeSlotSelected,
+                    selected && styles.timeSlotSelected,
                   ]}
                   onPress={() => setSelectedSlotKey(key)}
                 >
                   <Text
-                    style={[
-                      styles.timeSlotText,
-                      selectedSlotKey === key && styles.timeSlotTextSelected,
-                    ]}
+                    variant="bodyMedium"
+                    weight="semibold"
+                    style={{
+                      color: selected
+                        ? colors.textInverse
+                        : colors.textPrimary,
+                    }}
                   >
                     {label}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
         )}
-        <View style={{ height: 100 }} />
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            !selectedSlotKey && styles.nextButtonDisabled,
-          ]}
+      <View style={styles.footer}>
+        <Button
+          label="Review booking"
           onPress={handleNext}
           disabled={!selectedSlotKey}
-        >
-          <Text style={styles.nextButtonText}>Review Booking</Text>
-          <Ionicons name="arrow-forward" size={20} color={colors.white} />
-        </TouchableOpacity>
+          trailingIcon="arrow-forward"
+        />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
+  scroll: {
+    flex: 1,
   },
-  backButton: { padding: spacing.sm },
-  headerTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  scrollView: { flex: 1 },
-  sectionTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    paddingHorizontal: spacing.xxl,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
+  scrollContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[3],
+    paddingBottom: spacing[10],
+    gap: spacing[2],
   },
   datesContainer: {
-    paddingHorizontal: spacing.xxl,
-    gap: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingRight: spacing[4],
+    gap: spacing[2],
+    paddingBottom: spacing[3],
   },
   dateCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xl,
-    padding: spacing.lg,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
     alignItems: "center",
-    minWidth: 80,
-    borderWidth: 2,
-    borderColor: "transparent",
+    minWidth: 72,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing[1],
   },
-  dateCardSelected: { backgroundColor: "#0C4A6E", borderColor: "#0C4A6E" },
-  dateMonth: { fontSize: typography.fontSize.sm, color: "#A0B8C8", marginBottom: 4 },
-  dateNumber: {
-    fontSize: 28,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: 4,
+  dateCardSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  dateDay: { fontSize: typography.fontSize.sm, color: "#5A7A8F" },
-  dateTextSelected: { color: colors.white },
   typeRow: {
     flexDirection: "row",
-    gap: spacing.md,
-    paddingHorizontal: spacing.xxl,
-    marginBottom: spacing.lg,
+    gap: spacing[3],
+    marginBottom: spacing[3],
   },
   typeChip: {
     flex: 1,
-    backgroundColor: colors.white,
+    flexDirection: "row",
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "transparent",
+    justifyContent: "center",
+    gap: spacing[2],
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  typeChipSelected: { borderColor: "#0C4A6E", backgroundColor: "#E8F0F5" },
-  typeChipText: { color: "#5A7A8F", fontWeight: "600" },
-  typeChipTextSelected: { color: "#0C4A6E" },
+  typeChipSelected: {
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
+  },
   timeSlotsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.xxl,
+    gap: spacing[2],
+    paddingBottom: spacing[4],
   },
   timeSlot: {
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
     borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  timeSlotSelected: { backgroundColor: "#E8F0F5", borderColor: "#0C4A6E" },
-  timeSlotText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: "#5A7A8F",
-  },
-  timeSlotTextSelected: { color: "#0C4A6E" },
-  emptyText: {
-    paddingHorizontal: spacing.xxl,
-    color: "#94A3B8",
-    fontSize: 15,
-  },
-  buttonContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
-  },
-  nextButton: {
-    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 78,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
   },
-  nextButtonDisabled: { backgroundColor: "#C0D4E0" },
-  nextButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+  timeSlotSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  loading: {
+    paddingVertical: spacing[6],
+    alignItems: "center",
+  },
+  emptyBox: {
+    alignItems: "center",
+    gap: spacing[2],
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing[6],
+    paddingHorizontal: spacing[5],
+  },
+  footer: {
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing[4],
+    backgroundColor: colors.surfaceMuted,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 });

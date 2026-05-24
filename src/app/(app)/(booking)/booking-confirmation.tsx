@@ -1,18 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { borderRadius, colors, spacing, typography } from "../../../shared/theme";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { isPaymentRequiredError } from "../../../shared/api/client";
+import {
+  Badge,
+  Button,
+  Card,
+  Screen,
+  ScreenHeader,
+  Text,
+} from "../../../shared/components/ui";
+import { colors, layout, spacing } from "../../../shared/theme";
 import { useCreateAppointment } from "../hooks/useAppointments";
 import { useProfile } from "../hooks/useProfile";
 import { useBookingStore } from "../store/bookingStore";
@@ -64,135 +63,154 @@ export default function BookingConfirmationScreen() {
     }
   };
 
+  const doctorName = doctor
+    ? `${doctor.surname ?? ""} ${doctor.firstName} ${doctor.lastName}`.trim()
+    : "Not selected";
+
+  const dateString = slot
+    ? new Date(slot.date).toLocaleDateString(undefined, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : "Not selected";
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title="Confirm booking" subtitle="Step 3 of 3" />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Confirmation</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text variant="body" tone="secondary" style={styles.subtitle}>
+          Review your appointment details before confirming.
+        </Text>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>Review your appointment details</Text>
+        <Card variant="elevated" padding="lg" style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.iconCircle}>
+              <Ionicons
+                name="person-circle"
+                size={22}
+                color={colors.primary}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="caption" tone="secondary">
+                CLINICIAN
+              </Text>
+              <Text variant="title3" style={styles.rowValue}>
+                {doctorName}
+              </Text>
+            </View>
+          </View>
+        </Card>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Doctor</Text>
-          <Text style={styles.valueText}>
-            {doctor
-              ? `${doctor.surname ?? ""} ${doctor.firstName} ${doctor.lastName}`.trim()
-              : "Not selected"}
-          </Text>
-        </View>
+        <Card variant="elevated" padding="lg" style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.iconCircle}>
+              <Ionicons
+                name="calendar"
+                size={22}
+                color={colors.primary}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="caption" tone="secondary">
+                DATE & TIME
+              </Text>
+              <Text variant="title3" style={styles.rowValue}>
+                {dateString}
+              </Text>
+              {slot ? (
+                <Text variant="body" tone="secondary">
+                  {slot.startTime} – {slot.endTime}
+                </Text>
+              ) : null}
+              <View style={styles.badgeRow}>
+                <Badge
+                  label={meetingType === "online" ? "Online" : "In person"}
+                  tone="info"
+                  icon={meetingType === "online" ? "videocam" : "business"}
+                />
+              </View>
+            </View>
+          </View>
+        </Card>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Date & Time</Text>
-          <Text style={styles.valueText}>
-            {slot
-              ? `${slot.date} at ${slot.startTime}`
-              : "Not selected"}
-          </Text>
-          <Text style={styles.helperText}>
-            Meeting type: {meetingType === "online" ? "Online" : "In person"}
-          </Text>
-        </View>
-
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={24} color="#0C4A6E" />
-          <Text style={styles.infoBoxText}>
-            Your clinician will confirm the appointment. You will receive a notification when it is updated.
-          </Text>
-        </View>
+        <Card variant="tinted" padding="md" style={styles.card}>
+          <View style={styles.row}>
+            <Ionicons
+              name="information-circle"
+              size={22}
+              color={colors.primary}
+            />
+            <Text
+              variant="bodySmall"
+              tone="secondary"
+              style={styles.infoText}
+            >
+              {`Your clinician will confirm the appointment. You'll receive a notification once it's updated.`}
+            </Text>
+          </View>
+        </Card>
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.confirmButton}
+      <View style={styles.footer}>
+        <Button
+          label="Confirm appointment"
           onPress={handleConfirm}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={24} color={colors.white} />
-              <Text style={styles.confirmButtonText}>Confirm Appointment</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          loading={isSubmitting}
+          leadingIcon="checkmark-circle"
+        />
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
+  scrollContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[3],
+    paddingBottom: spacing[10],
+    gap: spacing[3],
   },
-  backButton: { padding: spacing.sm },
-  headerTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  scrollView: { flex: 1 },
   subtitle: {
-    fontSize: typography.fontSize.lg,
-    color: "#5A7A8F",
-    paddingHorizontal: spacing.xxl,
-    marginBottom: spacing.xl,
+    marginBottom: spacing[2],
   },
   card: {
-    backgroundColor: colors.white,
-    marginHorizontal: spacing.xxl,
-    marginBottom: spacing.md,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
+    gap: spacing[2],
   },
-  cardTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-  },
-  valueText: { fontSize: 16, color: "#0C4A6E", fontWeight: "600" },
-  helperText: { fontSize: 14, color: "#94A3B8", marginTop: 6 },
-  infoBox: {
+  row: {
     flexDirection: "row",
-    backgroundColor: "#E8F0F5",
-    marginHorizontal: spacing.xxl,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    gap: spacing.md,
-    marginTop: spacing.lg,
+    alignItems: "flex-start",
+    gap: spacing[3],
   },
-  infoBoxText: { flex: 1, fontSize: 14, color: "#5A7A8F", lineHeight: 22 },
-  buttonContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
+  rowValue: {
+    marginTop: 2,
   },
-  confirmButton: {
-    flexDirection: "row",
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primaryMuted,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#10B981",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
   },
-  confirmButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+  badgeRow: {
+    flexDirection: "row",
+    marginTop: spacing[2],
+  },
+  infoText: {
+    flex: 1,
+  },
+  footer: {
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing[4],
+    backgroundColor: colors.surfaceMuted,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 });

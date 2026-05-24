@@ -1,21 +1,14 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet, View } from "react-native";
 import {
-  ActivityIndicator,
-  StyleSheet,
+  Button,
+  Card,
   Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "../../../shared/theme";
+  TextField,
+} from "../../../shared/components/ui";
+import { colors, spacing } from "../../../shared/theme";
 import { useForgotPassword } from "../hooks/useForgotPassword";
 
 export function ForgotPasswordForm() {
@@ -30,141 +23,55 @@ export function ForgotPasswordForm() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t("auth.forgotPasswordTitle")}</Text>
-      <Text style={styles.subtitle}>{t("auth.forgotPasswordSubtitle")}</Text>
-
       {forgotPasswordMutation.error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.error}>{forgotPasswordMutation.error.message}</Text>
-        </View>
+        <Card
+          variant="flat"
+          padding="md"
+          style={{
+            backgroundColor: colors.errorBackground,
+            marginBottom: spacing[4],
+          }}
+        >
+          <Text variant="bodySmall" tone="danger">
+            {forgotPasswordMutation.error.message}
+          </Text>
+        </Card>
       )}
 
-      <View style={styles.form}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            placeholder={t("auth.email")}
-            placeholderTextColor={colors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-          />
-          <View style={styles.iconContainer}>
-            <Ionicons name="mail-outline" size={20} color={colors.icon} />
-          </View>
-        </View>
+      <TextField
+        label={t("auth.email", "Email")}
+        placeholder="you@example.com"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+        leadingIcon="mail-outline"
+      />
+
+      <View style={styles.actions}>
+        <Button
+          label={t("auth.sendResetLink", "Send reset link")}
+          onPress={handleSubmit}
+          loading={forgotPasswordMutation.isPending}
+          disabled={!email.trim()}
+        />
+        <Button
+          label={t("auth.backToLogin", "Back to log in")}
+          variant="ghost"
+          onPress={() => router.push("/(auth)/login")}
+        />
       </View>
-
-      <TouchableOpacity
-        style={[
-          styles.button,
-          forgotPasswordMutation.isPending && styles.buttonDisabled,
-        ]}
-        onPress={handleSubmit}
-        disabled={forgotPasswordMutation.isPending || !email.trim()}
-        activeOpacity={0.8}
-      >
-        {forgotPasswordMutation.isPending ? (
-          <ActivityIndicator color={colors.white} />
-        ) : (
-          <Text style={styles.buttonText}>{t("auth.sendResetLink")}</Text>
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.backToLogin}
-        onPress={() => router.push("/(auth)/login")}
-      >
-        <Text style={styles.backToLoginText}>{t("auth.backToLogin")}</Text>
-      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 180,
+    gap: spacing[4],
   },
-  title: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.lg,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.md,
-    color: colors.textLight,
-    marginBottom: spacing.xxxl,
-    lineHeight: typography.lineHeight.relaxed * typography.fontSize.md,
-  },
-  form: {
-    gap: spacing.lg,
-    marginBottom: spacing.massive,
-  },
-  inputWrapper: {
-    position: "relative",
-  },
-  input: {
-    backgroundColor: colors.inputBackground,
-    borderRadius: borderRadius.xxl,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-    paddingRight: 56,
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-  },
-  iconContainer: {
-    position: "absolute",
-    right: spacing.lg,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    width: 40,
-    height: "100%",
-  },
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxl,
-    alignItems: "center",
-    position: "absolute",
-    bottom: spacing.huge + 40,
-    left: spacing.xxl,
-    right: spacing.xxl,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: colors.white,
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-  },
-  backToLogin: {
-    position: "absolute",
-    bottom: spacing.huge,
-    left: spacing.xxl,
-    right: spacing.xxl,
-    alignItems: "center",
-  },
-  backToLoginText: {
-    color: colors.textLink,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  errorContainer: {
-    backgroundColor: "#FEE",
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
-  },
-  error: {
-    color: colors.error,
-    fontSize: typography.fontSize.sm,
+  actions: {
+    gap: spacing[2],
+    marginTop: spacing[3],
   },
 });

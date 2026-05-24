@@ -8,23 +8,23 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { apiClient } from "../../../shared/api/client";
 import multipartApiClient from "../../../shared/api/multipartClient";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "../../../shared/theme";
+  Button,
+  Screen,
+  ScreenHeader,
+  SectionHeader,
+  Text,
+  TextField,
+} from "../../../shared/components/ui";
+import { colors, layout, spacing } from "../../../shared/theme";
 import { useProfile } from "../hooks/useProfile";
 
 export default function UpdateProfileScreen() {
@@ -39,7 +39,6 @@ export default function UpdateProfileScreen() {
   const [phone, setPhone] = useState(profile?.phone || "");
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
-  // Sync state when profile loads
   useEffect(() => {
     if (profile) {
       setFirstName(profile.firstName || "");
@@ -95,27 +94,24 @@ export default function UpdateProfileScreen() {
 
   const handleSaveProfile = async () => {
     try {
-      // 1. Update text fields
       await updateProfileDetailsMutation.mutateAsync();
 
-      // 2. Upload image if selected
       if (profileImage) {
         await uploadProfilePicMutation.mutateAsync();
       }
 
-      // 3. Update local auth store user optimistically
       queryClient.invalidateQueries({ queryKey: ["profile"] });
 
       setStatusConfig({
         type: "success",
-        title: "Profile Updated",
+        title: "Profile updated",
         message: "Your profile has been successfully updated.",
       });
       setStatusModalVisible(true);
     } catch (error: any) {
       setStatusConfig({
         type: "error",
-        title: "Update Failed",
+        title: "Update failed",
         message: error.message || "Failed to update profile. Please try again.",
       });
       setStatusModalVisible(true);
@@ -127,7 +123,7 @@ export default function UpdateProfileScreen() {
     if (status !== "granted") {
       setStatusConfig({
         type: "error",
-        title: "Permission Required",
+        title: "Permission required",
         message:
           "Please grant camera roll permissions to upload a profile picture.",
       });
@@ -156,14 +152,11 @@ export default function UpdateProfileScreen() {
 
   if (isLoadingProfile && !profile) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <ActivityIndicator size="large" color="#0C4A6E" />
-      </View>
+      <Screen background={colors.surfaceMuted}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </Screen>
     );
   }
 
@@ -171,127 +164,118 @@ export default function UpdateProfileScreen() {
     updateProfileDetailsMutation.isPending ||
     uploadProfilePicMutation.isPending;
 
+  const avatarUri = profileImage || profile?.profilePictureUrl;
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title="Edit profile" />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-        <View style={{ width: 44 }} />
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* Profile Picture Upload */}
-        <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={handleImagePick} activeOpacity={0.8}>
-            <View style={styles.avatarContainer}>
-              {profileImage || profile?.profilePictureUrl ? (
-                <Image
-                  source={{
-                    uri: profileImage || profile?.profilePictureUrl,
-                  }}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={48} color="#A0B8C8" />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.avatarSection}>
+            <Pressable
+              onPress={handleImagePick}
+              style={({ pressed }) => [
+                styles.avatarPressable,
+                pressed && styles.pressed,
+              ]}
+            >
+              <View style={styles.avatarShell}>
+                {avatarUri ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={styles.avatarImage}
+                  />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Ionicons
+                      name="person"
+                      size={48}
+                      color={colors.iconMuted}
+                    />
+                  </View>
+                )}
+                <View style={styles.editBadge}>
+                  <Ionicons
+                    name="camera"
+                    size={16}
+                    color={colors.textInverse}
+                  />
                 </View>
-              )}
-              <View style={styles.editIconBadge}>
-                <Ionicons name="camera" size={18} color={colors.white} />
               </View>
-            </View>
-          </TouchableOpacity>
-        </View>
+              <Text
+                variant="bodySmall"
+                tone="secondary"
+                align="center"
+                style={styles.avatarHint}
+              >
+                Tap to change profile photo
+              </Text>
+            </Pressable>
+          </View>
 
-        <View style={styles.formContainer}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>First Name</Text>
-            <TextInput
-              style={styles.input}
+          <SectionHeader title="Personal info" />
+
+          <View style={styles.formGroup}>
+            <TextField
+              label="First name"
               value={firstName}
               onChangeText={setFirstName}
-              placeholder="First Name"
-              placeholderTextColor="#A0B8C8"
+              placeholder="First name"
+              leadingIcon="person-outline"
             />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Last Name</Text>
-            <TextInput
-              style={styles.input}
+            <TextField
+              label="Last name"
               value={lastName}
               onChangeText={setLastName}
-              placeholder="Last Name"
-              placeholderTextColor="#A0B8C8"
+              placeholder="Last name"
             />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Surname</Text>
-            <TextInput
-              style={styles.input}
+            <TextField
+              label="Surname"
               value={surname}
               onChangeText={setSurname}
-              placeholder="Surname (Optional)"
-              placeholderTextColor="#A0B8C8"
+              placeholder="Surname (optional)"
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
+          <SectionHeader title="Contact info" />
+
+          <View style={styles.formGroup}>
+            <TextField
+              label="Email"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              placeholder="Email Address"
-              placeholderTextColor="#A0B8C8"
+              placeholder="you@example.com"
+              leadingIcon="mail-outline"
             />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={styles.input}
+            <TextField
+              label="Phone number"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
-              placeholder="Phone Number"
-              placeholderTextColor="#A0B8C8"
+              placeholder="Phone number"
+              leadingIcon="call-outline"
             />
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+      <View style={styles.footer}>
+        <Button
+          label={isSaving ? "Saving..." : "Save changes"}
           onPress={handleSaveProfile}
-          disabled={isSaving}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.saveButtonText}>
-            {isSaving ? "Saving..." : "Save Changes"}
-          </Text>
-          {!isSaving && (
-            <Ionicons name="checkmark-circle" size={20} color={colors.white} />
-          )}
-        </TouchableOpacity>
+          loading={isSaving}
+          trailingIcon="checkmark-circle"
+        />
       </View>
 
       <StatusModal
@@ -301,124 +285,76 @@ export default function UpdateProfileScreen() {
         message={statusConfig.message}
         onPrimaryPress={handleModalPrimaryPress}
       />
-    </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loading: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8F0F5",
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-  },
-  scrollView: {
-    flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xxl,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.huge * 2,
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[2],
+    paddingBottom: spacing[8],
+    gap: spacing[4],
   },
   avatarSection: {
     alignItems: "center",
-    marginBottom: spacing.xxxl,
+    paddingVertical: spacing[4],
   },
-  avatarContainer: {
+  avatarPressable: {
+    alignItems: "center",
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  avatarShell: {
     position: "relative",
   },
   avatarImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 116,
+    height: 116,
+    borderRadius: 58,
     borderWidth: 3,
-    borderColor: colors.white,
+    borderColor: colors.surface,
   },
   avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#E8F0F5",
+    width: 116,
+    height: 116,
+    borderRadius: 58,
+    backgroundColor: colors.surfaceSunken,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
-    borderColor: colors.white,
+    borderColor: colors.surface,
   },
-  editIconBadge: {
+  editBadge: {
     position: "absolute",
-    bottom: 0,
+    bottom: 4,
     right: 4,
-    backgroundColor: "#0C4A6E",
     width: 36,
     height: 36,
     borderRadius: 18,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
-    borderColor: colors.white,
+    borderColor: colors.surfaceMuted,
   },
-  formContainer: {
-    gap: spacing.lg,
+  avatarHint: {
+    marginTop: spacing[3],
   },
-  inputGroup: {
-    gap: spacing.xs,
+  formGroup: {
+    gap: spacing[3],
   },
-  label: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: "#5A7A8F",
-    marginLeft: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: "#E8F0F5",
-    borderRadius: borderRadius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: Platform.OS === "ios" ? spacing.lg : spacing.md,
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-  },
-  buttonContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: Platform.OS === "ios" ? 40 : 20,
-    paddingTop: spacing.md,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: "#E8F0F5",
-  },
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
-  },
-  saveButtonDisabled: {
-    backgroundColor: "#C0D4E0",
-  },
-  saveButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+  footer: {
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing[4],
+    backgroundColor: colors.surfaceMuted,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 });

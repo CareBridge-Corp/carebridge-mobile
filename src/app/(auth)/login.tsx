@@ -1,18 +1,15 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Href, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
+import React from "react";
 import { useTranslation } from "react-i18next";
+import { StyleSheet, View } from "react-native";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
+  IconButton,
+  Screen,
+  ScreenHeader,
   Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+} from "../../shared/components/ui";
 import { useLanguageStore } from "../../shared/store/languageStore";
-import { colors, spacing, typography } from "../../shared/theme";
+import { spacing } from "../../shared/theme";
 import { LoginForm } from "./components/LoginForm";
 
 export default function LoginScreen() {
@@ -20,105 +17,74 @@ export default function LoginScreen() {
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguageStore();
 
-  const handleSkipToHome = () => {
-    router.replace("/(app)" as Href);
-  };
-
-  const toggleLanguage = () => {
-    const nextLang = language === "en" ? "am" : language === "am" ? "om" : "en";
-    setLanguage(nextLang);
+  const cycleLanguage = () => {
+    const next = language === "en" ? "am" : language === "am" ? "om" : "en";
+    setLanguage(next);
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
-      </TouchableOpacity>
+    <Screen scroll padded={false}>
+      <ScreenHeader
+        rightSlot={
+          <IconButton
+            icon="language"
+            variant="tinted"
+            size="sm"
+            accessibilityLabel="Change language"
+            onPress={cycleLanguage}
+          />
+        }
+      />
 
-      {/* Language Button replaced Skip Button */}
-      <TouchableOpacity style={styles.skipButton} onPress={toggleLanguage}>
-        <Ionicons name="language" size={18} color={colors.primary} />
-        <Text style={styles.skipText}>{language.toUpperCase()}</Text>
-      </TouchableOpacity>
+      <View style={styles.body}>
+        <View style={styles.intro}>
+          <Text variant="display">{t("auth.loginTitle", "Welcome back")}</Text>
+          <Text variant="body" tone="secondary" style={styles.subtitle}>
+            {t(
+              "auth.loginSubtitle",
+              "Continue caring for your child with personalized guidance.",
+            )}
+          </Text>
+        </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
         <LoginForm />
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>{t("auth.noAccount")} </Text>
-          <TouchableOpacity onPress={() => router.push("/(auth)/signup")}>
-            <Text style={styles.footerLink}>{t("auth.signup")}</Text>
-          </TouchableOpacity>
+          <Text variant="bodySmall" tone="secondary">
+            {t("auth.noAccount", "Don't have an account?")}{" "}
+          </Text>
+          <Text
+            variant="bodySmall"
+            weight="semibold"
+            tone="brand"
+            onPress={() => router.push("/(auth)/signup")}
+          >
+            {t("auth.signup", "Sign up")}
+          </Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  body: {
     flex: 1,
-    backgroundColor: colors.background,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingTop: 80,
-    justifyContent: "center",
+  intro: {
+    marginBottom: spacing[7],
   },
-  backButton: {
-    position: "absolute",
-    top: 60,
-    left: spacing.xl,
-    zIndex: 10,
-    padding: spacing.sm,
-  },
-  skipButton: {
-    position: "absolute",
-    top: 60,
-    right: spacing.xl,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    zIndex: 10,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  skipText: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: colors.primary,
+  subtitle: {
+    marginTop: spacing[2],
+    maxWidth: 320,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: spacing.xl,
-    marginTop: spacing.md,
-  },
-  footerText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textLight,
-  },
-  footerLink: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textLink,
-    fontWeight: typography.fontWeight.semibold,
+    paddingVertical: spacing[6],
+    marginTop: spacing[4],
   },
 });

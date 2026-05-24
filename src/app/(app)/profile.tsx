@@ -1,599 +1,316 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { ScrollView, StyleSheet, View } from "react-native";
 import {
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  IconButton,
+  ListRow,
+  SectionHeader,
+  Screen,
   Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+} from "../../shared/components/ui";
 import { useLogout } from "../(auth)/hooks/useLogout";
 import { useLanguageStore } from "../../shared/store/languageStore";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import { colors, layout, spacing } from "../../shared/theme";
 import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
 import { useChildrenStore } from "./store/childrenStore";
+
+type Language = "en" | "am" | "om";
+
+const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "am", label: "አማርኛ" },
+  { value: "om", label: "Afaan Oromoo" },
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
   const logoutMutation = useLogout();
   const { activeChild } = useChildrenStore();
   const { language, setLanguage } = useLanguageStore();
+  const { t } = useTranslation();
 
-  // Use the profile from our new profile feature hook/store
   const { data: profile } = useProfile();
-
-  // Fetch clinician for the active child if available
   const { data: clinician } = useAssignedClinician(activeChild?.childId);
 
-  console.log("Loaded profile:", profile);
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        router.replace("/(auth)/welcome");
-      },
+      onSuccess: () => router.replace("/(auth)/welcome"),
     });
   };
 
-  return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={colors.backgroundBlue}
-      />
+  const fullName =
+    profile?.fullName ||
+    `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim() ||
+    "Account";
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity style={styles.settingsButton}>
-          <Ionicons name="settings-outline" size={22} color={colors.text} />
-        </TouchableOpacity>
+  return (
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <View style={styles.headerBar}>
+        <Text variant="title1">{t("profile.title", "Profile")}</Text>
+        <IconButton
+          icon="settings-outline"
+          accessibilityLabel="Settings"
+          onPress={() => {
+            // Placeholder for future settings screen
+          }}
+        />
       </View>
 
       <ScrollView
-        style={styles.scrollView}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.profileCard}>
-          <View style={styles.avatarWrapper}>
-            <View style={styles.avatarLarge}>
-              {profile?.profilePictureUrl ? (
-                <Image
-                  source={{ uri: profile?.profilePictureUrl }}
-                  style={{ width: 80, height: 80, borderRadius: 40 }}
-                />
-              ) : (
-                <Ionicons name="person" size={48} color={colors.white} />
-              )}
-            </View>
-            <View style={styles.editAvatarBadge}>
-              <Ionicons name="camera" size={14} color={colors.white} />
+        {/* Profile summary */}
+        <Card variant="elevated" padding="lg" style={styles.profileCard}>
+          <View style={styles.avatarWrap}>
+            <Avatar uri={profile?.profilePictureUrl} name={fullName} size="xl" />
+            <View style={styles.editBadge}>
+              <IconButton
+                icon="camera"
+                size="sm"
+                variant="filled"
+                accessibilityLabel="Change photo"
+                onPress={() =>
+                  router.push("/(app)/(parent)/update-profile" as any)
+                }
+              />
             </View>
           </View>
 
-          <Text style={styles.userName}>
-            {profile?.fullName ||
-              `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim()}
+          <Text variant="title1" align="center" style={styles.name}>
+            {fullName}
           </Text>
 
-          <View style={styles.roleBadge}>
-            <Ionicons
-              name="shield-checkmark"
-              size={14}
-              color={colors.primary}
-              style={{ marginRight: 4 }}
+          {profile?.role ? (
+            <Badge
+              label={profile.role}
+              tone="brand"
+              icon="shield-checkmark"
+              style={styles.role}
             />
-            <Text style={styles.userRole}>
-              {profile?.role?.toUpperCase() || "PATIENT"}
+          ) : null}
+
+          {profile?.email ? (
+            <Text variant="bodySmall" tone="secondary" align="center" style={styles.email}>
+              {profile.email}
             </Text>
+          ) : null}
+
+          <View style={styles.editButton}>
+            <Button
+              label={t("profile.editProfile", "Edit profile")}
+              variant="secondary"
+              size="sm"
+              leadingIcon="create-outline"
+              onPress={() => router.push("/(app)/(parent)/update-profile" as any)}
+              fullWidth={false}
+            />
           </View>
+        </Card>
 
-          <Text style={styles.userEmail}>{profile?.email}</Text>
-        </View>
-
-        {/* Screening Profile Highlight Card */}
-        <View style={styles.screeningCardContainer}>
-          <TouchableOpacity
-            style={styles.screeningCard}
-            activeOpacity={0.85}
+        {/* Screening highlight */}
+        <View style={styles.section}>
+          <Card
+            variant="tinted"
+            padding="md"
             onPress={() => router.push("/(app)/(mchat)/mchat-profile" as any)}
           >
-            <View style={styles.screeningIconWrapper}>
-              <Ionicons name="clipboard" size={24} color={colors.white} />
+            <View style={styles.screeningRow}>
+              <View style={styles.screeningIcon}>
+                <Text variant="title2" tone="inverse">
+                  ✓
+                </Text>
+              </View>
+              <View style={styles.screeningText}>
+                <Text variant="body" weight="semibold">
+                  M-CHAT-R/F history
+                </Text>
+                <Text variant="caption" tone="secondary">
+                  Review past screenings
+                </Text>
+              </View>
             </View>
-            <View style={styles.screeningTextWrapper}>
-              <Text style={styles.screeningTitle}>M-CHAT-R/F Screening</Text>
-              <Text style={styles.screeningSubtitle}>
-                View child screening history
-              </Text>
-            </View>
-            <View style={styles.screeningArrow}>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
-          </TouchableOpacity>
+          </Card>
         </View>
 
-        {/* Doctor Section (Conditional) */}
-        {clinician && (
-          <View style={styles.menuSection}>
-            <Text style={styles.sectionTitle}>Assigned Clinician</Text>
-            <TouchableOpacity
-              style={styles.menuItem}
+        {/* Care team */}
+        {clinician ? (
+          <View style={styles.section}>
+            <SectionHeader title={t("profile.careTeam", "Care team")} />
+            <Card variant="flat" padding={0}>
+              <ListRow
+                icon="medical"
+                title={`${clinician.surname ?? ""} ${clinician.firstName} ${clinician.lastName}`.trim()}
+                subtitle={
+                  clinician.specializations?.[0]?.name ?? "Assigned clinician"
+                }
+                onPress={() =>
+                  router.push({
+                    pathname: "/(app)/(doctor)/doctor-details",
+                    params: { childId: activeChild?.childId },
+                  } as any)
+                }
+                noDivider
+              />
+            </Card>
+          </View>
+        ) : null}
+
+        {/* Account */}
+        <View style={styles.section}>
+          <SectionHeader title={t("profile.account", "Account")} />
+          <Card variant="flat" padding={0}>
+            <ListRow
+              icon="person-outline"
+              title={t("profile.personalInfo", "Personal information")}
+              subtitle="Edit your name, photo and contact"
               onPress={() =>
-                router.push({
-                  pathname: "/(app)/(doctor)/doctor-details",
-                  params: { childId: activeChild?.childId },
-                } as any)
+                router.push("/(app)/(parent)/update-profile" as any)
               }
-              activeOpacity={0.7}
-            >
-              <View style={styles.menuIconContainer}>
-                <Ionicons name="medical" size={20} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.menuText}>
-                  {clinician.surname} {clinician.firstName} {clinician.lastName}
-                </Text>
-                <Text style={{ fontSize: 12, color: colors.textLight }}>
-                  {clinician.specializations[0]?.name || "Specialist"}
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={colors.iconLight}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Menu Items */}
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Account settings</Text>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/(app)/(parent)/update-profile" as any)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.menuIconContainer}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
-            <Text style={styles.menuText}>Personal Information</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.iconLight}
             />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
-            <Text style={styles.menuText}>Appointments</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.iconLight}
+            <ListRow
+              icon="document-text-outline"
+              title={t("profile.screeningHistory", "Screening history")}
+              subtitle="View all M-CHAT submissions"
+              onPress={() => router.push("/(app)/(mchat)/mchat-profile" as any)}
+              noDivider
             />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuIconContainer}>
-              <Ionicons
-                name="notifications-outline"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
-            <Text style={styles.menuText}>Notifications</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.iconLight}
-            />
-          </TouchableOpacity>
+          </Card>
         </View>
 
-        <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>General</Text>
-
-          <View style={styles.menuItem}>
-            <View
-              style={[
-                styles.menuIconContainer,
-                { backgroundColor: colors.cardLightBlue },
-              ]}
-            >
-              <Ionicons
-                name="language-outline"
-                size={20}
-                color={colors.primary}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.menuText}>Language</Text>
-              <View style={styles.languageSelectors}>
-                <TouchableOpacity
-                  onPress={() => setLanguage("en")}
-                  style={[
-                    styles.langBadge,
-                    language === "en" && styles.langBadgeActive,
-                  ]}
-                >
+        {/* Preferences */}
+        <View style={styles.section}>
+          <SectionHeader title={t("profile.preferences", "Preferences")} />
+          <Card variant="flat" padding="md">
+            <Text variant="bodySmall" tone="secondary" style={styles.langLabel}>
+              {t("profile.language", "Language")}
+            </Text>
+            <View style={styles.langOptions}>
+              {LANGUAGE_OPTIONS.map((opt) => {
+                const isActive = language === opt.value;
+                return (
                   <Text
+                    key={opt.value}
+                    onPress={() => setLanguage(opt.value)}
+                    variant="bodySmall"
+                    weight="semibold"
                     style={[
-                      styles.langText,
-                      language === "en" && styles.langTextActive,
+                      styles.langChip,
+                      isActive && styles.langChipActive,
+                      { color: isActive ? colors.textInverse : colors.textPrimary },
                     ]}
                   >
-                    English
+                    {opt.label}
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setLanguage("am")}
-                  style={[
-                    styles.langBadge,
-                    language === "am" && styles.langBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.langText,
-                      language === "am" && styles.langTextActive,
-                    ]}
-                  >
-                    አማርኛ
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setLanguage("om")}
-                  style={[
-                    styles.langBadge,
-                    language === "om" && styles.langBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.langText,
-                      language === "om" && styles.langTextActive,
-                    ]}
-                  >
-                    Oromiffa
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                );
+              })}
             </View>
-          </View>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View
-              style={[
-                styles.menuIconContainer,
-                { backgroundColor: colors.borderLight },
-              ]}
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color={colors.textMedium}
-              />
-            </View>
-            <Text style={styles.menuText}>Privacy & Security</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.iconLight}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View
-              style={[
-                styles.menuIconContainer,
-                { backgroundColor: colors.borderLight },
-              ]}
-            >
-              <Ionicons
-                name="help-circle-outline"
-                size={20}
-                color={colors.textMedium}
-              />
-            </View>
-            <Text style={styles.menuText}>Help & Support</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.iconLight}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <View
-              style={[
-                styles.menuIconContainer,
-                { backgroundColor: colors.borderLight },
-              ]}
-            >
-              <Ionicons
-                name="information-circle-outline"
-                size={20}
-                color={colors.textMedium}
-              />
-            </View>
-            <Text style={styles.menuText}>About</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={colors.iconLight}
-            />
-          </TouchableOpacity>
+          </Card>
         </View>
 
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          disabled={logoutMutation.isPending}
-        >
-          <Ionicons name="log-out-outline" size={20} color={colors.error} />
-          <Text style={styles.logoutText}>
-            {logoutMutation.isPending ? "Logging out..." : "Logout"}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={{ height: 20 }} />
+        {/* Logout */}
+        <View style={styles.section}>
+          <Button
+            label={
+              logoutMutation.isPending
+                ? t("profile.loggingOut", "Logging out...")
+                : t("profile.logout", "Log out")
+            }
+            variant="secondary"
+            onPress={handleLogout}
+            disabled={logoutMutation.isPending}
+            leadingIcon="log-out-outline"
+          />
+        </View>
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundBlue,
-  },
-  header: {
+  headerBar: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[3],
   },
-  headerTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-  },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  scrollView: {
+  scroll: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing[5],
+    paddingBottom: layout.tabBarHeight + spacing[8],
+    gap: spacing[5],
   },
   profileCard: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xxxl,
-    borderTopRightRadius: borderRadius.xxxl,
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.lg,
     alignItems: "center",
   },
-  avatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.cardBackground,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: spacing.md,
+  avatarWrap: {
+    position: "relative",
+    marginBottom: spacing[3],
   },
-  avatarWrapper: {
-    marginTop: 0,
-    marginBottom: spacing.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-  },
-  editAvatarBadge: {
+  editBadge: {
     position: "absolute",
-    bottom: 8,
     right: -4,
+    bottom: -4,
+  },
+  name: {
+    marginBottom: spacing[2],
+  },
+  role: {
+    marginBottom: spacing[2],
+  },
+  email: {
+    marginBottom: spacing[4],
+  },
+  editButton: {
+    alignSelf: "stretch",
+    alignItems: "center",
+  },
+  section: {
+    gap: spacing[3],
+  },
+  screeningRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  screeningIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.primary,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  userName: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  roleBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#EBF4FF", // Light blue background for the badge
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderRadius: 100, // Pill shape
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: "#D3E4F9",
-  },
-  userRole: {
-    fontSize: typography.fontSize.xs,
-    color: colors.primary,
-    fontWeight: typography.fontWeight.bold,
-    letterSpacing: 1,
-  },
-  userEmail: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textMedium,
-    marginBottom: spacing.lg,
-  },
-  editProfileButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.xxl,
-  },
-  editProfileText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
-  },
-  menuSection: {
-    backgroundColor: colors.white,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textLight,
-    textTransform: "uppercase",
-    marginBottom: spacing.sm,
-    marginLeft: spacing.sm,
-    marginTop: spacing.md,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  menuIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.cardLightBlue,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  menuText: {
-    flex: 1,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text,
-  },
-  languageSelectors: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  langBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundBlue,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  langBadgeActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  langText: {
-    fontSize: 12,
-    color: colors.textMedium,
-    fontWeight: "500",
-  },
-  langTextActive: {
-    color: colors.white,
-    fontWeight: "600",
-  },
-  logoutButton: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FEF2F2", // very light red/pink for error backing
-    borderWidth: 1,
-    borderColor: "#FCC2D7",
-    marginHorizontal: spacing.xxl,
-    marginTop: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xxl,
-    gap: spacing.sm,
   },
-  logoutText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.error,
-  },
-  screeningCardContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    backgroundColor: colors.white,
-  },
-  screeningCard: {
-    backgroundColor: "#F0F7FB", // Light blue matching the theme
-    borderWidth: 1,
-    borderColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.lg,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  screeningIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  screeningTextWrapper: {
+  screeningText: {
     flex: 1,
   },
-  screeningTitle: {
-    color: "#0C4A6E", // Theme dark text
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    marginBottom: 4,
+  langLabel: {
+    marginBottom: spacing[3],
   },
-  screeningSubtitle: {
-    color: "#5A7A8F", // Theme subtle text
-    fontSize: typography.fontSize.xs,
+  langOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing[2],
   },
-  screeningArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: spacing.sm,
-    borderWidth: 1,
-    borderColor: "#E8F0F5",
+  langChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: 999,
+    backgroundColor: colors.surfaceSunken,
+    overflow: "hidden",
+  },
+  langChipActive: {
+    backgroundColor: colors.primary,
   },
 });

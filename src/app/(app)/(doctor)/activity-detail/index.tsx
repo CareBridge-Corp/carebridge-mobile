@@ -1,16 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import {
-  ActivityIndicator,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
+  Button,
+  IconButton,
+  Screen,
   Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { borderRadius, colors, spacing } from "../../../../shared/theme";
+} from "../../../../shared/components/ui";
+import { borderRadius, colors, layout, spacing } from "../../../../shared/theme";
 import {
   canCompleteActivity,
   canStartActivity,
@@ -59,10 +57,8 @@ export default function ActivityDetailScreen() {
     ? canCompleteActivity(currentWeekPlan, params.activityId, weekPlans)
     : { allowed: false };
 
-  // Flatten all activities in order across week plans
   const allActivitiesWithContext = weekPlans.flatMap((wp) =>
     (wp.activities || []).map((a) => {
-      // Find status from activityStatuses array
       const statusObj = wp.activityStatuses?.find(
         (s) => s.activityId === a.activityId,
       );
@@ -112,7 +108,6 @@ export default function ActivityDetailScreen() {
     if (!isCompleted) {
       setShowCompletionModal(true);
     } else if (nextActivity) {
-      // Check if moving to a new week plan
       if (nextActivity.weekPlanId !== params.weekPlanId) {
         setShowNewWeekModal(true);
       } else {
@@ -176,101 +171,87 @@ export default function ActivityDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      {/* Navbar */}
+    <Screen padded={false} background={colors.surface}>
       <View style={styles.navbar}>
-        <Text style={styles.navbarTitle}>{activityData.title}</Text>
-        <TouchableOpacity
-          style={styles.closeButton}
+        <View style={{ flex: 1 }}>
+          <Text variant="title1" numberOfLines={2}>
+            {activityData.title}
+          </Text>
+        </View>
+        <IconButton
+          icon="close"
+          variant="tinted"
+          accessibilityLabel="Close"
           onPress={() => router.back()}
-        >
-          <Ionicons name="close" size={24} color="#0C4A6E" />
-        </TouchableOpacity>
+        />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Video Placeholder */}
         <View style={styles.videoContainer}>
           <View style={styles.playButton}>
-            <Ionicons name="play" size={40} color="#BFDBFE" />
+            <Ionicons name="play" size={32} color={colors.primary} />
           </View>
         </View>
 
-        {/* Description Section */}
         <View style={styles.section}>
           <SectionHeader title="Description" />
           <Text
-            style={styles.descriptionText}
+            variant="body"
+            tone="secondary"
             numberOfLines={isExpanded ? undefined : 6}
+            style={styles.descriptionText}
           >
             {activityData.description}
           </Text>
-          <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)}>
-            <Text style={styles.moreLink}>{isExpanded ? "Less" : "More"}</Text>
-          </TouchableOpacity>
+          <Pressable
+            onPress={() => setIsExpanded(!isExpanded)}
+            hitSlop={6}
+          >
+            <Text
+              variant="bodyMedium"
+              weight="semibold"
+              style={styles.moreLink}
+            >
+              {isExpanded ? "Show less" : "Show more"}
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.divider} />
 
-        {/* Verification Info */}
         <View style={styles.section}>
-          <VerifiedBadge label="Verified by who" />
-          <VerifiedBadge label="Verified by who" />
-          <VerifiedBadge label="Verified by who" />
+          <SectionHeader title="Verified by" />
+          <VerifiedBadge label="Clinical evidence" />
+          <VerifiedBadge label="Pediatric protocol" />
+          <VerifiedBadge label="WHO guidance" />
         </View>
 
         <View style={styles.divider} />
 
-        {/* Recommended Games */}
         <View style={styles.section}>
-          <SectionHeader title="Recommended Games" />
+          <SectionHeader title="Recommended games" />
           <RecommendedGames />
         </View>
       </ScrollView>
 
-      {/* Sticky Bottom Footer */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.nextButton,
-            isCompleted && styles.completedNextButton,
-            !canComplete.allowed && !isCompleted && styles.disabledNextButton,
-          ]}
-          activeOpacity={0.8}
+        <Button
+          label={
+            isCompleted
+              ? nextActivity
+                ? "Go to next"
+                : "Finish"
+              : "Mark as completed"
+          }
+          variant={isCompleted ? "secondary" : "primary"}
           onPress={handleNext}
-          disabled={isCompleting || (!canComplete.allowed && !isCompleted)}
-        >
-          {isCompleting ? (
-            <ActivityIndicator color={isCompleted ? "#0C4A6E" : colors.white} />
-          ) : (
-            <>
-              <Text
-                style={[
-                  styles.nextButtonText,
-                  isCompleted && styles.completedNextButtonText,
-                ]}
-              >
-                {isCompleted
-                  ? nextActivity
-                    ? "Go to Next"
-                    : "Finish"
-                  : "Mark as Completed"}
-              </Text>
-              <Ionicons
-                name={
-                  isCompleted ? "checkmark-done-circle" : "checkmark-circle"
-                }
-                size={22}
-                color={isCompleted ? "#0C4A6E" : colors.white}
-              />
-            </>
-          )}
-        </TouchableOpacity>
+          loading={isCompleting}
+          disabled={!canComplete.allowed && !isCompleted}
+          trailingIcon={isCompleted ? "checkmark-done-circle" : "checkmark-circle"}
+        />
       </View>
 
       <CompletionModal
@@ -289,111 +270,63 @@ export default function ActivityDetailScreen() {
           navigateToNext();
         }}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.white,
-  },
   navbar: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
-  },
-  navbarTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[2],
+    paddingBottom: spacing[3],
+    gap: spacing[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 120,
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[4],
+    paddingBottom: spacing[10],
   },
   videoContainer: {
     width: "100%",
     aspectRatio: 16 / 9,
-    backgroundColor: "#F1F5F9",
-    borderRadius: borderRadius.xxl,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: borderRadius.xl,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing[6],
   },
   playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.surface,
     justifyContent: "center",
     alignItems: "center",
-    paddingLeft: 6,
+    paddingLeft: 4,
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing[5],
   },
   descriptionText: {
-    fontSize: 16,
-    color: "#64748B",
-    lineHeight: 24,
+    marginBottom: spacing[2],
   },
   moreLink: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    marginTop: 8,
-    textDecorationLine: "underline",
+    color: colors.primary,
   },
   divider: {
-    height: 1,
-    backgroundColor: "#F1F5F9",
-    marginBottom: spacing.xl,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderSubtle,
+    marginBottom: spacing[5],
   },
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 40,
-    paddingTop: spacing.lg,
-    backgroundColor: colors.white,
-  },
-  nextButton: {
-    backgroundColor: "#083344",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: spacing.lg,
-    borderRadius: 40,
-    gap: 8,
-  },
-  completedNextButton: {
-    backgroundColor: "#DBEAFE",
-  },
-  nextButtonText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  completedNextButtonText: {
-    color: "#0C4A6E",
-  },
-  disabledNextButton: {
-    backgroundColor: "#CBD5E1",
+    paddingHorizontal: layout.screenPadding,
+    paddingVertical: spacing[4],
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 });

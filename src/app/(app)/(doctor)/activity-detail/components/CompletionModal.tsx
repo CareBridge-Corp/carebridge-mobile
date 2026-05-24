@@ -1,4 +1,6 @@
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Modal, StyleSheet, View } from "react-native";
+import { Button, Text } from "../../../../../shared/components/ui";
 import { borderRadius, colors, spacing } from "../../../../../shared/theme";
 
 interface CompletionModalProps {
@@ -23,25 +25,39 @@ export function CompletionModal({
     >
       <View style={styles.overlay}>
         <View style={styles.content}>
-          <Text style={styles.title}>Activity Completed?</Text>
-          <Text style={styles.subtitle}>
-            Have you finished practicing "{title}" with your child?
+          <View style={styles.iconCircle}>
+            <Ionicons
+              name="checkmark-done"
+              size={28}
+              color={colors.primary}
+            />
+          </View>
+          <Text variant="title2" align="center" style={styles.title}>
+            Activity completed?
+          </Text>
+          <Text
+            variant="body"
+            tone="secondary"
+            align="center"
+            style={styles.subtitle}
+          >
+            {`Have you finished practicing "${title}" with your child?`}
           </Text>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
+          <View style={styles.buttons}>
+            <Button
+              label="Not yet"
+              variant="secondary"
               onPress={onClose}
-            >
-              <Text style={styles.cancelButtonText}>Not yet</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.confirmButton]}
+              fullWidth={false}
+              style={styles.btn}
+            />
+            <Button
+              label="Yes, confirm"
               onPress={onConfirm}
-            >
-              <Text style={styles.confirmButtonText}>Yes, confirm</Text>
-            </TouchableOpacity>
+              fullWidth={false}
+              style={styles.btn}
+            />
           </View>
         </View>
       </View>
@@ -52,57 +68,39 @@ export function CompletionModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.overlay,
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.xl,
+    padding: spacing[5],
   },
   content: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: borderRadius.xxl,
-    padding: spacing.xxxl,
+    padding: spacing[6],
     width: "100%",
     alignItems: "center",
   },
-  iconContainer: {
-    marginBottom: spacing.xl,
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing[4],
   },
   title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
+    marginBottom: spacing[2],
   },
   subtitle: {
-    fontSize: 16,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: spacing.xxxl,
+    marginBottom: spacing[6],
   },
-  buttonContainer: {
+  buttons: {
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing[3],
     width: "100%",
   },
-  button: {
+  btn: {
     flex: 1,
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.lg,
-    alignItems: "center",
-  },
-  cancelButton: {
-    backgroundColor: "#F1F5F9",
-  },
-  confirmButton: {
-    backgroundColor: "#0C4A6E",
-  },
-  cancelButtonText: {
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  confirmButtonText: {
-    color: colors.white,
-    fontWeight: "600",
   },
 });

@@ -1,9 +1,10 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { useQueryClient } from "@tanstack/react-query";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { Screen, Text } from "../shared/components/ui";
+import { colors, spacing } from "../shared/theme";
 import { verifyPayment } from "./(app)/hooks/useEntitlements";
-import { colors, spacing, typography } from "../shared/theme";
 
 export default function PaymentReturnScreen() {
   const router = useRouter();
@@ -32,7 +33,9 @@ export default function PaymentReturnScreen() {
         }
       } catch {
         if (!cancelled) {
-          setMessage("Could not verify payment yet. Check your subscription status.");
+          setMessage(
+            "Could not verify payment yet. Check your subscription status.",
+          );
         }
       } finally {
         if (!cancelled) {
@@ -49,10 +52,14 @@ export default function PaymentReturnScreen() {
   }, [params.tx_ref, params.trx_ref, queryClient, router]);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color={colors.primary} />
-      <Text style={styles.text}>{message}</Text>
-    </View>
+    <Screen background={colors.surfaceMuted}>
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text variant="body" align="center" style={styles.text}>
+          {message}
+        </Text>
+      </View>
+    </Screen>
   );
 }
 
@@ -61,13 +68,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.backgroundBlue,
-    padding: spacing.xxl,
   },
   text: {
-    marginTop: spacing.lg,
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    textAlign: "center",
+    marginTop: spacing[4],
   },
 });

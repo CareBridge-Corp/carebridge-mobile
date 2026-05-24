@@ -1,52 +1,59 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
-  StatusBar,
+  Pressable,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { socketService } from "../../shared/api/socket";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import {
+  Avatar,
+  Badge,
+  EmptyState,
+  Screen,
+  Text,
+  TextField,
+} from "../../shared/components/ui";
+import { colors, layout, shadows, spacing } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
-import { PaywallCard } from "./components/PaywallCard";
 import { useConversations } from "./hooks/useChat";
-import { useEntitlements } from "./hooks/useEntitlements";
 import { ChatConversation, useChatStore } from "./store/chatStore";
 import { useChildrenStore } from "./store/childrenStore";
+
+function formatTimestamp(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d`;
+  return date.toLocaleDateString();
+}
 
 export default function ChatScreen() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { data: entitlements, isLoading: entitlementsLoading } =
-    useEntitlements();
   const [searchQuery, setSearchQuery] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const [showChildSelector, setShowChildSelector] = useState(false);
   const { activeChild, children } = useChildrenStore();
   const { setActiveConversation } = useChatStore();
 
-  // Connect socket FIRST before fetching conversations
   useEffect(() => {
     socketService.connect();
-    const timer = setTimeout(() => {
-      setSocketConnected(true);
-    }, 500);
-
-    return () => {
-      clearTimeout(timer);
-      // Don't disconnect on unmount, keep connection alive
-    };
+    const timer = setTimeout(() => setSocketConnected(true), 500);
+    return () => clearTimeout(timer);
   }, []);
 
-  // Only fetch conversations after socket is connected and we have an active child
   const { data: conversations, isLoading } = useConversations(
     activeChild?.childId,
   );
@@ -54,22 +61,6 @@ export default function ChatScreen() {
   const handleChatPress = (conversation: ChatConversation) => {
     setActiveConversation(conversation);
     router.push("/(app)/(doctor)/doctor-chat" as Href);
-  };
-
-  const formatTimestamp = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
   };
 
   const filteredConversations = conversations?.filter((conv) => {
@@ -80,330 +71,225 @@ export default function ChatScreen() {
 
   const renderConversation = ({ item }: { item: ChatConversation }) => {
     const isUnread = item.lastMessage && !item.lastMessage.readAt;
-    const lastMessageText = item.lastMessage?.content || "No messages yet";
+    const lastMessage = item.lastMessage?.content || "No messages yet";
     const timestamp = item.lastMessage?.createdAt
       ? formatTimestamp(item.lastMessage.createdAt)
       : "";
-
-    // Build clinician display name with surname if available
-    const clinicianDisplayName = item.clinician.surname
+    const displayName = item.clinician.surname
       ? `${item.clinician.surname} ${item.clinician.firstName} ${item.clinician.lastName}`
       : `Dr. ${item.clinician.firstName} ${item.clinician.lastName}`;
 
     return (
-      <TouchableOpacity
-        style={styles.conversationCard}
+      <Pressable
         onPress={() => handleChatPress(item)}
-        activeOpacity={0.7}
+        style={({ pressed }) => [
+          styles.row,
+          pressed && styles.rowPressed,
+        ]}
       >
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={28} color="#0C4A6E" />
-          </View>
-        </View>
-
-        <View style={styles.conversationContent}>
-          <View style={styles.conversationHeader}>
-            <Text style={styles.doctorName}>{clinicianDisplayName}</Text>
-            <Text style={styles.timestamp}>{timestamp}</Text>
-          </View>
-          <View style={styles.messageRow}>
-            <Text
-              style={[styles.lastMessage, isUnread && styles.unreadMessage]}
-              numberOfLines={1}
-            >
-              {lastMessageText}
+        <Avatar name={displayName} size="md" />
+        <View style={styles.rowText}>
+          <View style={styles.rowTopLine}>
+            <Text variant="body" weight="semibold" numberOfLines={1}>
+              {displayName}
             </Text>
-            {isUnread && (
-              <View style={styles.unreadBadge}>
-                <View style={styles.unreadDot} />
-              </View>
-            )}
+            <Text variant="caption" tone="tertiary">
+              {timestamp}
+            </Text>
           </View>
-          <Text style={styles.childName}>Child: {item.child.firstName}</Text>
+          <View style={styles.rowBottomLine}>
+            <Text
+              variant="bodySmall"
+              tone={isUnread ? "primary" : "secondary"}
+              numberOfLines={1}
+              style={[styles.preview, isUnread && styles.previewUnread]}
+            >
+              {lastMessage}
+            </Text>
+            {isUnread ? (
+              <View style={styles.unreadDot} />
+            ) : null}
+          </View>
+          <Text variant="caption" tone="tertiary" style={styles.childLine}>
+            {item.child.firstName}
+          </Text>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={colors.backgroundBlue}
-      />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity
-          style={styles.avatar}
-          onPress={() => children.length > 0 && setShowChildSelector(true)}
-          activeOpacity={0.7}
-        >
-          {activeChild?.profilePictureUrl ? (
-            <Image
-              source={{ uri: activeChild.profilePictureUrl }}
-              style={styles.avatarImage}
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <View style={styles.headerBar}>
+        <View style={styles.headerLeft}>
+          <Text variant="title1">{t("chat.title", "Messages")}</Text>
+          {!socketConnected ? (
+            <Badge
+              label="Connecting..."
+              tone="warning"
+              icon="time-outline"
+              style={styles.statusBadge}
             />
-          ) : (
-            <Ionicons name="person" size={24} color="#0C4A6E" />
-          )}
-          {children.length > 1 && (
-            <View style={styles.childCountBadge}>
-              <Text style={styles.childCountText}>{children.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color="#A0B8C8" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search conversations..."
-            placeholderTextColor="#A0B8C8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          ) : null}
         </View>
+        <Avatar
+          uri={activeChild?.profilePictureUrl}
+          name={activeChild?.firstName}
+          size="md"
+          badgeCount={children.length}
+          onPress={() => children.length > 0 && setShowChildSelector(true)}
+        />
       </View>
 
-      {/* Conversations List */}
-      <View style={styles.conversationsContainer}>
+      <View style={styles.search}>
+        <TextField
+          placeholder={t("chat.search", "Search conversations")}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          leadingIcon="search-outline"
+          autoCapitalize="none"
+        />
+      </View>
+
+      <View style={styles.list}>
         {!socketConnected || isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0C4A6E" />
-            <Text style={styles.loadingText}>
-              {!socketConnected ? "Connecting..." : "Loading conversations..."}
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text variant="bodySmall" tone="secondary" style={styles.loadingText}>
+              {!socketConnected
+                ? "Connecting to messaging..."
+                : "Loading conversations..."}
             </Text>
           </View>
         ) : !activeChild ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="person-outline" size={64} color="#A0B8C8" />
-            <Text style={styles.emptyText}>No child selected</Text>
-            <Text style={styles.emptySubtext}>
-              Please select a child to view conversations
-            </Text>
-          </View>
+          <EmptyState
+            icon="person-outline"
+            title={t("chat.noChildTitle", "No child selected")}
+            description={t(
+              "chat.noChildDescription",
+              "Pick a child to see their conversations.",
+            )}
+            primaryAction={{
+              label: "Choose child",
+              onPress: () => setShowChildSelector(true),
+            }}
+          />
         ) : filteredConversations && filteredConversations.length > 0 ? (
           <FlatList
             data={filteredConversations}
             renderItem={renderConversation}
-            keyExtractor={(item) => item.conversationId || item.child.childId}
+            keyExtractor={(item) =>
+              item.conversationId || item.child.childId
+            }
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.conversationsList}
+            contentContainerStyle={styles.flatListContent}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#A0B8C8" />
-            <Text style={styles.emptyText}>No conversations yet</Text>
-            <Text style={styles.emptySubtext}>
-              Start chatting with {activeChild.firstName}'s doctor
-            </Text>
-          </View>
+          <EmptyState
+            icon="chatbubbles-outline"
+            title="No conversations yet"
+            description={`Your assigned clinician will message you here once they've reviewed ${
+              activeChild.firstName
+            }'s screening.`}
+          />
         )}
       </View>
 
-      {/* Child Selector Modal */}
       <ChildSelectorModal
         visible={showChildSelector}
         onClose={() => setShowChildSelector(false)}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundBlue,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.xxl,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  childCountBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#10B981",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  childCountText: {
-    fontSize: 12,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.white,
-  },
-  searchContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.lg,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    padding: 0,
-  },
-  conversationsContainer: {
-    flex: 1,
-    backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xxxl,
-    borderTopRightRadius: borderRadius.xxxl,
-    paddingTop: spacing.lg,
-  },
-  conversationsList: {
-    paddingHorizontal: spacing.xxl,
-  },
-  conversationCard: {
-    flexDirection: "row",
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
-  },
-  avatarContainer: {
-    position: "relative",
-    marginRight: spacing.md,
-  },
-  avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#E8F0F5",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  onlineIndicator: {
-    position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#10B981",
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  conversationContent: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  conversationHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
-  doctorName: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  timestamp: {
-    fontSize: typography.fontSize.xs,
-    color: "#A0B8C8",
-  },
-  messageRow: {
+  headerBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[3],
   },
-  lastMessage: {
+  headerLeft: {
     flex: 1,
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    marginRight: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
   },
-  unreadMessage: {
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
+  statusBadge: {
+    marginLeft: spacing[1],
   },
-  unreadBadge: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#0C4A6E",
+  search: {
+    paddingHorizontal: spacing[5],
+    paddingBottom: spacing[3],
+  },
+  list: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: spacing[3],
+    ...shadows.xs,
+  },
+  flatListContent: {
+    paddingHorizontal: spacing[3],
+    paddingBottom: layout.tabBarHeight + spacing[8],
+  },
+  row: {
+    flexDirection: "row",
+    gap: spacing[3],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[2],
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  rowPressed: {
+    backgroundColor: colors.surfaceSunken,
+  },
+  rowText: {
+    flex: 1,
+  },
+  rowTopLine: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  rowBottomLine: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  preview: {
+    flex: 1,
+    marginRight: spacing[2],
+  },
+  previewUnread: {
+    fontWeight: "600",
   },
   unreadDot: {
-    width: "100%",
-    height: "100%",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
-  childName: {
-    fontSize: typography.fontSize.xs,
-    color: "#A0B8C8",
-    marginTop: spacing.xs,
+  childLine: {
+    marginTop: 2,
   },
-  loadingContainer: {
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderSubtle,
+    marginLeft: 60,
+  },
+  loading: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: spacing.md,
+    gap: spacing[3],
   },
   loadingText: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-    marginTop: spacing.sm,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: spacing.xxl,
-  },
-  emptyText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginTop: spacing.lg,
-  },
-  emptySubtext: {
-    fontSize: typography.fontSize.md,
-    color: "#A0B8C8",
-    marginTop: spacing.sm,
-    textAlign: "center",
-  },
-  paywallContainer: {
-    flex: 1,
-    justifyContent: "center",
-    paddingVertical: spacing.xxxl,
+    marginTop: spacing[2],
   },
 });

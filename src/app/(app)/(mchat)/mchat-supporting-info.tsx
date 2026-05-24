@@ -6,25 +6,26 @@ import { Href, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Image,
-  KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
-  StatusBar,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import apiClient from "../../../shared/api/client";
 import multipartApiClient from "../../../shared/api/multipartClient";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
-  borderRadius,
-  colors,
-  spacing,
-  typography,
-} from "../../../shared/theme";
+  Button,
+  Card,
+  IconButton,
+  ProgressBar,
+  Screen,
+  SectionHeader,
+  Text,
+  TextField,
+} from "../../../shared/components/ui";
+import { borderRadius, colors, spacing } from "../../../shared/theme";
 import { useChildrenStore } from "../store/childrenStore";
 import { useMChatStore } from "../store/mchatStore";
 
@@ -42,7 +43,6 @@ export default function MChatSupportingInfoScreen() {
 
   const [description, setDescription] = useState(parentDescription);
   const [pictures, setPictures] = useState<string[]>(childPictures);
-
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [audioUri, setAudioUri] = useState<string | null>(
     storedAudioRecording || null,
@@ -62,50 +62,34 @@ export default function MChatSupportingInfoScreen() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (!activeChild?.childId) {
-        throw new Error("No active child selected");
-      }
+      if (!activeChild?.childId) throw new Error("No active child selected");
 
-      // 1. Submit M-CHAT answers first
-      const screeningPayload = {
+      const screeningRes = await apiClient.post("/screenings", {
         childId: activeChild.childId,
-        answers: answers,
+        answers,
         questionIds: useMChatStore.getState().questionIds,
-      };
-
-      const screeningRes = await apiClient.post(
-        "/screenings",
-        screeningPayload,
-      );
+      });
       const screeningId =
         screeningRes.data?.screeningId ||
         screeningRes.screeningId ||
         screeningRes.screening?.screeningId;
-
-      if (!screeningId) {
+      if (!screeningId)
         throw new Error("Failed to retrieve screening ID from server");
-      }
 
-      // 2. Submit Supporting Info via Multipart
       if (description.trim() || pictures.length > 0 || audioUri) {
         const formData = new FormData();
-
-        if (description.trim()) {
+        if (description.trim())
           formData.append("parentDescription", description.trim());
-        }
-
         pictures.forEach((uri, index) => {
           const filename = uri.split("/").pop() || `child_image_${index}.jpg`;
           const match = /\.(\w+)$/.exec(filename);
           const type = match ? `image/${match[1]}` : "image/jpeg";
-
           formData.append("childPictures", {
             uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
             name: filename,
             type,
           } as any);
         });
-
         if (audioUri) {
           const audioFilename = audioUri.split("/").pop() || "audio_note.m4a";
           formData.append("audioNote", {
@@ -117,21 +101,11 @@ export default function MChatSupportingInfoScreen() {
             type: "audio/m4a",
           } as any);
         }
-
-        try {
-          await multipartApiClient.post(
-            `/screenings/${screeningId}/supporting-info`,
-            formData,
-          );
-        } catch (uploadError: any) {
-          // If supporting info fails, still consider screening submitted
-          // but log the error for debugging
-          throw new Error(
-            uploadError.message || "Failed to upload supporting information",
-          );
-        }
+        await multipartApiClient.post(
+          `/screenings/${screeningId}/supporting-info`,
+          formData,
+        );
       }
-
       return true;
     },
     onSuccess: () => {
@@ -143,7 +117,7 @@ export default function MChatSupportingInfoScreen() {
       setConfirmModalVisible(false);
       setStatusConfig({
         type: "error",
-        title: "Submission Failed",
+        title: "Submission failed",
         message:
           error.message || "An error occurred while submitting your screening.",
       });
@@ -155,31 +129,28 @@ export default function MChatSupportingInfoScreen() {
     if (pictures.length >= 5) {
       setStatusConfig({
         type: "info",
-        title: "Limit Reached",
+        title: "Limit reached",
         message: "You can only upload up to 5 pictures.",
       });
       setStatusModalVisible(true);
       return;
     }
-
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       setStatusConfig({
         type: "error",
-        title: "Permission Required",
+        title: "Permission required",
         message: "Please grant camera roll permissions to upload images.",
       });
       setStatusModalVisible(true);
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsMultipleSelection: true,
       quality: 0.8,
       selectionLimit: 5 - pictures.length,
     });
-
     if (!result.canceled && result.assets) {
       const uris = result.assets.map((a) => a.uri);
       setPictures((prev) => [...prev, ...uris].slice(0, 5));
@@ -189,54 +160,42 @@ export default function MChatSupportingInfoScreen() {
   const startRecording = async () => {
     try {
       const permission = await Audio.requestPermissionsAsync();
-      if (permission.status === "granted") {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-
-        const { recording: newRecording } = await Audio.Recording.createAsync(
-          Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        );
-
-        setRecording(newRecording);
-        setIsRecording(true);
-        setRecordingDuration(0);
-
-        newRecording.setOnRecordingStatusUpdate((status) => {
-          if (status.isRecording) {
-            setRecordingDuration(Math.floor(status.durationMillis / 1000));
-          }
-        });
-      } else {
+      if (permission.status !== "granted") {
         setStatusConfig({
           type: "error",
-          title: "Permission Required",
+          title: "Permission required",
           message: "Please grant microphone permissions to record audio.",
         });
         setStatusModalVisible(true);
+        return;
       }
-    } catch (err) {
-      console.error("Recording error", err);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording: newRec } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      setRecording(newRec);
+      setIsRecording(true);
+      setRecordingDuration(0);
+      newRec.setOnRecordingStatusUpdate((s) => {
+        if (s.isRecording) setRecordingDuration(Math.floor(s.durationMillis / 1000));
+      });
+    } catch (e) {
+      console.error("Recording error", e);
     }
   };
 
   const stopRecording = async () => {
     if (!recording) return;
-
     try {
       setIsRecording(false);
-
       const status = await recording.getStatusAsync();
-      if (status.canRecord) {
-        await recording.stopAndUnloadAsync();
-      }
-
-      const uri = recording.getURI();
-      setAudioUri(uri);
+      if (status.canRecord) await recording.stopAndUnloadAsync();
+      setAudioUri(recording.getURI());
       setRecording(null);
-    } catch (error) {
-      console.error("Stop recording error", error);
+    } catch (e) {
       setIsRecording(false);
       setRecording(null);
     }
@@ -244,9 +203,7 @@ export default function MChatSupportingInfoScreen() {
 
   const playAudio = async () => {
     if (!audioUri) return;
-
     try {
-      // If already playing, stop it
       if (sound && isPlaying) {
         await sound.stopAsync();
         await sound.unloadAsync();
@@ -254,33 +211,26 @@ export default function MChatSupportingInfoScreen() {
         setIsPlaying(false);
         return;
       }
-
-      // Create and play new sound
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: audioUri },
         { shouldPlay: true },
       );
-
       setSound(newSound);
       setIsPlaying(true);
-
-      // Listen for playback status
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
+      newSound.setOnPlaybackStatusUpdate((s) => {
+        if (s.isLoaded && s.didJustFinish) {
           setIsPlaying(false);
           newSound.unloadAsync();
           setSound(null);
         }
       });
-    } catch (error) {
-      // Silent error handling
+    } catch {
       setIsPlaying(false);
       setSound(null);
     }
   };
 
   const removeAudio = () => {
-    // Stop and unload sound if playing
     if (sound) {
       sound.stopAsync().catch(() => {});
       sound.unloadAsync().catch(() => {});
@@ -298,10 +248,7 @@ export default function MChatSupportingInfoScreen() {
   };
 
   const handleNext = () => {
-    // Save to store to persist state if going back
     setSupportingInfo(description, pictures, audioUri);
-
-    // Check if 20 questions are answered (basic check)
     if (Object.keys(answers).length < 20) {
       setStatusConfig({
         type: "error",
@@ -311,7 +258,6 @@ export default function MChatSupportingInfoScreen() {
       setStatusModalVisible(true);
       return;
     }
-
     setConfirmModalVisible(true);
   };
 
@@ -322,182 +268,170 @@ export default function MChatSupportingInfoScreen() {
 
   useEffect(() => {
     return () => {
-      async function cleanup() {
+      (async () => {
         if (recording) {
           try {
-            const status = await recording.getStatusAsync();
-            if (status.canRecord) {
-              await recording.stopAndUnloadAsync();
-            }
-          } catch (e) {}
+            const s = await recording.getStatusAsync();
+            if (s.canRecord) await recording.stopAndUnloadAsync();
+          } catch {}
         }
         if (sound) {
           sound.stopAsync().catch(() => {});
           sound.unloadAsync().catch(() => {});
         }
-      }
-      cleanup();
+      })();
     };
   }, [recording, sound]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.navButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={28} color="#0C4A6E" />
-        </TouchableOpacity>
-        <View style={styles.progressDotsContainer}>
-          {/* Mock progress just to show end indicator */}
-          <View style={[styles.progressDot, styles.progressDotCompleted]} />
-          <View style={[styles.progressDot, styles.progressDotActive]} />
+    <Screen padded={false}>
+      <View style={styles.headerRow}>
+        <IconButton
+          icon="chevron-back"
+          accessibilityLabel="Back"
+          onPress={handleBack}
+        />
+        <View style={styles.progressWrap}>
+          <Text variant="caption" tone="secondary" style={styles.progressLabel}>
+            Final step
+          </Text>
+          <ProgressBar value={100} />
         </View>
-        <View style={styles.navButton} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Supporting Info</Text>
-        <Text style={styles.subtitle}>
-          Adding details and pictures will help our clinicians provide a better
-          analysis. This is purely optional.
+        <Text variant="display" style={styles.title}>
+          Add supporting info
+        </Text>
+        <Text variant="body" tone="secondary" style={styles.subtitle}>
+          Optional. Sharing details, photos, or a short voice note helps your
+          clinician give a richer analysis.
         </Text>
 
-        {/* Parent Description */}
-        <Text style={styles.label}>Additional Comments</Text>
-        <TextInput
-          style={styles.textArea}
-          placeholder="e.g. I noticed my child making less eye contact recently..."
-          placeholderTextColor="#A0B8C8"
-          multiline
-          numberOfLines={4}
+        <SectionHeader title="Notes for your clinician" />
+        <TextField
+          placeholder="e.g. I've noticed my child making less eye contact recently..."
           value={description}
           onChangeText={setDescription}
-          textAlignVertical="top"
+          multiline
+          containerStyle={styles.field}
         />
 
-        {/* Audio Recording */}
-        <Text style={styles.label}>Voice Note (Optional)</Text>
-        <View style={styles.audioContainer}>
-          {!audioUri ? (
-            <TouchableOpacity
-              style={[styles.recordBtn, isRecording && styles.recordingActive]}
-              onPress={isRecording ? stopRecording : startRecording}
+        <SectionHeader title="Voice note" />
+        {!audioUri ? (
+          <Pressable
+            onPress={isRecording ? stopRecording : startRecording}
+            style={({ pressed }) => [
+              styles.recordBtn,
+              isRecording && styles.recordingActive,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Ionicons
+              name={isRecording ? "stop-circle" : "mic"}
+              size={22}
+              color={isRecording ? colors.textInverse : colors.primary}
+            />
+            <Text
+              variant="bodyMedium"
+              style={{
+                color: isRecording ? colors.textInverse : colors.primary,
+              }}
             >
+              {isRecording
+                ? `Recording · ${formatDuration(recordingDuration)}`
+                : "Tap to record"}
+            </Text>
+          </Pressable>
+        ) : (
+          <Card variant="flat" padding="md" style={styles.audioCard}>
+            <Pressable onPress={playAudio} style={styles.audioPlayBtn}>
               <Ionicons
-                name={isRecording ? "stop" : "mic"}
-                size={24}
-                color={isRecording ? colors.white : "#0C4A6E"}
+                name={isPlaying ? "pause-circle" : "play-circle"}
+                size={36}
+                color={colors.primary}
               />
-              <Text
-                style={[
-                  styles.recordBtnText,
-                  isRecording && { color: colors.white },
-                ]}
-              >
-                {isRecording
-                  ? `Recording... ${formatDuration(recordingDuration)}`
-                  : "Tap to Record"}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.audioPlayer}>
-              <TouchableOpacity style={styles.playBtn} onPress={playAudio}>
-                <Ionicons
-                  name={isPlaying ? "pause" : "play"}
-                  size={24}
-                  color="#0C4A6E"
-                />
-                <View>
-                  <Text style={styles.playBtnText}>
-                    {isPlaying ? "Pause Recording" : "Play Recording"}
-                  </Text>
-                  <Text style={styles.durationText}>
-                    {formatDuration(recordingDuration)}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.removeAudioBtn}
-                onPress={removeAudio}
-              >
-                <Ionicons name="trash-outline" size={24} color="#EF4444" />
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+              <View>
+                <Text variant="body" weight="semibold">
+                  Voice note
+                </Text>
+                <Text variant="caption" tone="secondary">
+                  {formatDuration(recordingDuration)}
+                </Text>
+              </View>
+            </Pressable>
+            <IconButton
+              icon="trash-outline"
+              accessibilityLabel="Remove audio"
+              tint={colors.error}
+              onPress={removeAudio}
+            />
+          </Card>
+        )}
 
-        {/* Pictures List */}
-        <Text style={styles.label}>Child Pictures (Up to 5)</Text>
+        <SectionHeader title={`Photos (${pictures.length}/5)`} />
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.imagesScroll}
+          style={styles.imagesRow}
+          contentContainerStyle={styles.imagesRowContent}
         >
-          {pictures.map((uri, index) => (
-            <View key={index} style={styles.imageWrapper}>
-              <Image source={{ uri }} style={styles.imageThumb} />
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                onPress={() =>
-                  setPictures(pictures.filter((_, i) => i !== index))
-                }
+          {pictures.map((uri, idx) => (
+            <View key={idx} style={styles.imageWrapper}>
+              <Image source={{ uri }} style={styles.thumb} />
+              <Pressable
+                style={styles.removeThumb}
+                onPress={() => setPictures(pictures.filter((_, i) => i !== idx))}
+                hitSlop={6}
               >
-                <Ionicons name="close-circle" size={24} color="#EF4444" />
-              </TouchableOpacity>
+                <Ionicons name="close-circle" size={22} color={colors.error} />
+              </Pressable>
             </View>
           ))}
-          {pictures.length < 5 && (
-            <TouchableOpacity
-              style={styles.addImageBtn}
+          {pictures.length < 5 ? (
+            <Pressable
               onPress={handleAddPicture}
-              activeOpacity={0.7}
+              style={({ pressed }) => [
+                styles.addThumb,
+                pressed && { opacity: 0.85 },
+              ]}
+              accessibilityLabel="Add photo"
             >
-              <Ionicons name="add" size={32} color="#0C4A6E" />
-            </TouchableOpacity>
-          )}
+              <Ionicons name="add" size={28} color={colors.primary} />
+              <Text variant="caption" tone="brand">
+                Add photo
+              </Text>
+            </Pressable>
+          ) : null}
         </ScrollView>
       </ScrollView>
 
-      {/* Bottom Action */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[
-            styles.primaryButton,
-            submitMutation.isPending && styles.primaryButtonDisabled,
-          ]}
+      <View style={styles.footer}>
+        <Button
+          label="Submit screening"
           onPress={handleNext}
-          disabled={submitMutation.isPending}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.primaryButtonText}>Finish & Submit Analysis</Text>
-          <Ionicons name="checkmark-circle" size={20} color={colors.white} />
-        </TouchableOpacity>
+          loading={submitMutation.isPending}
+          trailingIcon="checkmark-circle"
+        />
       </View>
 
-      {/* Confirmation Modal */}
       <StatusModal
         visible={confirmModalVisible}
         type="info"
         title="Submit M-CHAT"
-        message="Are you ready to submit your M-CHAT answers and any supporting info for clinical analysis? You cannot edit them after submitting."
+        message="Are you ready to submit your answers and any supporting info? You cannot edit them after submitting."
         primaryButtonText={
-          submitMutation.isPending ? "Submitting..." : "Yes, Submit"
+          submitMutation.isPending ? "Submitting..." : "Yes, submit"
         }
         onPrimaryPress={() => submitMutation.mutate()}
-        secondaryButtonText="Go Back"
+        secondaryButtonText="Go back"
         onSecondaryPress={() => setConfirmModalVisible(false)}
       />
-
-      {/* Success/Error/Info Responses Output Modal */}
       <StatusModal
         visible={statusModalVisible}
         type={statusConfig.type}
@@ -505,182 +439,102 @@ export default function MChatSupportingInfoScreen() {
         message={statusConfig.message}
         onPrimaryPress={() => setStatusModalVisible(false)}
       />
-    </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
+  headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
-    paddingTop: 60,
-    paddingBottom: spacing.md,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    gap: spacing[2],
   },
-  navButton: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  progressDotsContainer: {
-    flexDirection: "row",
-    gap: 4,
+  progressWrap: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
   },
-  progressDot: {
-    width: 10,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#C0D4E0",
+  progressLabel: {
+    marginBottom: spacing[1],
+    textAlign: "center",
   },
-  progressDotActive: {
-    backgroundColor: "#0C4A6E",
-    width: 20,
-  },
-  progressDotCompleted: {
-    backgroundColor: "#5A7A8F",
-    width: 20,
-  },
-  scrollView: {
+  scroll: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.huge,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[3],
+    paddingBottom: spacing[10],
   },
   title: {
-    fontSize: 32,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
+    marginBottom: spacing[2],
   },
   subtitle: {
-    fontSize: typography.fontSize.md,
-    color: "#A0B8C8",
-    marginBottom: spacing.xxl,
-    lineHeight: typography.lineHeight.relaxed * typography.fontSize.md,
+    marginBottom: spacing[6],
   },
-  label: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  textArea: {
-    backgroundColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    height: 120,
-  },
-  imagesScroll: {
-    flexDirection: "row",
-    paddingVertical: spacing.sm,
-  },
-  imageWrapper: {
-    marginRight: spacing.md,
-    position: "relative",
-  },
-  imageThumb: {
-    width: 100,
-    height: 100,
-    borderRadius: borderRadius.xl,
-  },
-  removeImageBtn: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: colors.white,
-    borderRadius: 12,
-  },
-  addImageBtn: {
-    width: 100,
-    height: 100,
-    borderRadius: borderRadius.xl,
-    backgroundColor: "#E8F0F5",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#D1DFE8",
-    borderStyle: "dashed",
-  },
-  buttonContainer: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: 50,
-    paddingTop: spacing.lg,
-    backgroundColor: colors.background,
-  },
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    borderRadius: borderRadius.xxxl,
-    gap: spacing.sm,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: "#C0D4E0",
-  },
-  primaryButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
-  },
-  audioContainer: {
-    marginVertical: spacing.sm,
+  field: {
+    marginBottom: spacing[5],
   },
   recordBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E8F0F5",
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xl,
-    gap: spacing.sm,
+    gap: spacing[2],
+    paddingVertical: spacing[4],
+    backgroundColor: colors.primaryMuted,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing[5],
   },
   recordingActive: {
-    backgroundColor: "#EF4444",
+    backgroundColor: colors.error,
   },
-  recordBtnText: {
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    fontWeight: typography.fontWeight.semibold,
-  },
-  audioPlayer: {
+  audioCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#E8F0F5",
-    padding: spacing.md,
-    borderRadius: borderRadius.xl,
+    marginBottom: spacing[5],
   },
-  playBtn: {
+  audioPlayBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing[2],
   },
-  playBtnText: {
-    fontSize: typography.fontSize.md,
-    color: "#0C4A6E",
-    fontWeight: typography.fontWeight.semibold,
+  imagesRow: {
+    marginBottom: spacing[4],
   },
-  durationText: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    marginTop: 2,
+  imagesRowContent: {
+    gap: spacing[3],
   },
-  removeAudioBtn: {
-    padding: spacing.xs,
+  imageWrapper: {
+    position: "relative",
+  },
+  thumb: {
+    width: 96,
+    height: 96,
+    borderRadius: 14,
+  },
+  removeThumb: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: colors.surface,
+    borderRadius: 11,
+  },
+  addThumb: {
+    width: 96,
+    height: 96,
+    borderRadius: 14,
+    backgroundColor: colors.primaryMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: colors.borderStrong,
+  },
+  footer: {
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[5],
+    backgroundColor: colors.surfaceMuted,
   },
 });

@@ -1,80 +1,51 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { StyleSheet, View } from "react-native";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  TouchableOpacity,
-} from "react-native";
-import { useLanguageStore } from "../../shared/store/languageStore";
-import { colors, spacing } from "../../shared/theme";
+  Screen,
+  ScreenHeader,
+  Text,
+} from "../../shared/components/ui";
+import { spacing } from "../../shared/theme";
 import { ResetPasswordForm } from "./components/ResetPasswordForm";
 
 export default function ResetPasswordScreen() {
-  const router = useRouter();
-  const { language, setLanguage } = useLanguageStore();
-
-  const toggleLanguage = () => {
-    const nextLang = language === "en" ? "am" : language === "am" ? "om" : "en";
-    setLanguage(nextLang);
-  };
+  const { t } = useTranslation();
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
-      </TouchableOpacity>
+    <Screen scroll padded={false}>
+      <ScreenHeader />
 
-      <TouchableOpacity style={styles.languageButton} onPress={toggleLanguage}>
-        <Ionicons name="language" size={18} color={colors.primary} />
-      </TouchableOpacity>
+      <View style={styles.body}>
+        <View style={styles.intro}>
+          <Text variant="display">
+            {t("auth.resetPasswordTitle", "Reset password")}
+          </Text>
+          <Text variant="body" tone="secondary" style={styles.subtitle}>
+            {t(
+              "auth.resetPasswordSubtitle",
+              "Enter the token from your email and choose a new password.",
+            )}
+          </Text>
+        </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
         <ResetPasswordForm />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  body: {
     flex: 1,
-    backgroundColor: colors.background,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[4],
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingTop: 80,
-    justifyContent: "center",
+  intro: {
+    marginBottom: spacing[7],
   },
-  backButton: {
-    position: "absolute",
-    top: 60,
-    left: spacing.xl,
-    zIndex: 10,
-    padding: spacing.sm,
-  },
-  languageButton: {
-    position: "absolute",
-    top: 60,
-    right: spacing.xl,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    zIndex: 10,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+  subtitle: {
+    marginTop: spacing[2],
+    maxWidth: 320,
   },
 });

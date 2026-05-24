@@ -1,27 +1,20 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Href, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Image,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useAuthStore } from "../(auth)/store/authStore";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
-
-import { useLanguageStore } from "../../shared/store/languageStore";
+import {
+  EmptyState,
+  Screen,
+  SectionHeader,
+} from "../../shared/components/ui";
+import { colors, layout, spacing } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
-import { DoctorsSection } from "./components/DoctorsSection";
-import { EmptyChildView } from "./components/EmptyChildView";
-import { HasChildView } from "./components/HasChildView";
+import { ClinicianCard } from "./components/ClinicianCard";
+import { HomeHeader } from "./components/HomeHeader";
+import { HomeHero } from "./components/HomeHero";
 import { HomeSkeletonView } from "./components/HomeSkeletonView";
-import VerificationTracker from "./components/VerificationTracker";
-import { VerifiedChildView } from "./components/VerifiedChildView";
 import { useChildren } from "./hooks/useChildren";
 import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
@@ -30,31 +23,35 @@ import { useChildScreenings } from "./hooks/useScreenings";
 import { useScreeningProgress } from "./hooks/useScreeningProgress";
 import { useChildrenStore } from "./store/childrenStore";
 
+type LifecycleStage =
+  | "no_children"
+  | "needs_verification"
+  | "needs_screening"
+  | "screening_under_review"
+  | "follow_up_due"
+  | "active_care"
+  | "ready_for_next_screening";
+
 export default function AppHomeScreen() {
+  const router = useRouter();
+  const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const { activeChild, children, setActiveChild } = useChildrenStore();
-  const { language, setLanguage } = useLanguageStore();
-  const { t } = useTranslation();
-
-  console.log("children:", children, activeChild);
   const [showChildSelector, setShowChildSelector] = useState(false);
 
-  // Determine greeting based on time of day
   const getGreeting = () => {
     const hours = new Date().getHours();
-    if (hours < 12) return t("home.goodMorning");
-    if (hours < 17) return t("home.goodAfternoon");
-    return t("home.goodEvening");
+    if (hours < 12) return t("home.goodMorning", "Good morning");
+    if (hours < 17) return t("home.goodAfternoon", "Good afternoon");
+    return t("home.goodEvening", "Good evening");
   };
 
-  // Fetch children and sync with store
   const {
     data: childrenData,
     isLoading,
     refetch: refetchChildren,
   } = useChildren();
 
-  // Only set the active child to the first one if there isn't one already selected
   useEffect(() => {
     if (!activeChild) {
       if (childrenData && childrenData.length > 0) {
@@ -66,17 +63,15 @@ export default function AppHomeScreen() {
   }, [childrenData, children, activeChild, setActiveChild]);
 
   const { data: profile, refetch: refetchProfile } = useProfile();
-
-  const { data: screeningsData, refetch: refetchScreenings } =
-    useChildScreenings(activeChild?.childId);
+  const { data: screeningsData, refetch: refetchScreenings } = useChildScreenings(
+    activeChild?.childId,
+  );
   const { data: roadmapData, refetch: refetchRoadmaps } = useRoadmaps(
     activeChild?.childId,
   );
-  const { refetch: refetchScreeningProgress } = useScreeningProgress(
-    activeChild?.childId,
-  );
+  const { data: progressData, refetch: refetchScreeningProgress } =
+    useScreeningProgress(activeChild?.childId);
 
-  // Refetch verification status when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       refetchProfile();
@@ -96,267 +91,302 @@ export default function AppHomeScreen() {
     ]),
   );
 
-  // Fetch clinician if child is verified
   const { data: clinician } = useAssignedClinician(
     activeChild?.status === "VERIFIED" ? activeChild?.childId : undefined,
   );
 
   const hasActiveRoadmap = roadmapData?.hasActiveRoadmap ?? false;
-
   const hasChildren = children.length > 0;
-
-  // Check if BOTH parent and child are verified
   const parentVerified = profile?.status === "VERIFIED";
   const childVerified = activeChild?.status === "VERIFIED";
-
   const bothVerified = parentVerified && childVerified;
 
-  console.log("Verification Status:", {
+  const screenings = screeningsData?.screenings ?? [];
+  const latestScreening = screenings[0];
+  const profileInProgress =
+    progressData?.profileStatus === "profile_in_progress" ||
+    (!!latestScreening && !hasActiveRoadmap);
+  const readyForNextScreening = !!progressData?.readyForNextScreening;
+
+  const stage = computeStage({
     hasChildren,
-    parentStatus: profile?.status,
-    childStatus: activeChild?.status,
-    parentVerified,
-    childVerified,
     bothVerified,
+    hasActiveRoadmap,
+    profileInProgress,
+    hasLatestScreening: !!latestScreening,
+    readyForNextScreening,
   });
 
-  console.log(activeChild);
+  const greeting = getGreeting();
+  const primaryName = activeChild?.firstName || user?.firstName || "Friend";
+  const headerSubtitle = activeChild
+    ? activeChild.gender ? `${activeChild.gender}` : undefined
+    : undefined;
 
-  // const handleMChat = () => {
-  //   router.push("/(app)/mchat-privacy" as Href);
-  // };
+  const onAvatarPress = () => {
+    if (children.length > 0) setShowChildSelector(true);
+  };
 
   return (
-    <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={colors.backgroundBlue}
+    <Screen
+      padded={false}
+      background={colors.surfaceMuted}
+      statusBarStyle="dark-content"
+    >
+      <HomeHeader
+        greeting={greeting}
+        primaryName={primaryName}
+        subtitle={headerSubtitle}
+        avatarUri={activeChild?.profilePictureUrl}
+        badgeCount={children.length}
+        onAvatarPress={onAvatarPress}
       />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.userName}>
-            {activeChild
-              ? activeChild.firstName
-              : user?.firstName || t("home.guest")}
-          </Text>
-        </View>
-
-        {/* Small Language Toggle in Header */}
-        <View style={styles.headerLanguageActions}>
-          <TouchableOpacity
-            onPress={() =>
-              setLanguage(
-                language === "en" ? "am" : language === "am" ? "om" : "en",
-              )
-            }
-            style={styles.langHeaderToggle}
-          >
-            <Ionicons name="language" size={16} color={colors.primary} />
-            <Text style={styles.langHeaderText}>{language.toUpperCase()}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.avatar}
-            onPress={() => children.length > 0 && setShowChildSelector(true)}
-            activeOpacity={0.7}
-          >
-            {activeChild?.profilePictureUrl ? (
-              <Image
-                source={{ uri: activeChild.profilePictureUrl }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <Ionicons name="person" size={28} color={colors.text} />
-            )}
-            {children.length > 1 && (
-              <View style={styles.childCountBadge}>
-                <Text style={styles.childCountText}>{children.length}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
-        style={styles.scrollView}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {isLoading ? (
           <HomeSkeletonView />
         ) : (
-          <View style={styles.contentContainer}>
-            <DoctorsSection />
+          <View style={styles.body}>
+            {/* Hero — single primary CTA driven by lifecycle stage */}
+            {renderHero(stage, {
+              router,
+              childName: activeChild?.firstName,
+              parentVerified,
+              childVerified,
+              latestScreening,
+              progressPct: computeScreeningProgressPercent(progressData),
+            })}
 
-            {!hasChildren ? (
-              <EmptyChildView /> //checked
-            ) : !bothVerified ? (
-              <View>
-                {/* <View>
-                  <Text>Please Complete the Verification Process</Text>
-                </View> */}
-
-                <VerificationTracker
-                  parentStatus={profile?.status}
-                  childStatus={activeChild?.status}
+            {/* Optional: assigned clinician */}
+            {bothVerified && clinician ? (
+              <View style={styles.section}>
+                <SectionHeader title="Your care team" />
+                <ClinicianCard
+                  clinician={clinician}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(app)/(doctor)/doctor-details",
+                      params: { childId: activeChild?.childId },
+                    } as any)
+                  }
+                  onMessagePress={() => router.push("/chat" as Href)}
                 />
               </View>
-            ) : (
-              <>
-                <HasChildView />
-                {hasActiveRoadmap && (
-                  <VerifiedChildView
-                    clinician={clinician}
-                    weekPlans={roadmapData?.weekPlans ?? []}
-                    roadmap={roadmapData?.roadmap ?? null}
-                  />
-                )}
-              </>
-            )}
+            ) : null}
+
+            {/* Optional: screening history link if any exists */}
+            {bothVerified && screenings.length > 0 ? (
+              <View style={styles.section}>
+                <SectionHeader
+                  title="Recent screenings"
+                  action={{
+                    label: "View all",
+                    onPress: () =>
+                      router.push("/(app)/(mchat)/mchat-profile" as any),
+                  }}
+                />
+                <EmptyState
+                  icon="clipboard-outline"
+                  title={`${screenings.length} ${
+                    screenings.length === 1 ? "screening" : "screenings"
+                  } on file`}
+                  description="Tap to review past M-CHAT submissions and clinician notes."
+                  primaryAction={{
+                    label: "Open history",
+                    onPress: () =>
+                      router.push("/(app)/(mchat)/mchat-profile" as any),
+                  }}
+                />
+              </View>
+            ) : null}
           </View>
         )}
-
-        <View style={{ height: 100 }} />
       </ScrollView>
 
       <ChildSelectorModal
         visible={showChildSelector}
         onClose={() => setShowChildSelector(false)}
       />
-    </View>
+    </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundBlue,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.xxl,
-    paddingTop: 60,
-    paddingBottom: spacing.xl,
-  },
-  greeting: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  avatarImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
-  childCountBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: "#10B981",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 4,
-  },
-  childCountText: {
-    fontSize: 12,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.white,
-  },
-  headerLanguageActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  langHeaderToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "#E0E7FF",
-  },
-  langHeaderText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: colors.primary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: spacing.xxxl,
-  },
+function computeScreeningProgressPercent(
+  progress: ReturnType<typeof useScreeningProgress>["data"],
+): number | undefined {
+  if (!progress) return undefined;
+  if (progress.profileStatus === "roadmap_ready") return 100;
+  if (progress.profileStatus === "profile_in_progress") return 75;
+  if (progress.latestScreening) return 50;
+  return 0;
+}
 
-  statusContainer: {
-    backgroundColor: "#F4F8FA",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xxl,
-    alignItems: "center",
-    marginTop: spacing.xl,
+function computeStage(input: {
+  hasChildren: boolean;
+  bothVerified: boolean;
+  hasActiveRoadmap: boolean;
+  profileInProgress: boolean;
+  hasLatestScreening: boolean;
+  readyForNextScreening: boolean;
+}): LifecycleStage {
+  if (!input.hasChildren) return "no_children";
+  if (!input.bothVerified) return "needs_verification";
+  if (input.hasActiveRoadmap) return "active_care";
+  if (input.profileInProgress) return "screening_under_review";
+  if (input.readyForNextScreening) return "ready_for_next_screening";
+  return "needs_screening";
+}
+
+function renderHero(
+  stage: LifecycleStage,
+  ctx: {
+    router: ReturnType<typeof useRouter>;
+    childName?: string;
+    parentVerified: boolean;
+    childVerified: boolean;
+    latestScreening?: any;
+    progressPct?: number;
   },
-  statusIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: spacing.lg,
+) {
+  switch (stage) {
+    case "no_children":
+      return (
+        <HomeHero
+          eyebrow="Step 1 of 4"
+          title="Let's get started"
+          description="Register your child to begin their screening and care journey."
+          illustrationIcon="happy-outline"
+          primaryAction={{
+            label: "Register child",
+            onPress: () =>
+              ctx.router.push("/(app)/(child)/create-child" as Href),
+            leadingIcon: "person-add-outline",
+          }}
+        />
+      );
+    case "needs_verification": {
+      const completed =
+        (ctx.parentVerified ? 1 : 0) + (ctx.childVerified ? 1 : 0);
+      const progress = (completed / 2) * 100;
+      return (
+        <HomeHero
+          eyebrow="Step 2 of 4"
+          title="Verify your identity"
+          description="Two quick steps unlock screening and clinician matching."
+          illustrationIcon="shield-checkmark-outline"
+          badge={{
+            label: completed === 0 ? "Required" : "In progress",
+            tone: "warning",
+            icon: "time-outline",
+          }}
+          progress={progress}
+          primaryAction={{
+            label: completed === 0 ? "Start verification" : "Continue",
+            onPress: () => ctx.router.push("/(app)/(verification)/verify" as Href),
+          }}
+        />
+      );
+    }
+    case "needs_screening":
+      return (
+        <HomeHero
+          eyebrow="Step 3 of 4"
+          title={`Begin ${ctx.childName ?? "your child"}'s screening`}
+          description="The M-CHAT-R/F takes about 10 minutes. Your answers are private and only seen by your clinician."
+          illustrationIcon="clipboard-outline"
+          stats={[
+            { label: "Minutes", value: "10" },
+            { label: "Questions", value: "20" },
+          ]}
+          primaryAction={{
+            label: "Start screening",
+            onPress: () => ctx.router.push("/(app)/mchat-privacy" as Href),
+          }}
+        />
+      );
+    case "screening_under_review":
+      return (
+        <HomeHero
+          eyebrow="Step 4 of 4"
+          title="Under clinical review"
+          description="Your clinician is reviewing the screening. You'll get a notification when the care plan is ready."
+          illustrationIcon="hourglass-outline"
+          badge={{
+            label: "Under review",
+            tone: "info",
+            icon: "time-outline",
+          }}
+          progress={ctx.progressPct ?? 50}
+          secondaryAction={{
+            label: "View submission",
+            onPress: () =>
+              ctx.router.push("/(app)/(mchat)/mchat-profile" as any),
+          }}
+        />
+      );
+    case "ready_for_next_screening":
+      return (
+        <HomeHero
+          eyebrow="Follow-up"
+          title="Time for the next check-in"
+          description="A short re-screening helps your clinician track progress and adjust the plan."
+          illustrationIcon="refresh-circle-outline"
+          badge={{
+            label: "Due now",
+            tone: "warning",
+          }}
+          primaryAction={{
+            label: "Start re-screening",
+            onPress: () => ctx.router.push("/(app)/mchat-privacy" as Href),
+          }}
+          secondaryAction={{
+            label: "Not now",
+            onPress: () =>
+              ctx.router.push("/(app)/(mchat)/mchat-profile" as any),
+          }}
+        />
+      );
+    case "active_care":
+      return (
+        <HomeHero
+          eyebrow="Today's focus"
+          title="Continue this week's plan"
+          description={`Open ${ctx.childName ?? "your child"}'s schedule to see today's activities.`}
+          illustrationIcon="flame-outline"
+          badge={{
+            label: "Active",
+            tone: "success",
+            icon: "checkmark-circle",
+          }}
+          primaryAction={{
+            label: "Open schedule",
+            onPress: () => ctx.router.push("/schedule" as Href),
+          }}
+          secondaryAction={{
+            label: "See growth journey",
+            onPress: () => ctx.router.push("/(app)/growth-journey" as Href),
+          }}
+        />
+      );
+  }
+}
+
+const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
   },
-  statusTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-    textAlign: "center",
+  scrollContent: {
+    paddingBottom: layout.tabBarHeight + spacing[8],
   },
-  statusSubtitle: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: spacing.xxl,
+  body: {
+    paddingHorizontal: spacing[5],
+    gap: spacing[6],
   },
-  verifyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xxxl,
-    borderRadius: borderRadius.xxl,
-    gap: spacing.sm,
-    width: "100%",
-  },
-  verifyButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
+  section: {
+    gap: spacing[3],
   },
 });

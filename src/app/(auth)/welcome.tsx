@@ -1,186 +1,142 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React from "react";
 import { useTranslation } from "react-i18next";
+import { Pressable, StyleSheet, View } from "react-native";
 import {
-  StatusBar,
-  StyleSheet,
+  Button,
+  Screen,
   Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+} from "../../shared/components/ui";
 import { useLanguageStore } from "../../shared/store/languageStore";
-import { colors } from "../../shared/theme";
+import { colors, layout, shadows, spacing } from "../../shared/theme";
+
+const LANGUAGE_LABELS: Record<string, string> = {
+  en: "English",
+  am: "አማርኛ",
+  om: "Afaan Oromoo",
+};
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { language, setLanguage } = useLanguageStore();
 
-  const handleGoogleSignIn = () => {
-    // TODO: Implement Google Sign-In
-    console.log("Google Sign-In pressed");
-  };
-
-  const handleEmailSignUp = () => {
-    router.push("/(auth)/signup");
-  };
-
-  const toggleLanguage = () => {
-    const nextLang = language === "en" ? "am" : language === "am" ? "om" : "en";
-    setLanguage(nextLang);
+  const cycleLanguage = () => {
+    const next = language === "en" ? "am" : language === "am" ? "om" : "en";
+    setLanguage(next);
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7FAFC" />
-
-      {/* Language Button replaced Skip Button */}
-      <TouchableOpacity style={styles.skipButton} onPress={toggleLanguage}>
-        <Ionicons name="language" size={18} color={colors.primary} />
-        <Text style={styles.skipText}>{language.toUpperCase()}</Text>
-      </TouchableOpacity>
-
-      {/* Main Content */}
-      <View style={styles.content}>
-        <Text style={styles.message}>{t("auth.loginSubtitle")}</Text>
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Change language. Current: ${LANGUAGE_LABELS[language] ?? language}`}
+          onPress={cycleLanguage}
+          style={({ pressed }) => [
+            styles.langChip,
+            pressed && styles.langChipPressed,
+          ]}
+        >
+          <Ionicons name="language" size={16} color={colors.primary} />
+          <Text variant="caption" tone="brand">
+            {LANGUAGE_LABELS[language] ?? language.toUpperCase()}
+          </Text>
+        </Pressable>
       </View>
 
-      {/* Bottom Actions */}
-      <View style={styles.actionsContainer}>
-        {/* Login Button replaced Google Button */}
-        <TouchableOpacity
-          style={styles.loginButton}
-          onPress={() => router.push("/(auth)/login")}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="log-in-outline" size={20} color={colors.white} />
-          <Text style={styles.loginButtonText}>{t("auth.login")}</Text>
-        </TouchableOpacity>
-
-        {/* Email Sign Up Button */}
-        <TouchableOpacity
-          style={styles.emailButton}
-          onPress={handleEmailSignUp}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="person-add-outline"
-            size={20}
-            color="#1A365D"
-            style={styles.emailIcon}
-          />
-          <Text style={styles.emailButtonText}>{t("auth.signup")}</Text>
-        </TouchableOpacity>
-
-        {/* Page Indicator */}
-        <View style={styles.pageIndicator}>
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={styles.dot} />
+      <View style={styles.hero}>
+        <View style={styles.logoMark}>
+          <Ionicons name="heart" size={28} color={colors.surface} />
         </View>
+
+        <Text variant="caption" tone="brand" style={styles.eyebrow}>
+          CareBridge
+        </Text>
+
+        <Text variant="display" align="left" style={styles.headline}>
+          {t("auth.loginSubtitle", "Early support for your child's growth.")}
+        </Text>
+
+        <Text variant="body" tone="secondary" style={styles.subhead}>
+          Screen, connect, and care — with guidance from trusted clinicians.
+        </Text>
       </View>
-    </View>
+
+      <View style={styles.actions}>
+        <Button
+          label={t("auth.signup", "Create account")}
+          onPress={() => router.push("/(auth)/signup")}
+          trailingIcon="arrow-forward"
+        />
+        <Button
+          label={t("auth.login", "I already have an account")}
+          variant="ghost"
+          onPress={() => router.push("/(auth)/login")}
+        />
+
+        <Text variant="caption" tone="tertiary" align="center" style={styles.footnote}>
+          By continuing you agree to our Terms & Privacy Policy.
+        </Text>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F7FAFC",
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[2],
   },
-  skipButton: {
-    position: "absolute",
-    top: 60,
-    right: 20,
+  langChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: colors.white,
-    borderRadius: 20,
-    zIndex: 10,
+    gap: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    backgroundColor: colors.surface,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: colors.borderSubtle,
+    ...shadows.xs,
   },
-  skipText: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: colors.primary,
+  langChipPressed: {
+    opacity: 0.85,
   },
-  content: {
+  hero: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingBottom: 100,
+    paddingHorizontal: layout.screenPadding,
+    gap: spacing[3],
   },
-  message: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#1A365D",
-    lineHeight: 38,
-  },
-  actionsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 16,
-  },
-  loginButton: {
-    flexDirection: "row",
+  logoMark: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: 18,
-    borderRadius: 28,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    marginBottom: spacing[4],
+    ...shadows.md,
   },
-  loginButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: colors.white,
+  eyebrow: {
+    marginBottom: spacing[1],
   },
-  emailButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.white,
-    paddingVertical: 18,
-    borderRadius: 28,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+  headline: {
+    marginBottom: spacing[2],
   },
-  emailIcon: {
-    marginRight: 4,
+  subhead: {
+    maxWidth: 320,
   },
-  emailButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1A365D",
+  actions: {
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: spacing[8],
+    gap: spacing[3],
   },
-  pageIndicator: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#CBD5E0",
-  },
-  dotActive: {
-    backgroundColor: "#4A5568",
+  footnote: {
+    marginTop: spacing[2],
   },
 });

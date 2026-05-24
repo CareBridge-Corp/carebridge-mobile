@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
@@ -8,12 +9,17 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
-import { useQueryClient } from "@tanstack/react-query";
-import { borderRadius, colors, spacing, typography } from "../../shared/theme";
+import {
+  Badge,
+  Button,
+  Card,
+  Screen,
+  ScreenHeader,
+  Text,
+} from "../../shared/components/ui";
+import { colors, layout, spacing } from "../../shared/theme";
 import {
   initializePayment,
   PaymentPurpose,
@@ -24,11 +30,10 @@ import {
 const PLANS: Array<{
   purpose: PaymentPurpose;
   icon: keyof typeof Ionicons.glyphMap;
-  color: string;
 }> = [
-  { purpose: "SUBSCRIPTION", icon: "sparkles", color: "#2563EB" },
-  { purpose: "EXTRA_CHILD", icon: "person-add", color: "#10B981" },
-  { purpose: "APPOINTMENT", icon: "medical", color: "#F59E0B" },
+  { purpose: "SUBSCRIPTION", icon: "sparkles" },
+  { purpose: "EXTRA_CHILD", icon: "person-add" },
+  { purpose: "APPOINTMENT", icon: "medical" },
 ];
 
 export default function PaymentScreen() {
@@ -81,160 +86,167 @@ export default function PaymentScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <Screen background={colors.surfaceMuted}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </Screen>
     );
   }
 
+  const visiblePlans = PLANS.filter(
+    (plan) => !purposeParam || plan.purpose === purposeParam,
+  );
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
-      </TouchableOpacity>
+    <Screen padded={false} background={colors.surfaceMuted}>
+      <ScreenHeader title={t("payment.title")} />
 
-      <Text style={styles.title}>{t("payment.title")}</Text>
-      <Text style={styles.subtitle}>{t("payment.subtitle")}</Text>
-
-      <View style={styles.statusCard}>
-        <Text style={styles.statusLabel}>{t("payment.subscriptionStatus")}</Text>
-        <Text style={styles.statusValue}>
-          {entitlements?.hasActiveSubscription
-            ? t("payment.active")
-            : t("payment.inactive")}
-        </Text>
-        {entitlements?.subscriptionExpiresAt ? (
-          <Text style={styles.statusMeta}>
-            {t("payment.expires")}{" "}
-            {new Date(entitlements.subscriptionExpiresAt).toLocaleDateString()}
-          </Text>
-        ) : null}
-      </View>
-
-      {PLANS.filter((plan) => {
-        if (!purposeParam) return true;
-        return plan.purpose === purposeParam;
-      }).map((plan) => (
-        <View key={plan.purpose} style={styles.planCard}>
-          <View style={styles.planHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: plan.color }]}>
-              <Ionicons name={plan.icon} size={22} color={colors.white} />
-            </View>
-            <View style={styles.planText}>
-              <Text style={styles.planTitle}>
-                {t(`payment.plan.${plan.purpose}.title`)}
-              </Text>
-              <Text style={styles.planDescription}>
-                {t(`payment.plan.${plan.purpose}.description`)}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.planFooter}>
-            <Text style={styles.price}>{getAmount(plan.purpose)}</Text>
-            <TouchableOpacity
-              style={styles.payButton}
-              onPress={() => handlePay(plan.purpose)}
-              disabled={processingPurpose === plan.purpose}
-            >
-              {processingPurpose === plan.purpose ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text style={styles.payButtonText}>{t("payment.payNow")}</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      ))}
-
-      <TouchableOpacity
-        style={styles.linkButton}
-        onPress={() => router.push("/(app)" as Href)}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.linkButtonText}>{t("payment.backHome")}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <Text variant="body" tone="secondary" style={styles.subtitle}>
+          {t("payment.subtitle")}
+        </Text>
+
+        <Card variant="elevated" padding="lg" style={styles.statusCard}>
+          <Text variant="caption" tone="secondary">
+            {t("payment.subscriptionStatus").toUpperCase()}
+          </Text>
+          <View style={styles.statusRow}>
+            <Text variant="title2">
+              {entitlements?.hasActiveSubscription
+                ? t("payment.active")
+                : t("payment.inactive")}
+            </Text>
+            <Badge
+              label={
+                entitlements?.hasActiveSubscription
+                  ? t("payment.active")
+                  : t("payment.inactive")
+              }
+              tone={entitlements?.hasActiveSubscription ? "success" : "warning"}
+            />
+          </View>
+          {entitlements?.subscriptionExpiresAt ? (
+            <Text variant="caption" tone="tertiary" style={styles.statusMeta}>
+              {t("payment.expires")}{" "}
+              {new Date(entitlements.subscriptionExpiresAt).toLocaleDateString()}
+            </Text>
+          ) : null}
+        </Card>
+
+        {visiblePlans.map((plan) => {
+          const processing = processingPurpose === plan.purpose;
+          return (
+            <Card
+              key={plan.purpose}
+              variant="elevated"
+              padding="lg"
+              style={styles.planCard}
+            >
+              <View style={styles.planHeader}>
+                <View style={styles.planIcon}>
+                  <Ionicons
+                    name={plan.icon}
+                    size={22}
+                    color={colors.primary}
+                  />
+                </View>
+                <View style={styles.planText}>
+                  <Text variant="title3">
+                    {t(`payment.plan.${plan.purpose}.title`)}
+                  </Text>
+                  <Text variant="bodySmall" tone="secondary">
+                    {t(`payment.plan.${plan.purpose}.description`)}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.planFooter}>
+                <View>
+                  <Text variant="caption" tone="secondary">
+                    AMOUNT
+                  </Text>
+                  <Text variant="title2" tone="brand">
+                    {getAmount(plan.purpose)}
+                  </Text>
+                </View>
+                <Button
+                  label={t("payment.payNow")}
+                  onPress={() => handlePay(plan.purpose)}
+                  loading={processing}
+                  fullWidth={false}
+                  size="sm"
+                  trailingIcon="arrow-forward"
+                />
+              </View>
+            </Card>
+          );
+        })}
+
+        <Button
+          label={t("payment.backHome")}
+          variant="ghost"
+          onPress={() => router.push("/(app)" as Href)}
+        />
+      </ScrollView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.backgroundBlue },
-  content: { padding: spacing.xxl, paddingTop: 60, paddingBottom: 40 },
-  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
-  backButton: { marginBottom: spacing.lg },
-  title: {
-    fontSize: typography.fontSize.xxxl,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-    marginBottom: spacing.xxl,
-    lineHeight: 22,
-  },
-  statusCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  statusLabel: { fontSize: typography.fontSize.sm, color: "#94A3B8" },
-  statusValue: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginTop: 4,
-  },
-  statusMeta: { fontSize: typography.fontSize.sm, color: "#64748B", marginTop: 4 },
-  planCard: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  planHeader: { flexDirection: "row", gap: spacing.lg, marginBottom: spacing.lg },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  loading: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  planText: { flex: 1 },
-  planTitle: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
+  scrollContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing[3],
+    paddingBottom: spacing[10],
+    gap: spacing[3],
   },
-  planDescription: {
-    fontSize: typography.fontSize.sm,
-    color: "#64748B",
-    marginTop: 4,
-    lineHeight: 20,
+  subtitle: {
+    marginBottom: spacing[2],
+  },
+  statusCard: {
+    gap: spacing[1],
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing[1],
+  },
+  statusMeta: {
+    marginTop: spacing[1],
+  },
+  planCard: {
+    gap: spacing[4],
+  },
+  planHeader: {
+    flexDirection: "row",
+    gap: spacing[3],
+    alignItems: "flex-start",
+  },
+  planIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primaryMuted,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  planText: {
+    flex: 1,
+    gap: spacing[1],
   },
   planFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing[3],
   },
-  price: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-  },
-  payButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xxl,
-    minWidth: 110,
-    alignItems: "center",
-  },
-  payButtonText: {
-    color: colors.white,
-    fontWeight: typography.fontWeight.semibold,
-  },
-  linkButton: { alignItems: "center", marginTop: spacing.md },
-  linkButtonText: { color: colors.textLink, fontWeight: typography.fontWeight.semibold },
 });
