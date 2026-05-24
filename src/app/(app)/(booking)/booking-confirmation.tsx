@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
-import { getDateLocale } from "../../../shared/localization/language";
-import { useLanguageStore } from "../../../shared/store/languageStore";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useAuthStore } from "../../(auth)/store/authStore";
 import { isPaymentRequiredError } from "../../../shared/api/client";
+import StatusModal from "../../../shared/components/StatusModal";
 import {
   Badge,
   Button,
@@ -14,26 +14,87 @@ import {
   ScreenHeader,
   Text,
 } from "../../../shared/components/ui";
+import { getDateLocale } from "../../../shared/localization/language";
+import { useLanguageStore } from "../../../shared/store/languageStore";
 import { colors, layout, spacing } from "../../../shared/theme";
 import { useCreateAppointment } from "../hooks/useAppointments";
 import { useProfile } from "../hooks/useProfile";
+import { useProfileStore } from "../store/profileStore";
 import { useBookingStore } from "../store/bookingStore";
+
+type ModalState = {
+  visible: boolean;
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+  primaryLabel?: string;
+  onPrimary?: () => void;
+};
+
+const MODAL_HIDDEN: ModalState = {
+  visible: false,
+  type: "info",
+  title: "",
+  message: "",
+};
 
 export default function BookingConfirmationScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { language } = useLanguageStore();
   const { doctor, slot, meetingType, childId, reset } = useBookingStore();
+  const authUser = useAuthStore((state) => state.user);
+  const storedProfile = useProfileStore((state) => state.profile);
   const { data: profile } = useProfile();
   const createAppointment = useCreateAppointment();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modal, setModal] = useState<ModalState>(MODAL_HIDDEN);
+
+  const parentId = useMemo(
+    () => profile?.userId ?? authUser?.userId ?? storedProfile?.userId,
+    [profile?.userId, authUser?.userId, storedProfile?.userId],
+  );
+
+  const closeModal = () => setModal(MODAL_HIDDEN);
+
+  const showModal = (next: Omit<ModalState, "visible">) => {
+    setModal({ ...next, visible: true });
+  };
 
   const handleConfirm = async () => {
-    if (!doctor || !slot || !profile?.userId) {
-      Alert.alert(
-        t("booking.missingDetails"),
-        t("booking.missingDetailsMessage"),
-      );
+    if (!doctor) {
+      showModal({
+        type: "error",
+        title: t("booking.missingDetails"),
+        message: t("booking.missingClinician"),
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
+      return;
+    }
+
+    if (!slot?.scheduleId || !slot.date || !slot.startTime) {
+      showModal({
+        type: "error",
+        title: t("booking.missingInfoTitle"),
+        message: t("booking.missingInfoMessage"),
+        primaryLabel: t("common.ok"),
+        onPrimary: () => {
+          closeModal();
+          router.back();
+        },
+      });
+      return;
+    }
+
+    if (!parentId) {
+      showModal({
+        type: "error",
+        title: t("booking.missingDetails"),
+        message: t("booking.missingProfile"),
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
       return;
     }
 
@@ -43,7 +104,7 @@ export default function BookingConfirmationScreen() {
         doctorId: doctor.userId,
         payload: {
           schedule_id: slot.scheduleId,
-          parent_id: profile.userId,
+          parent_id: parentId,
           child_id: childId ?? undefined,
           appointment_date: slot.date,
           start_time: slot.startTime,
@@ -52,20 +113,30 @@ export default function BookingConfirmationScreen() {
       });
 
       reset();
-      Alert.alert(t("common.success"), t("booking.bookingSuccess"), [
-        {
-          text: t("common.ok"),
-          onPress: () => router.replace("/(app)/schedule" as Href),
+      showModal({
+        type: "success",
+        title: t("common.success"),
+        message: t("booking.bookingSuccess"),
+        primaryLabel: t("common.ok"),
+        onPrimary: () => {
+          closeModal();
+          router.replace("/(app)/schedule" as Href);
         },
-      ]);
+      });
     } catch (error: unknown) {
       if (isPaymentRequiredError(error)) {
         router.push("/(app)/payment?purpose=SUBSCRIPTION" as Href);
         return;
       }
       const message =
-        error instanceof Error ? error.message : "Unable to create appointment.";
-      Alert.alert(t("booking.bookingFailed"), message);
+        error instanceof Error ? error.message : t("booking.bookFailed");
+      showModal({
+        type: "error",
+        title: t("booking.bookingFailed"),
+        message,
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -76,17 +147,23 @@ export default function BookingConfirmationScreen() {
     : t("booking.notSelected");
 
   const dateString = slot
-    ? new Date(slot.date).toLocaleDateString(getDateLocale(language), {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+    ? new Date(`${slot.date}T12:00:00`).toLocaleDateString(
+        getDateLocale(language),
+        {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        },
+      )
     : t("booking.notSelected");
 
   return (
     <Screen padded={false} background={colors.surfaceMuted}>
-      <ScreenHeader title={t("booking.confirmBooking")} subtitle={t("booking.step3of3")} />
+      <ScreenHeader
+        title={t("booking.confirmBooking")}
+        subtitle={t("booking.step3of3")}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -99,11 +176,7 @@ export default function BookingConfirmationScreen() {
         <Card variant="elevated" padding="lg" style={styles.card}>
           <View style={styles.row}>
             <View style={styles.iconCircle}>
-              <Ionicons
-                name="person-circle"
-                size={22}
-                color={colors.primary}
-              />
+              <Ionicons name="person-circle" size={22} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="caption" tone="secondary">
@@ -119,11 +192,7 @@ export default function BookingConfirmationScreen() {
         <Card variant="elevated" padding="lg" style={styles.card}>
           <View style={styles.row}>
             <View style={styles.iconCircle}>
-              <Ionicons
-                name="calendar"
-                size={22}
-                color={colors.primary}
-              />
+              <Ionicons name="calendar" size={22} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text variant="caption" tone="secondary">
@@ -139,7 +208,11 @@ export default function BookingConfirmationScreen() {
               ) : null}
               <View style={styles.badgeRow}>
                 <Badge
-                  label={meetingType === "online" ? t("booking.online") : t("booking.inPerson")}
+                  label={
+                    meetingType === "online"
+                      ? t("booking.online")
+                      : t("booking.inPerson")
+                  }
                   tone="info"
                   icon={meetingType === "online" ? "videocam" : "business"}
                 />
@@ -155,11 +228,7 @@ export default function BookingConfirmationScreen() {
               size={22}
               color={colors.primary}
             />
-            <Text
-              variant="bodySmall"
-              tone="secondary"
-              style={styles.infoText}
-            >
+            <Text variant="bodySmall" tone="secondary" style={styles.infoText}>
               {t("booking.confirmInfo")}
             </Text>
           </View>
@@ -171,9 +240,19 @@ export default function BookingConfirmationScreen() {
           label={t("booking.confirmAppointment")}
           onPress={handleConfirm}
           loading={isSubmitting}
+          disabled={!doctor || !slot}
           leadingIcon="checkmark-circle"
         />
       </View>
+
+      <StatusModal
+        visible={modal.visible}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        primaryButtonText={modal.primaryLabel ?? t("common.ok")}
+        onPrimaryPress={modal.onPrimary ?? closeModal}
+      />
     </Screen>
   );
 }

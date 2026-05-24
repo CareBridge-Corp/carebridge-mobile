@@ -2,9 +2,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "../../(auth)/store/authStore";
+import StatusModal from "../../../shared/components/StatusModal";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,15 +28,30 @@ import {
   useAvailableDays,
   useAvailableSlots,
   useCreateAppointment,
+  toLocalIsoDate,
 } from "../hooks/useAppointments";
 import { useProfile } from "../hooks/useProfile";
+import { useProfileStore } from "../store/profileStore";
 import { useClinicianStore } from "../store/clinicianStore";
+import { isPaymentRequiredError } from "../../../shared/api/client";
 
 const RANGE_DAYS = 30;
 
-function toIsoDate(date: Date): string {
-  return date.toISOString().split("T")[0];
-}
+type ModalState = {
+  visible: boolean;
+  type: "success" | "error" | "info";
+  title: string;
+  message: string;
+  primaryLabel?: string;
+  onPrimary?: () => void;
+};
+
+const MODAL_HIDDEN: ModalState = {
+  visible: false,
+  type: "info",
+  title: "",
+  message: "",
+};
 
 function formatDay(dateStr: string, locale: string) {
   const date = new Date(`${dateStr}T00:00:00`);
@@ -58,13 +74,27 @@ export default function DoctorConsultationScreen() {
   );
 
   const { data: profile } = useProfile();
+  const authUser = useAuthStore((state) => state.user);
+  const storedProfile = useProfileStore((state) => state.profile);
   const createAppointment = useCreateAppointment();
+  const [modal, setModal] = useState<ModalState>(MODAL_HIDDEN);
+
+  const parentId = useMemo(
+    () => profile?.userId ?? authUser?.userId ?? storedProfile?.userId,
+    [profile?.userId, authUser?.userId, storedProfile?.userId],
+  );
+
+  const closeModal = () => setModal(MODAL_HIDDEN);
+
+  const showModal = (next: Omit<ModalState, "visible">) => {
+    setModal({ ...next, visible: true });
+  };
 
   const range = useMemo(() => {
     const today = new Date();
     const end = new Date(today);
     end.setDate(today.getDate() + RANGE_DAYS - 1);
-    return { from: toIsoDate(today), to: toIsoDate(end) };
+    return { from: toLocalIsoDate(today), to: toLocalIsoDate(end) };
   }, []);
 
   const [meetingType, setMeetingType] = useState<"in_person" | "online">(
@@ -73,12 +103,15 @@ export default function DoctorConsultationScreen() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
 
-  const { data: availableDays = [], isLoading: daysLoading } = useAvailableDays(
-    clinician?.userId,
-    range.from,
-    range.to,
+  const resolvedChildId = childId ?? undefined;
+
+  const { data: availableDays = [], isLoading: daysLoading } = useAvailableDays({
+    childId: resolvedChildId,
+    doctorId: clinician?.userId,
+    from: range.from,
+    to: range.to,
     meetingType,
-  );
+  });
 
   useEffect(() => {
     if (!selectedDate && availableDays.length > 0) {
@@ -89,52 +122,89 @@ export default function DoctorConsultationScreen() {
     }
   }, [availableDays, selectedDate]);
 
-  const { data: slots = [], isLoading: slotsLoading } = useAvailableSlots(
-    clinician?.userId,
-    selectedDate || undefined,
+  const { data: slots = [], isLoading: slotsLoading } = useAvailableSlots({
+    childId: resolvedChildId,
+    doctorId: clinician?.userId,
+    date: selectedDate || undefined,
     meetingType,
-  );
+  });
 
-  const handleBookMeeting = () => {
+  const handleBookMeeting = async () => {
     const slot = slots.find(
       (item) => `${item.schedule_id}-${item.start_time}` === selectedSlotKey,
     );
 
-    if (!selectedDate || !slot || !clinician || !profile?.id) {
-      Alert.alert(
-        t("booking.missingInfoTitle"),
-        t("booking.missingInfoMessage"),
-      );
+    if (!clinician) {
+      showModal({
+        type: "error",
+        title: t("booking.missingDetails"),
+        message: t("booking.missingClinician"),
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
       return;
     }
 
-    createAppointment.mutate(
-      {
+    if (!selectedDate || !slot?.schedule_id || !slot.start_time) {
+      showModal({
+        type: "error",
+        title: t("booking.missingInfoTitle"),
+        message: t("booking.missingInfoMessage"),
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
+      return;
+    }
+
+    if (!parentId) {
+      showModal({
+        type: "error",
+        title: t("booking.missingDetails"),
+        message: t("booking.missingProfile"),
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
+      return;
+    }
+
+    try {
+      await createAppointment.mutateAsync({
         doctorId: clinician.userId,
         payload: {
           appointment_date: selectedDate,
           start_time: slot.start_time.slice(0, 5),
           meeting_type: meetingType,
-          parent_id: profile.id,
+          parent_id: parentId,
           schedule_id: slot.schedule_id,
+          child_id: resolvedChildId,
         },
-      },
-      {
-        onSuccess: () => {
-          Alert.alert(t("common.success"), t("booking.bookSuccess"), [
-            { text: t("common.ok"), onPress: () => router.back() },
-          ]);
+      });
+
+      showModal({
+        type: "success",
+        title: t("common.success"),
+        message: t("booking.bookSuccess"),
+        primaryLabel: t("common.ok"),
+        onPrimary: () => {
+          closeModal();
+          router.back();
         },
-        onError: (err: any) => {
-          Alert.alert(
-            t("common.error"),
-            err.response?.data?.error ||
-              err.message ||
-              t("booking.bookFailed"),
-          );
-        },
-      },
-    );
+      });
+    } catch (error: unknown) {
+      if (isPaymentRequiredError(error)) {
+        router.push("/(app)/payment?purpose=SUBSCRIPTION" as Href);
+        return;
+      }
+      const message =
+        error instanceof Error ? error.message : t("booking.bookFailed");
+      showModal({
+        type: "error",
+        title: t("booking.bookingFailed"),
+        message,
+        primaryLabel: t("common.ok"),
+        onPrimary: closeModal,
+      });
+    }
   };
 
   if (!clinician) {
@@ -349,6 +419,15 @@ export default function DoctorConsultationScreen() {
           onPress={() => router.push("/(app)/doctor-chat" as Href)}
         />
       </View>
+
+      <StatusModal
+        visible={modal.visible}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        primaryButtonText={modal.primaryLabel ?? t("common.ok")}
+        onPrimaryPress={modal.onPrimary ?? closeModal}
+      />
     </Screen>
   );
 }
