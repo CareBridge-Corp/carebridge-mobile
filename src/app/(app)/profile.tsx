@@ -52,7 +52,7 @@ export default function ProfileScreen() {
         <Text variant="title1">{t("profile.title", "Profile")}</Text>
         <IconButton
           icon="settings-outline"
-          accessibilityLabel="Settings"
+          accessibilityLabel={t("profile.settings")}
           onPress={() => {
             // Placeholder for future settings screen
           }}
@@ -73,7 +73,7 @@ export default function ProfileScreen() {
                 icon="camera"
                 size="sm"
                 variant="filled"
-                accessibilityLabel="Change photo"
+                accessibilityLabel={t("profile.changePhoto")}
                 onPress={() =>
                   router.push("/(app)/(parent)/update-profile" as any)
                 }
@@ -127,10 +127,10 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.screeningText}>
                 <Text variant="body" weight="semibold">
-                  M-CHAT-R/F history
+                  {t("profile.screeningHistoryCardTitle")}
                 </Text>
                 <Text variant="caption" tone="secondary">
-                  Review past screenings
+                  {t("profile.screeningHistoryCardSubtitle")}
                 </Text>
               </View>
             </View>
@@ -146,7 +146,8 @@ export default function ProfileScreen() {
                 icon="medical"
                 title={`${clinician.surname ?? ""} ${clinician.firstName} ${clinician.lastName}`.trim()}
                 subtitle={
-                  clinician.specializations?.[0]?.name ?? "Assigned clinician"
+                  clinician.specializations?.[0]?.name ??
+                  t("profile.assignedClinician")
                 }
                 onPress={() =>
                   router.push({
@@ -166,16 +167,16 @@ export default function ProfileScreen() {
           <Card variant="flat" padding={0}>
             <ListRow
               icon="person-outline"
-              title={t("profile.personalInfo", "Personal information")}
-              subtitle="Edit your name, photo and contact"
+              title={t("profile.personalInfo")}
+              subtitle={t("profile.personalInfoSubtitle")}
               onPress={() =>
                 router.push("/(app)/(parent)/update-profile" as any)
               }
             />
             <ListRow
               icon="document-text-outline"
-              title={t("profile.screeningHistory", "Screening history")}
-              subtitle="View all M-CHAT submissions"
+              title={t("profile.screeningHistory")}
+              subtitle={t("profile.screeningHistorySubtitle")}
               onPress={() => router.push("/(app)/(mchat)/mchat-profile" as any)}
               noDivider
             />
@@ -184,10 +185,13 @@ export default function ProfileScreen() {
 
         {/* Preferences */}
         <View style={styles.section}>
-          <SectionHeader title={t("profile.preferences", "Preferences")} />
+          <SectionHeader title={t("profile.preferences")} />
           <Card variant="flat" padding="md">
             <Text variant="bodySmall" tone="secondary" style={styles.langLabel}>
-              {t("profile.language", "Language")}
+              {t("profile.language")}
+            </Text>
+            <Text variant="caption" tone="tertiary" style={styles.langHint}>
+              {t("profile.languageHint")}
             </Text>
             <View style={styles.langOptions}>
               {LANGUAGE_OPTIONS.map((opt) => {
@@ -217,8 +221,8 @@ export default function ProfileScreen() {
           <Button
             label={
               logoutMutation.isPending
-                ? t("profile.loggingOut", "Logging out...")
-                : t("profile.logout", "Log out")
+                ? t("profile.loggingOut")
+                : t("profile.logout")
             }
             variant="secondary"
             onPress={handleLogout}
@@ -293,6 +297,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   langLabel: {
+    marginBottom: spacing[1],
+  },
+  langHint: {
     marginBottom: spacing[3],
   },
   langOptions: {
