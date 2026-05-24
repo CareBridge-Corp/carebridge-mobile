@@ -54,5 +54,40 @@
     "curatedBy": "Kan qophaa'e",
     "treatmentTimeline": "Adeemsa wal'aansaa",
     "phase": "Marsaa"
+  },
+  "payment": {
+    "title": "CareBridge bani",
+    "subtitle": "Chat, appointment, fi wal'aansaaf subscribe gochuu.",
+    "subscriptionStatus": "Subscription",
+    "active": "Active",
+    "inactive": "Not active",
+    "expires": "Expires",
+    "payNow": "Pay now",
+    "unlock": "Unlock access",
+    "backHome": "Back to home",
+    "plan": {
+      "SUBSCRIPTION": {
+        "title": "Monthly subscription",
+        "description": "Chat, appointments, and treatment."
+      },
+      "EXTRA_CHILD": {
+        "title": "Additional child profile",
+        "description": "Add another child."
+      },
+      "APPOINTMENT": {
+        "title": "Appointment fee",
+        "description": "Confirm appointment booking."
+      }
+    },
+    "gate": {
+      "chatTitle": "Chat requires subscription",
+      "chatDescription": "Subscribe to message your clinician.",
+      "treatmentTitle": "Treatment requires subscription",
+      "treatmentDescription": "Subscribe to access treatment activities.",
+      "appointmentTitle": "Appointments require subscription",
+      "appointmentDescription": "Subscribe to book appointments.",
+      "extraChildTitle": "Additional child profile",
+      "extraChildDescription": "First child is free. Pay to add another."
+    }
   }
 }

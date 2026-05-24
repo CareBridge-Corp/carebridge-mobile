@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,12 +16,17 @@ import {
 import { socketService } from "../../shared/api/socket";
 import { borderRadius, colors, spacing, typography } from "../../shared/theme";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
+import { PaywallCard } from "./components/PaywallCard";
 import { useConversations } from "./hooks/useChat";
+import { useEntitlements } from "./hooks/useEntitlements";
 import { ChatConversation, useChatStore } from "./store/chatStore";
 import { useChildrenStore } from "./store/childrenStore";
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
+  const { data: entitlements, isLoading: entitlementsLoading } =
+    useEntitlements();
   const [searchQuery, setSearchQuery] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const [showChildSelector, setShowChildSelector] = useState(false);
@@ -394,5 +400,10 @@ const styles = StyleSheet.create({
     color: "#A0B8C8",
     marginTop: spacing.sm,
     textAlign: "center",
+  },
+  paywallContainer: {
+    flex: 1,
+    justifyContent: "center",
+    paddingVertical: spacing.xxxl,
   },
 });

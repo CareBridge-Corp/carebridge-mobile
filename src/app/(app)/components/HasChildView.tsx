@@ -8,19 +8,23 @@ import {
   spacing,
   typography,
 } from "../../../shared/theme";
-import { useProfile } from "../hooks/useProfile";
+import { useScreeningProgress } from "../hooks/useScreeningProgress";
+import { useRoadmaps } from "../hooks/useRoadmaps";
 import { useChildScreenings } from "../hooks/useScreenings";
 import { useChildrenStore } from "../store/childrenStore";
 import { useScreeningStore } from "../store/screeningStore";
+import { ProfileInProgressCard } from "./ProfileInProgressCard";
+import { ScreeningProgressCard } from "./ScreeningProgressCard";
+import { LongitudinalCheckInCard } from "./LongitudinalCheckInCard";
 
 export function HasChildView() {
   const router = useRouter();
   const { t } = useTranslation();
   const { activeChild } = useChildrenStore();
-  const { data: profile } = useProfile();
 
-  // Use the new hook to fetch screenings
   const { data: screeningsData } = useChildScreenings(activeChild?.childId);
+  const { data: progressData } = useScreeningProgress(activeChild?.childId);
+  const { data: roadmapData } = useRoadmaps(activeChild?.childId);
   const screeningsByChild = useScreeningStore(
     (state) => state.screeningsByChild,
   );
@@ -30,19 +34,10 @@ export function HasChildView() {
     : [];
 
   const latestScreening = childScreenings[0];
-
-  console.log("latestScreening", childScreenings[0]);
-
-  const childStatus = activeChild?.status || "UNVERIFIED";
-  const parentStatus = profile?.status || "UNVERIFIED";
-
-  const parentVerified = parentStatus === "VERIFIED";
-  const childVerified = childStatus === "VERIFIED";
-  const bothVerified = parentVerified && childVerified;
-
-  const handleUploadVideo = () => {
-    // ...existing code...
-  };
+  const hasActiveRoadmap = roadmapData?.hasActiveRoadmap ?? false;
+  const profileInProgress =
+    progressData?.profileStatus === "profile_in_progress" ||
+    (!!latestScreening && !hasActiveRoadmap);
 
   const handleMChat = () => {
     router.push("/(app)/mchat-privacy" as Href);
@@ -51,24 +46,36 @@ export function HasChildView() {
   return (
     <View style={styles.mainCard}>
       <Text style={styles.mainTitle}>{t("home.fillInfoStartTreatment")}</Text>
-      {/* 
-      {!bothVerified && (
-        <VerificationTracker
-          parentStatus={parentStatus}
-          childStatus={childStatus}
+
+      {profileInProgress && (
+        <ProfileInProgressCard
+          progress={progressData ?? null}
+          childName={activeChild?.firstName}
         />
-      )} */}
+      )}
 
-      {/* {latestScreening && <ScreeningResultCard screening={latestScreening} />} */}
+      {progressData?.domainProgress && progressData.domainProgress.length > 0 && (
+        <ScreeningProgressCard
+          domainProgress={progressData.domainProgress}
+          screeningMonth={progressData.latestScreening?.screeningMonth}
+        />
+      )}
 
-      {!latestScreening && (
+      {progressData?.readyForNextScreening && (
+        <LongitudinalCheckInCard
+          progress={progressData}
+          childName={activeChild?.firstName}
+        />
+      )}
+
+      {!latestScreening && !profileInProgress && (
         <TouchableOpacity
           style={styles.actionCard}
           onPress={handleMChat}
           activeOpacity={0.7}
         >
           <View style={styles.actionCardContent}>
-            <Text style={styles.actionCardTitle}>M-chat</Text>
+            <Text style={styles.actionCardTitle}>M-CHAT</Text>
             <Text style={styles.actionCardSubtitle}>{t("home.infoSafe")}</Text>
 
             <View style={styles.verifiedBadge}>
@@ -116,6 +123,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     position: "relative",
   },
+  followUpCard: {
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
   actionCardContent: {
     paddingRight: 50,
   },
@@ -130,24 +142,6 @@ const styles = StyleSheet.create({
     color: "#5A7A8F",
     lineHeight: typography.lineHeight.relaxed * typography.fontSize.sm,
     marginBottom: spacing.xl,
-  },
-  watchGuideButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  playIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#0C4A6E",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  watchGuideText: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.medium,
-    color: "#0C4A6E",
   },
   verifiedBadge: {
     flexDirection: "row",
@@ -182,85 +176,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     justifyContent: "center",
     alignItems: "center",
-  },
-  placeholderRow: {
-    flexDirection: "row",
-    gap: spacing.lg,
-    marginTop: spacing.lg,
-  },
-  featureCard: {
-    flex: 1,
-    backgroundColor: "#E8F0F5",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 160,
-  },
-  featureIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.white,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  featureCardTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: "#0C4A6E",
-    marginBottom: spacing.xs,
-    textAlign: "center",
-  },
-  featureCardSubtitle: {
-    fontSize: typography.fontSize.sm,
-    color: "#5A7A8F",
-    textAlign: "center",
-  },
-  statusContainer: {
-    backgroundColor: "#F4F8FA",
-    borderRadius: borderRadius.xxl,
-    padding: spacing.xxl,
-    alignItems: "center",
-    marginTop: spacing.xl,
-  },
-  statusIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  statusTitle: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: "#0C4A6E",
-    marginBottom: spacing.sm,
-    textAlign: "center",
-  },
-  statusSubtitle: {
-    fontSize: typography.fontSize.md,
-    color: "#5A7A8F",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: spacing.xxl,
-  },
-  verifyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#0C4A6E",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xxxl,
-    borderRadius: borderRadius.xxl,
-    gap: spacing.sm,
-    width: "100%",
-  },
-  verifyButtonText: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
   },
 });

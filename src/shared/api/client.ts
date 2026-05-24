@@ -8,6 +8,27 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+export class ApiError extends Error {
+  statusCode?: number;
+  code?: string;
+
+  constructor(message: string, statusCode?: number, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
+export function isPaymentRequiredError(error: unknown): error is ApiError {
+  return (
+    error instanceof ApiError &&
+    error.statusCode === 402 &&
+    (error.code === "SUBSCRIPTION_REQUIRED" ||
+      error.code === "EXTRA_CHILD_REQUIRED")
+  );
+}
+
 // API Client class
 class ApiClient {
   private client: AxiosInstance;
@@ -83,22 +104,23 @@ class ApiClient {
     );
   }
 
-  private handleError(error: AxiosError): Error {
+  private handleError(error: AxiosError): ApiError {
     if (error.response) {
-      // Server responded with error, the API documentation usually returns a message
       const data = error.response.data as any;
       const message =
         data?.message ||
         (typeof data?.error === "string" ? data.error : data?.error?.message) ||
         "Server error";
-      return new Error(message);
-    } else if (error.request) {
-      // Request made but no response
-      return new Error("Network error. Please check your connection.");
-    } else {
-      // Something else happened
-      return new Error(error.message || "An unexpected error occurred");
+      return new ApiError(
+        message,
+        error.response.status,
+        data?.code,
+      );
     }
+    if (error.request) {
+      return new ApiError("Network error. Please check your connection.");
+    }
+    return new ApiError(error.message || "An unexpected error occurred");
   }
 
   // HTTP Methods

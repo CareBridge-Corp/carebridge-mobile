@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import StatusModal from "../../../shared/components/StatusModal";
+import { isPaymentRequiredError } from "../../../shared/api/client";
 import {
   borderRadius,
   colors,
@@ -24,9 +25,16 @@ import {
   typography,
 } from "../../../shared/theme";
 import { useCreateChild } from "../hooks/useChildren";
+import { useEntitlements } from "../hooks/useEntitlements";
+import { PaywallCard } from "../components/PaywallCard";
+import { useTranslation } from "react-i18next";
+
 export default function CreateChildScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const createChildMutation = useCreateChild();
+  const { data: entitlements, isLoading: entitlementsLoading } =
+    useEntitlements();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -239,11 +247,19 @@ export default function CreateChildScreen() {
           });
           setStatusModalVisible(true);
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
+          if (isPaymentRequiredError(error)) {
+            router.push("/(app)/payment?purpose=EXTRA_CHILD" as Href);
+            return;
+          }
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Failed to create child profile.";
           setStatusModalConfig({
             type: "error",
             title: "Error",
-            message: error.message || "Failed to create child profile.",
+            message,
             onPrimaryPress: () => setStatusModalVisible(false),
           });
           setStatusModalVisible(true);
@@ -274,6 +290,16 @@ export default function CreateChildScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {!entitlementsLoading &&
+          entitlements &&
+          !entitlements.canAddChild && (
+            <PaywallCard
+              title={t("payment.gate.extraChildTitle")}
+              description={t("payment.gate.extraChildDescription")}
+              purpose="EXTRA_CHILD"
+            />
+          )}
+
         <Text style={styles.title}>Child's Info</Text>
 
         <View style={styles.imageUploadWrapper}>
@@ -433,10 +459,15 @@ export default function CreateChildScreen() {
         <TouchableOpacity
           style={[
             styles.nextButton,
-            createChildMutation.isPending && styles.nextButtonDisabled,
+            (createChildMutation.isPending ||
+              (!entitlementsLoading && entitlements && !entitlements.canAddChild)) &&
+              styles.nextButtonDisabled,
           ]}
           onPress={handleNext}
-          disabled={createChildMutation.isPending}
+          disabled={
+            createChildMutation.isPending ||
+            (!entitlementsLoading && !!entitlements && !entitlements.canAddChild)
+          }
           activeOpacity={0.8}
         >
           <Text style={styles.nextButtonText}>

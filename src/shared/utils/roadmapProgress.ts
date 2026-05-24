@@ -179,12 +179,25 @@ export function isRoadmapCycleComplete(
   const allWeeksDone = sorted.every((wp) => wp.status === "COMPLETED");
   if (!allWeeksDone) return false;
 
+  const skipCooldown =
+    process.env.EXPO_PUBLIC_SKIP_ROADMAP_COOLDOWN !== "false";
+
+  if (skipCooldown) return true;
+
   const lastWeek = sorted[sorted.length - 1];
-  if (!lastWeek?.completionDate) return false;
+  if (!lastWeek?.completionDate) return true;
 
   const completedAt = new Date(lastWeek.completionDate).getTime();
   const cooldownEnds = completedAt + ROADMAP_COOLDOWN_MS;
   return Date.now() >= cooldownEnds;
+}
+
+export function isReadyForNextScreening(
+  weekPlans: WeekPlan[],
+  roadmap: RoadmapSummary | null,
+) {
+  if (!roadmap || weekPlans.length === 0) return false;
+  return weekPlans.every((wp) => wp.status === "COMPLETED");
 }
 
 export function getCurrentWeekPlan(weekPlans: WeekPlan[]) {
