@@ -15,6 +15,7 @@ import {
 } from "../../shared/components/ui";
 import { useLogout } from "../(auth)/hooks/useLogout";
 import { useLanguageStore } from "../../shared/store/languageStore";
+import { APP_LANGUAGES } from "../../shared/localization/language";
 import { colors, layout, spacing } from "../../shared/theme";
 import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
@@ -22,11 +23,7 @@ import { useChildrenStore } from "./store/childrenStore";
 
 type Language = "en" | "am" | "om";
 
-const LANGUAGE_OPTIONS: { value: Language; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "am", label: "አማርኛ" },
-  { value: "om", label: "Afaan Oromoo" },
-];
+const LANGUAGE_OPTIONS = APP_LANGUAGES;
 
 export default function ProfileScreen() {
   const router = useRouter();
