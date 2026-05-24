@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Screen, Text } from "../shared/components/ui";
 import { colors, spacing } from "../shared/theme";
@@ -9,13 +10,14 @@ import { verifyPayment } from "./(app)/hooks/useEntitlements";
 export default function PaymentReturnScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ tx_ref?: string; trx_ref?: string }>();
-  const [message, setMessage] = useState("Verifying payment...");
+  const [message, setMessage] = useState(t("payment.verifying"));
 
   useEffect(() => {
     const txRef = params.tx_ref || params.trx_ref;
     if (!txRef) {
-      setMessage("Payment return received.");
+      setMessage(t("payment.returnReceived"));
       const timer = setTimeout(() => {
         router.replace("/(app)/payment" as Href);
       }, 1500);
@@ -29,13 +31,11 @@ export default function PaymentReturnScreen() {
         await verifyPayment(txRef);
         await queryClient.invalidateQueries({ queryKey: ["entitlements"] });
         if (!cancelled) {
-          setMessage("Payment verified. Redirecting...");
+          setMessage(t("payment.verifiedRedirect"));
         }
       } catch {
         if (!cancelled) {
-          setMessage(
-            "Could not verify payment yet. Check your subscription status.",
-          );
+          setMessage(t("payment.verifyPending"));
         }
       } finally {
         if (!cancelled) {

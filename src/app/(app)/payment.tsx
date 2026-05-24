@@ -67,7 +67,13 @@ export default function PaymentScreen() {
       await queryClient.invalidateQueries({ queryKey: ["entitlements"] });
       Alert.alert("Payment", "If payment succeeded, your access is now unlocked.");
     } catch (error: any) {
-      Alert.alert("Payment failed", error?.message ?? "Unable to initialize payment.");
+      const responseData = error?.response?.data;
+      const details =
+        responseData?.details ||
+        responseData?.error ||
+        error?.message ||
+        "Unable to initialize payment.";
+      Alert.alert("Payment failed", details);
     } finally {
       setProcessingPurpose(null);
     }

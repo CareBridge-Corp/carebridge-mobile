@@ -10,11 +10,14 @@ import {
   SectionHeader,
 } from "../../shared/components/ui";
 import { colors, layout, spacing } from "../../shared/theme";
+import { AsdResourcesSection } from "./components/AsdResourcesSection";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
 import { ClinicianCard } from "./components/ClinicianCard";
+import { HelpfulGamesSection } from "./components/HelpfulGamesSection";
 import { HomeHeader } from "./components/HomeHeader";
 import { HomeHero } from "./components/HomeHero";
 import { HomeSkeletonView } from "./components/HomeSkeletonView";
+import { PediatriciansSection } from "./components/PediatriciansSection";
 import { useChildren } from "./hooks/useChildren";
 import { useAssignedClinician } from "./hooks/useClinician";
 import { useProfile } from "./hooks/useProfile";
@@ -118,7 +121,7 @@ export default function AppHomeScreen() {
   });
 
   const greeting = getGreeting();
-  const primaryName = activeChild?.firstName || user?.firstName || "Friend";
+  const primaryName = activeChild?.firstName || user?.firstName || t("common.friend");
   const headerSubtitle = activeChild
     ? activeChild.gender ? `${activeChild.gender}` : undefined
     : undefined;
@@ -154,6 +157,7 @@ export default function AppHomeScreen() {
             {/* Hero — single primary CTA driven by lifecycle stage */}
             {renderHero(stage, {
               router,
+              t,
               childName: activeChild?.firstName,
               parentVerified,
               childVerified,
@@ -161,10 +165,15 @@ export default function AppHomeScreen() {
               progressPct: computeScreeningProgressPercent(progressData),
             })}
 
+            {/* Top section: pediatricians network preview */}
+            <View style={styles.section}>
+              <PediatriciansSection />
+            </View>
+
             {/* Optional: assigned clinician */}
             {bothVerified && clinician ? (
               <View style={styles.section}>
-                <SectionHeader title="Your care team" />
+                <SectionHeader title={t("home.careTeam")} />
                 <ClinicianCard
                   clinician={clinician}
                   onPress={() =>
@@ -182,27 +191,37 @@ export default function AppHomeScreen() {
             {bothVerified && screenings.length > 0 ? (
               <View style={styles.section}>
                 <SectionHeader
-                  title="Recent screenings"
+                  title={t("home.recentScreenings")}
                   action={{
-                    label: "View all",
+                    label: t("home.viewAll"),
                     onPress: () =>
                       router.push("/(app)/(mchat)/mchat-profile" as any),
                   }}
                 />
                 <EmptyState
                   icon="clipboard-outline"
-                  title={`${screenings.length} ${
-                    screenings.length === 1 ? "screening" : "screenings"
-                  } on file`}
-                  description="Tap to review past M-CHAT submissions and clinician notes."
+                  title={t("home.screeningsOnFile", {
+                    count: screenings.length,
+                  })}
+                  description={t("home.screeningHistoryDesc")}
                   primaryAction={{
-                    label: "Open history",
+                    label: t("home.openHistory"),
                     onPress: () =>
                       router.push("/(app)/(mchat)/mchat-profile" as any),
                   }}
                 />
               </View>
             ) : null}
+
+            {/* Interactive games */}
+            <View style={styles.section}>
+              <HelpfulGamesSection />
+            </View>
+
+            {/* Bottom section: trusted ASD info resources */}
+            <View style={styles.section}>
+              <AsdResourcesSection />
+            </View>
           </View>
         )}
       </ScrollView>
@@ -245,6 +264,7 @@ function renderHero(
   stage: LifecycleStage,
   ctx: {
     router: ReturnType<typeof useRouter>;
+    t: ReturnType<typeof useTranslation>["t"];
     childName?: string;
     parentVerified: boolean;
     childVerified: boolean;
@@ -256,12 +276,12 @@ function renderHero(
     case "no_children":
       return (
         <HomeHero
-          eyebrow="Step 1 of 4"
-          title="Let's get started"
-          description="Register your child to begin their screening and care journey."
+          eyebrow={ctx.t("home.hero.step1")}
+          title={ctx.t("home.hero.getStarted")}
+          description={ctx.t("home.hero.getStartedDesc")}
           illustrationIcon="happy-outline"
           primaryAction={{
-            label: "Register child",
+            label: ctx.t("home.hero.registerChild"),
             onPress: () =>
               ctx.router.push("/(app)/(child)/create-child" as Href),
             leadingIcon: "person-add-outline",
@@ -274,18 +294,18 @@ function renderHero(
       const progress = (completed / 2) * 100;
       return (
         <HomeHero
-          eyebrow="Step 2 of 4"
-          title="Verify your identity"
-          description="Two quick steps unlock screening and clinician matching."
+          eyebrow={ctx.t("home.hero.step2")}
+          title={ctx.t("home.hero.verifyTitle")}
+          description={ctx.t("home.hero.verifyDesc")}
           illustrationIcon="shield-checkmark-outline"
           badge={{
-            label: completed === 0 ? "Required" : "In progress",
+            label: completed === 0 ? ctx.t("common.required") : ctx.t("common.inProgress"),
             tone: "warning",
             icon: "time-outline",
           }}
           progress={progress}
           primaryAction={{
-            label: completed === 0 ? "Start verification" : "Continue",
+            label: completed === 0 ? ctx.t("home.hero.startVerification") : ctx.t("common.continue"),
             onPress: () => ctx.router.push("/(app)/(verification)/verify" as Href),
           }}
         />
@@ -294,16 +314,20 @@ function renderHero(
     case "needs_screening":
       return (
         <HomeHero
-          eyebrow="Step 3 of 4"
-          title={`Begin ${ctx.childName ?? "your child"}'s screening`}
-          description="The M-CHAT-R/F takes about 10 minutes. Your answers are private and only seen by your clinician."
+          eyebrow={ctx.t("home.hero.step3")}
+          title={
+            ctx.childName
+              ? ctx.t("home.hero.beginScreening", { name: ctx.childName })
+              : ctx.t("home.hero.beginScreeningDefault")
+          }
+          description={ctx.t("home.hero.screeningDesc")}
           illustrationIcon="clipboard-outline"
           stats={[
-            { label: "Minutes", value: "10" },
-            { label: "Questions", value: "20" },
+            { label: ctx.t("home.hero.minutes"), value: "10" },
+            { label: ctx.t("home.hero.questions"), value: "20" },
           ]}
           primaryAction={{
-            label: "Start screening",
+            label: ctx.t("home.hero.startScreening"),
             onPress: () => ctx.router.push("/(app)/mchat-privacy" as Href),
           }}
         />
@@ -311,18 +335,18 @@ function renderHero(
     case "screening_under_review":
       return (
         <HomeHero
-          eyebrow="Step 4 of 4"
-          title="Under clinical review"
-          description="Your clinician is reviewing the screening. You'll get a notification when the care plan is ready."
+          eyebrow={ctx.t("home.hero.step4")}
+          title={ctx.t("home.hero.underReview")}
+          description={ctx.t("home.hero.underReviewDesc")}
           illustrationIcon="hourglass-outline"
           badge={{
-            label: "Under review",
+            label: ctx.t("screening.underReview"),
             tone: "info",
             icon: "time-outline",
           }}
           progress={ctx.progressPct ?? 50}
           secondaryAction={{
-            label: "View submission",
+            label: ctx.t("home.hero.viewSubmission"),
             onPress: () =>
               ctx.router.push("/(app)/(mchat)/mchat-profile" as any),
           }}
@@ -331,20 +355,20 @@ function renderHero(
     case "ready_for_next_screening":
       return (
         <HomeHero
-          eyebrow="Follow-up"
-          title="Time for the next check-in"
-          description="A short re-screening helps your clinician track progress and adjust the plan."
+          eyebrow={ctx.t("home.hero.followUp")}
+          title={ctx.t("home.hero.nextCheckIn")}
+          description={ctx.t("home.hero.nextCheckInDesc")}
           illustrationIcon="refresh-circle-outline"
           badge={{
-            label: "Due now",
+            label: ctx.t("home.hero.dueNow"),
             tone: "warning",
           }}
           primaryAction={{
-            label: "Start re-screening",
+            label: ctx.t("home.hero.startRescreening"),
             onPress: () => ctx.router.push("/(app)/mchat-privacy" as Href),
           }}
           secondaryAction={{
-            label: "Not now",
+            label: ctx.t("home.hero.notNow"),
             onPress: () =>
               ctx.router.push("/(app)/(mchat)/mchat-profile" as any),
           }}
@@ -353,21 +377,23 @@ function renderHero(
     case "active_care":
       return (
         <HomeHero
-          eyebrow="Today's focus"
-          title="Continue this week's plan"
-          description={`Open ${ctx.childName ?? "your child"}'s schedule to see today's activities.`}
+          eyebrow={ctx.t("home.hero.todayFocus")}
+          title={ctx.t("home.hero.continuePlan")}
+          description={ctx.t("home.hero.continuePlanDesc", {
+            name: ctx.childName ?? ctx.t("common.friend"),
+          })}
           illustrationIcon="flame-outline"
           badge={{
-            label: "Active",
+            label: ctx.t("common.active"),
             tone: "success",
             icon: "checkmark-circle",
           }}
           primaryAction={{
-            label: "Open schedule",
+            label: ctx.t("home.hero.openSchedule"),
             onPress: () => ctx.router.push("/schedule" as Href),
           }}
           secondaryAction={{
-            label: "See growth journey",
+            label: ctx.t("home.hero.seeGrowthJourney"),
             onPress: () => ctx.router.push("/(app)/growth-journey" as Href),
           }}
         />
