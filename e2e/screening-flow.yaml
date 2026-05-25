@@ -22,6 +22,6 @@ env:
 # Confirm submission in the modal
 - tapOn:
     text: "Yes, submit"
-# Assert results screen is visible (auto-redirect after success screen)
+# Assert results screen is visible
 - assertVisible:
     text: "M-CHAT results"

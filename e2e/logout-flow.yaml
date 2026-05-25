@@ -4,25 +4,15 @@ env:
   E2E_PARENT_PASSWORD: ${E2E_PARENT_PASSWORD}
 ---
 - runFlow: auth-login.yaml
-# Open profile / settings — typically a profile icon or menu in the header
+# Navigate to Profile tab
 - tapOn:
-    id: "profile-button"
-    optional: true
-# Fallback: tap the avatar or settings icon if no id
-- tapOn:
-    text: "Settings"
-    optional: true
-# Tap the logout / sign out button
+    text: "Profile"
+# Tap "Log out"
 - tapOn:
     text: "Log out"
-# Confirm logout if a confirmation dialog appears
-- tapOn:
-    text: "Yes"
-    optional: true
-# Assert the app returns to the welcome / login screen
+# Assert the app returns to the welcome screen
 - assertTrue:
     visible:
       anyOf:
-        - text: "I already have an account"
-        - text: "Create account"
+        - text: "Sign up"
         - text: "Log in"
