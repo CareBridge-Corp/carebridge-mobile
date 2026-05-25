@@ -4,22 +4,29 @@ env:
   E2E_SIGNUP_PASSWORD: TestPass123!
 ---
 - launchApp
+# Welcome screen — tap "Sign up" (primary button)
 - tapOn:
-    text: "Create account"
+    text: "Sign up"
+# Fill first name
 - tapOn:
     text: "First name"
 - inputText: "E2E"
+# Fill last name
 - tapOn:
     text: "Last name"
 - inputText: "TestUser"
+# Fill email
 - tapOn:
     text: "Email"
 - inputText: ${E2E_SIGNUP_EMAIL}
+# Fill password
 - tapOn:
     text: "Password"
 - inputText: ${E2E_SIGNUP_PASSWORD}
+# Tap the "Sign up" submit button inside the signup form
 - tapOn:
-    text: "Create account"
+    text: "Sign up"
     index: 1
+# Assert signup screen heading is no longer visible
 - assertNotVisible:
-    text: "Create account"
+    text: "Sign up"
