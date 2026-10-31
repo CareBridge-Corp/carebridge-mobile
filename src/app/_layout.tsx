@@ -6,6 +6,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { ConversationProvider } from "@elevenlabs/react-native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -73,11 +74,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutReady}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <StatusBar barStyle="dark-content" backgroundColor="#F7FAFC" />
-          <Stack screenOptions={{ headerShown: false }} />
-          <ToastComponent />
-        </QueryClientProvider>
+        <ConversationProvider>
+          <QueryClientProvider client={queryClient}>
+            <StatusBar barStyle="dark-content" backgroundColor="#F7FAFC" />
+            <Stack screenOptions={{ headerShown: false }} />
+            <ToastComponent />
+          </QueryClientProvider>
+        </ConversationProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

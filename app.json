@@ -8,7 +8,10 @@
     "scheme": "carebridgemobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Allow CareBridge to use your microphone for live conversations with the AI Parent Companion."
+      }
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
@@ -20,7 +23,15 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.thenm334.carebridgemobile",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET",
+        "android.permission.WAKE_LOCK",
+        "android.permission.BLUETOOTH"
+      ]
     },
     "web": {
       "output": "static",
@@ -54,7 +65,9 @@
           "color": "#0C4A6E"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@livekit/react-native-expo-plugin",
+      "@config-plugins/react-native-webrtc"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -63,7 +76,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "70b17805-ab74-40c9-bbd4-24989c405444"
+        "projectId": "25f9f60e-74ab-4c6e-8292-706c9376c467"
       }
     }
   }

@@ -6,7 +6,8 @@ export interface AvailableSlot {
 }
 
 export interface Appointment {
-  appointmentId: string;
+  id?: string;
+  appointmentId?: string;
   doctorId: string;
   parentId: string;
   childId?: string | null;
@@ -16,6 +17,10 @@ export interface Appointment {
   endTime: string;
   meetingType: "in_person" | "online";
   status: "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
+  meetingLink?: string | null;
+  googleCalendarUrl?: string | null;
+  googleEventId?: string | null;
+  conferenceStatus: "not_required" | "not_connected" | "pending" | "ready" | "failed";
   createdAt: string;
   updatedAt: string;
 }

@@ -11,18 +11,19 @@ export interface ApiResponse<T = any> {
 // Multipart API Client class for file uploads
 class MultipartApiClient {
   private client: AxiosInstance;
+  private baseURL: string;
 
   constructor() {
+    this.baseURL =
+      process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
     this.client = axios.create({
-      baseURL: process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api",
+      baseURL: this.baseURL,
       timeout: 120000, // 2 minutes timeout for file uploads
       withCredentials: true,
       headers: {
         Accept: "application/json",
         // DO NOT set Content-Type here - let axios set it with the boundary
       },
-      // Essential for React Native FormData to prevent Axios from messing with the payload
-      transformRequest: (data) => data,
     });
 
     this.setupInterceptors();
@@ -121,11 +122,78 @@ class MultipartApiClient {
   }
 
   // HTTP Methods (typically only POST, PUT, PATCH are used for multipart)
+  private async postNativeFormData<T>(url: string, data: FormData): Promise<T> {
+    const token = await SecureStore.getItemAsync("authToken");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000);
+    const requestUrl = `${this.baseURL.replace(/\/$/, "")}/${url.replace(/^\//, "")}`;
+
+    if (__DEV__) {
+      console.log(`[Multipart API Request] POST ${requestUrl}`);
+    }
+
+    try {
+      const response = await fetch(requestUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // Do not set Content-Type. React Native adds the multipart boundary.
+        },
+        body: data,
+        signal: controller.signal,
+      });
+
+      const responseText = await response.text();
+      let payload: any = null;
+      if (responseText) {
+        try {
+          payload = JSON.parse(responseText);
+        } catch {
+          payload = { message: responseText };
+        }
+      }
+
+      if (__DEV__) {
+        console.log(
+          `[Multipart API Response] POST ${requestUrl} - Status: ${response.status}`,
+        );
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          await SecureStore.deleteItemAsync("authToken").catch(() => {});
+        }
+        const message =
+          payload?.message ||
+          (typeof payload?.error === "string"
+            ? payload.error
+            : payload?.error?.message) ||
+          `Upload failed with status ${response.status}`;
+        throw new Error(message);
+      }
+
+      return payload as T;
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error("Upload timed out. Please try again.");
+      }
+      if (error instanceof Error) throw error;
+      throw new Error("Network error. Please check your connection.");
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   async post<T = any>(
     url: string,
     data?: any,
     config?: AxiosRequestConfig,
   ): Promise<T> {
+    if (data instanceof FormData) {
+      return this.postNativeFormData<T>(url, data);
+    }
+
     try {
       const response = await this.client.post(url, data, config);
       return response as unknown as Promise<T>;

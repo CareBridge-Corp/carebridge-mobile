@@ -1,7 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import multipartApiClient from "../../../shared/api/multipartClient";
 import StatusModal from "../../../shared/components/StatusModal";
@@ -22,14 +22,23 @@ interface VerifyParentProps {
   hideHeader?: boolean;
 }
 
+interface SelectedDocument {
+  uri: string;
+  name: string;
+  type: string;
+}
+
 export default function VerifyParentScreen({
   onSuccess,
   hideHeader,
 }: VerifyParentProps = {}) {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [documentImage, setDocumentImage] = useState<string | null>(null);
+  const [documentImage, setDocumentImage] = useState<SelectedDocument | null>(
+    null,
+  );
   const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const submitInFlight = useRef(false);
   const [statusConfig, setStatusConfig] = useState({
     type: "info" as "success" | "error" | "info",
     title: "",
@@ -40,16 +49,13 @@ export default function VerifyParentScreen({
     mutationFn: async () => {
       if (!documentImage) throw new Error("Missing parent document.");
       const formData = new FormData();
-      const filename = documentImage.split("/").pop() || "parent.jpg";
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : "image/jpeg";
       formData.append("image", {
         uri:
           Platform.OS === "android"
-            ? documentImage
-            : documentImage.replace("file://", ""),
-        name: filename,
-        type,
+            ? documentImage.uri
+            : documentImage.uri.replace("file://", ""),
+        name: documentImage.name,
+        type: documentImage.type,
       } as any);
       return await multipartApiClient.post(`/users/me/verify/parent`, formData);
     },
@@ -89,13 +95,37 @@ export default function VerifyParentScreen({
       quality: 0.8,
     });
     if (!result.canceled && result.assets?.length > 0) {
-      setDocumentImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      const filename = asset.fileName || asset.uri.split("/").pop() || "parent.jpg";
+      const extension = /\.(\w+)$/.exec(filename)?.[1]?.toLowerCase();
+      setDocumentImage({
+        uri: asset.uri,
+        name: filename,
+        type: asset.mimeType || (extension ? `image/${extension}` : "image/jpeg"),
+      });
     }
   };
 
   const handleModalPrimaryPress = () => {
     setStatusModalVisible(false);
     if (statusConfig.type === "success") router.back();
+  };
+
+  const handleSubmit = () => {
+    if (
+      !documentImage ||
+      submitInFlight.current ||
+      uploadParentVerificationMutation.isPending
+    ) {
+      return;
+    }
+
+    submitInFlight.current = true;
+    uploadParentVerificationMutation.mutate(undefined, {
+      onSettled: () => {
+        submitInFlight.current = false;
+      },
+    });
   };
 
   if (!user) {
@@ -124,7 +154,7 @@ export default function VerifyParentScreen({
 
       <SectionHeader title="Fayda ID photo" />
       <DocumentUpload
-        imageUri={documentImage}
+        imageUri={documentImage?.uri || null}
         onUpload={handleUpload}
         onRemove={() => setDocumentImage(null)}
         title="Upload Fayda ID"
@@ -137,9 +167,9 @@ export default function VerifyParentScreen({
     <View style={styles.footer}>
       <Button
         label="Submit document"
-        onPress={() => uploadParentVerificationMutation.mutate()}
+        onPress={handleSubmit}
         loading={uploadParentVerificationMutation.isPending}
-        disabled={!documentImage}
+        disabled={!documentImage || uploadParentVerificationMutation.isPending}
         trailingIcon="checkmark-circle"
       />
     </View>

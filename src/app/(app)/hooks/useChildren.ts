@@ -139,3 +139,27 @@ export function useDeleteChild() {
     },
   });
 }
+
+export function useUpdateChildBirthDate() {
+  const queryClient = useQueryClient();
+  const { updateChild, setError } = useChildrenStore();
+
+  return useMutation({
+    mutationFn: async ({ childId, dob }: { childId: string; dob: string }) => {
+      const response: any = await apiClient.patch(`/users/children/${childId}`, {
+        dob,
+      });
+      return response.child;
+    },
+    onSuccess: (child) => {
+      if (child?.childId) {
+        updateChild(child.childId, child);
+      }
+      queryClient.invalidateQueries({ queryKey: ["children"] });
+      setError(null);
+    },
+    onError: (error: any) => {
+      setError(error.message || "Failed to update date of birth");
+    },
+  });
+}

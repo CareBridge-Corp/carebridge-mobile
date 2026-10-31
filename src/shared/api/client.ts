@@ -50,13 +50,9 @@ class ApiClient {
     // Request interceptor - Add auth token and log request
     this.client.interceptors.request.use(
       async (config) => {
-        console.log(
-          `[API Request] ${config.method?.toUpperCase()} ${config.baseURL || ""}${config.url}`,
-        );
-        if (config.data) {
+        if (__DEV__) {
           console.log(
-            `[API Request Data]`,
-            JSON.stringify(config.data, null, 2),
+            `[API Request] ${config.method?.toUpperCase()} ${config.baseURL || ""}${config.url}`,
           );
         }
 
@@ -76,19 +72,17 @@ class ApiClient {
     // Response interceptor - Handle errors globally and log response
     this.client.interceptors.response.use(
       (response) => {
-        console.log(
-          `[API Response] ${response.config.method?.toUpperCase()} ${response.config.baseURL || ""}${response.config.url} - Status: ${response.status}`,
-        );
+        if (__DEV__) {
+          console.log(
+            `[API Response] ${response.config.method?.toUpperCase()} ${response.config.baseURL || ""}${response.config.url} - Status: ${response.status}`,
+          );
+        }
         return response.data;
       },
       async (error: AxiosError) => {
-        console.log(
-          `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.baseURL || ""}${error.config?.url} - Status: ${error.response?.status || "UNKNOWN"}`,
-        );
-        if (error.response?.data) {
+        if (__DEV__) {
           console.log(
-            `[API Error Data] `,
-            JSON.stringify(error.response.data, null, 2),
+            `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.baseURL || ""}${error.config?.url} - Status: ${error.response?.status || "UNKNOWN"}`,
           );
         }
 

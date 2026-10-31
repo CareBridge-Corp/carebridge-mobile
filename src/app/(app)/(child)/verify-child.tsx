@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import multipartApiClient from "../../../shared/api/multipartClient";
 import StatusModal from "../../../shared/components/StatusModal";
@@ -32,6 +32,7 @@ export default function VerifyChildScreen({
 
   const [documentImage, setDocumentImage] = useState<string | null>(null);
   const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const submitInFlight = useRef(false);
   const [statusConfig, setStatusConfig] = useState({
     type: "info" as "success" | "error" | "info",
     title: "",
@@ -108,6 +109,19 @@ export default function VerifyChildScreen({
     if (statusConfig.type === "success") router.back();
   };
 
+  const handleSubmit = () => {
+    if (!documentImage || submitInFlight.current || uploadMutation.isPending) {
+      return;
+    }
+
+    submitInFlight.current = true;
+    uploadMutation.mutate(undefined, {
+      onSettled: () => {
+        submitInFlight.current = false;
+      },
+    });
+  };
+
   if (!activeChild) {
     return (
       <Screen background={colors.surfaceMuted}>
@@ -156,9 +170,9 @@ export default function VerifyChildScreen({
     <View style={styles.footer}>
       <Button
         label="Submit document"
-        onPress={() => uploadMutation.mutate()}
+        onPress={handleSubmit}
         loading={uploadMutation.isPending}
-        disabled={!documentImage}
+        disabled={!documentImage || uploadMutation.isPending}
         trailingIcon="checkmark-circle"
       />
     </View>

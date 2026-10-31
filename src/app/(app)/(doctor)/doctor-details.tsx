@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from "react-native";
 import {
   Avatar,
   Badge,
@@ -14,6 +14,7 @@ import {
 import { colors, layout, spacing } from "../../../shared/theme";
 import { useClinicianById } from "../hooks/useClinician";
 import { useClinicianStore } from "../store/clinicianStore";
+import { toLocalIsoDate, useDoctorAppointments } from "../hooks/useAppointments";
 
 export default function DoctorDetailsScreen() {
   const router = useRouter();
@@ -33,6 +34,13 @@ export default function DoctorDetailsScreen() {
   );
 
   const clinician = cachedClinician || fetchedClinician;
+  const clinicianId = clinician?.userId;
+  const { data: upcomingAppointments = [], isLoading: appointmentsLoading } =
+    useDoctorAppointments(clinicianId, {
+      status: "confirmed",
+      from: toLocalIsoDate(new Date()),
+    });
+  const nextAppointment = upcomingAppointments[0];
 
   if (isLoading) {
     return (
@@ -117,6 +125,60 @@ export default function DoctorDetailsScreen() {
           />
         </View>
 
+        <SectionHeader title="Upcoming consultation" />
+        {appointmentsLoading ? (
+          <Card variant="tinted" padding="md" style={styles.appointmentCard}>
+            <ActivityIndicator color={colors.primary} />
+          </Card>
+        ) : nextAppointment ? (
+          <Card variant="tinted" padding="md" style={styles.appointmentCard}>
+            <View style={styles.appointmentHeading}>
+              <View style={styles.appointmentIcon}>
+                <Ionicons
+                  name={nextAppointment.meetingType === "online" ? "videocam" : "location"}
+                  size={18}
+                  color={colors.primary}
+                />
+              </View>
+              <View style={styles.appointmentCopy}>
+                <Text variant="title3">
+                  {new Date(`${nextAppointment.appointmentDate}T12:00:00`).toLocaleDateString(
+                    undefined,
+                    { weekday: "short", month: "short", day: "numeric" },
+                  )}
+                </Text>
+                <Text variant="bodySmall" tone="secondary">
+                  {nextAppointment.startTime.slice(0, 5)}–{nextAppointment.endTime.slice(0, 5)} · {nextAppointment.meetingType === "online" ? "Online" : "In person"}
+                </Text>
+              </View>
+              <Badge label="Confirmed" tone="success" />
+            </View>
+
+            {nextAppointment.meetingType === "online" && nextAppointment.meetingLink ? (
+              <Button
+                label="Join Google Meet"
+                leadingIcon="videocam"
+                onPress={() => void Linking.openURL(nextAppointment.meetingLink as string)}
+              />
+            ) : nextAppointment.meetingType === "online" ? (
+              <View style={styles.meetPending}>
+                <Ionicons name="time-outline" size={17} color={colors.info} />
+                <Text variant="bodySmall" tone="secondary" style={styles.appointmentCopy}>
+                  {nextAppointment.conferenceStatus === "not_connected"
+                    ? "The clinician will add the Google Meet link."
+                    : "Google Meet link is being prepared."}
+                </Text>
+              </View>
+            ) : null}
+          </Card>
+        ) : (
+          <Card variant="tinted" padding="md" style={styles.appointmentCard}>
+            <Text variant="bodySmall" tone="secondary">
+              No upcoming consultation with this clinician.
+            </Text>
+          </Card>
+        )}
+
         <SectionHeader title="Specializations" />
         <View style={styles.specs}>
           {clinician.specializations.map((spec) => (
@@ -200,5 +262,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing[3],
+  },
+  appointmentCard: {
+    gap: spacing[4],
+  },
+  appointmentHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  appointmentIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primaryMuted,
+  },
+  appointmentCopy: {
+    flex: 1,
+  },
+  meetPending: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing[3],
   },
 });

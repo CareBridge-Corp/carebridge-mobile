@@ -29,6 +29,7 @@ import {
 import { useMChatQuestions } from "../hooks/useScreeningProgress";
 import { useChildrenStore } from "../store/childrenStore";
 import { useMChatStore } from "../store/mchatStore";
+import MChatParentCompanion from "./MChatParentCompanionSheet";
 
 const MCHAT_QUESTIONS = [
   {
@@ -88,6 +89,7 @@ export default function MChatQuestionnaireScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
   const activeChild = useChildrenStore((state) => state.activeChild);
   const { language } = useLanguageStore();
   const { data: questionsData, isLoading } = useMChatQuestions(
@@ -122,6 +124,19 @@ export default function MChatQuestionnaireScreen() {
   const questionKey = (id: number) => `Q${id}`;
   const question = questions[currentQuestion];
   const totalQuestions = questions.length;
+  const companionMessageCount = useMChatStore(
+    (state) =>
+      state.companionConversations[question?.id]?.messages.length ?? 0,
+  );
+
+  useEffect(() => {
+    if (companionMessageCount === 0) return;
+    const timeout = setTimeout(
+      () => scrollRef.current?.scrollToEnd({ animated: true }),
+      120,
+    );
+    return () => clearTimeout(timeout);
+  }, [companionMessageCount, question?.id]);
 
   const shakeAnimation = useRef(new Animated.Value(0)).current;
   const startShake = () => {
@@ -209,9 +224,12 @@ export default function MChatQuestionnaireScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         {...panResponder.panHandlers}
       >
         <Animated.View style={{ transform: [{ translateX: shakeAnimation }] }}>
@@ -256,6 +274,14 @@ export default function MChatQuestionnaireScreen() {
               />
             ) : null}
           </Card>
+
+          {activeChild?.childId ? (
+            <MChatParentCompanion
+              childId={activeChild.childId}
+              language={language}
+              question={question}
+            />
+          ) : null}
         </Animated.View>
       </ScrollView>
 

@@ -6,6 +6,7 @@ import { useAuthStore } from "../../(auth)/store/authStore";
 import StatusModal from "../../../shared/components/StatusModal";
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +29,7 @@ import {
   useAvailableDays,
   useAvailableSlots,
   useCreateAppointment,
+  useDoctorAppointments,
   toLocalIsoDate,
 } from "../hooks/useAppointments";
 import { useProfile } from "../hooks/useProfile";
@@ -105,6 +107,16 @@ export default function DoctorConsultationScreen() {
 
   const resolvedChildId = childId ?? undefined;
 
+  const { data: upcomingAppointments = [], isLoading: appointmentsLoading } =
+    useDoctorAppointments(clinician?.userId, {
+      status: "confirmed",
+      from: toLocalIsoDate(new Date()),
+      childId: resolvedChildId,
+    });
+  const activeOnlineAppointment = upcomingAppointments.find(
+    (appointment) => appointment.meetingType === "online",
+  );
+
   const { data: availableDays = [], isLoading: daysLoading } = useAvailableDays({
     childId: resolvedChildId,
     doctorId: clinician?.userId,
@@ -114,11 +126,11 @@ export default function DoctorConsultationScreen() {
   });
 
   useEffect(() => {
-    if (!selectedDate && availableDays.length > 0) {
-      const firstOpen =
-        availableDays.find((day) => day.is_available)?.date ||
-        availableDays[0]?.date;
-      if (firstOpen) setSelectedDate(firstOpen);
+    const selectedDay = availableDays.find((day) => day.date === selectedDate);
+    if (!selectedDay?.is_available) {
+      const firstOpen = availableDays.find((day) => day.is_available)?.date;
+      setSelectedDate(firstOpen ?? "");
+      setSelectedSlotKey(null);
     }
   }, [availableDays, selectedDate]);
 
@@ -168,7 +180,7 @@ export default function DoctorConsultationScreen() {
     }
 
     try {
-      await createAppointment.mutateAsync({
+      const appointment = await createAppointment.mutateAsync({
         doctorId: clinician.userId,
         payload: {
           appointment_date: selectedDate,
@@ -183,7 +195,12 @@ export default function DoctorConsultationScreen() {
       showModal({
         type: "success",
         title: t("common.success"),
-        message: t("booking.bookSuccess"),
+        message:
+          meetingType === "online" && appointment.meetingLink
+            ? "Appointment booked. A Google Meet invitation was sent to your email, and the link is available on the clinician profile."
+            : meetingType === "online"
+              ? "Appointment booked. The Google Meet link will appear on the clinician profile when it is ready."
+              : t("booking.bookSuccess"),
         primaryLabel: t("common.ok"),
         onPrimary: () => {
           closeModal();
@@ -257,6 +274,62 @@ export default function DoctorConsultationScreen() {
           />
         </View>
 
+        {appointmentsLoading ? (
+          <Card variant="tinted" padding="md">
+            <ActivityIndicator color={colors.primary} />
+          </Card>
+        ) : activeOnlineAppointment ? (
+          <>
+            <SectionHeader title="Active online consultation" />
+            <Card variant="tinted" padding="md" style={styles.activeMeetingCard}>
+              <View style={styles.activeMeetingHeading}>
+                <View style={styles.activeMeetingIcon}>
+                  <Ionicons name="videocam" size={19} color={colors.primary} />
+                </View>
+                <View style={styles.activeMeetingCopy}>
+                  <Text variant="title3">
+                    {new Date(
+                      `${activeOnlineAppointment.appointmentDate}T12:00:00`,
+                    ).toLocaleDateString(dateLocale, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </Text>
+                  <Text variant="bodySmall" tone="secondary">
+                    {activeOnlineAppointment.startTime.slice(0, 5)}–
+                    {activeOnlineAppointment.endTime.slice(0, 5)} · Online
+                  </Text>
+                </View>
+                <Badge label="Confirmed" tone="success" />
+              </View>
+
+              {activeOnlineAppointment.meetingLink ? (
+                <Button
+                  label="Join Google Meet"
+                  leadingIcon="videocam"
+                  onPress={() =>
+                    void Linking.openURL(
+                      activeOnlineAppointment.meetingLink as string,
+                    )
+                  }
+                />
+              ) : (
+                <View style={styles.meetingPending}>
+                  <Ionicons name="time-outline" size={17} color={colors.info} />
+                  <Text variant="bodySmall" tone="secondary" style={styles.activeMeetingCopy}>
+                    {activeOnlineAppointment.conferenceStatus === "not_connected"
+                      ? "The clinician needs to connect Google Calendar."
+                      : activeOnlineAppointment.conferenceStatus === "failed"
+                        ? "The meeting link could not be created yet."
+                        : "Google Meet link is being prepared."}
+                  </Text>
+                </View>
+              )}
+            </Card>
+          </>
+        ) : null}
+
         <SectionHeader title={t("booking.consultationType")} />
         <View style={styles.typeRow}>
           {(["in_person", "online"] as const).map((type) => {
@@ -267,6 +340,7 @@ export default function DoctorConsultationScreen() {
                 style={[styles.typeChip, active && styles.typeChipActive]}
                 onPress={() => {
                   setMeetingType(type);
+                  setSelectedDate("");
                   setSelectedSlotKey(null);
                 }}
               >
@@ -452,6 +526,33 @@ const styles = StyleSheet.create({
   },
   name: {
     marginTop: spacing[2],
+  },
+  activeMeetingCard: {
+    gap: spacing[3],
+  },
+  activeMeetingHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  activeMeetingIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primaryMuted,
+  },
+  activeMeetingCopy: {
+    flex: 1,
+  },
+  meetingPending: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+    padding: spacing[3],
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
   },
   statusBadge: {
     marginTop: spacing[2],

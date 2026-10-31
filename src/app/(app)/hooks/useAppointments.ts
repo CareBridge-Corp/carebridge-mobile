@@ -130,7 +130,7 @@ export function useAvailableDays(
 
 export function useDoctorAppointments(
   doctorId: string | undefined,
-  filters?: { status?: string; from?: string; to?: string },
+  filters?: { status?: string; from?: string; to?: string; childId?: string },
 ) {
   return useQuery({
     queryKey: ["doctor-appointments", doctorId, filters],
@@ -141,6 +141,7 @@ export function useDoctorAppointments(
       if (filters?.status) queryParams.append("status", filters.status);
       if (filters?.from) queryParams.append("from", filters.from);
       if (filters?.to) queryParams.append("to", filters.to);
+      if (filters?.childId) queryParams.append("childId", filters.childId);
 
       const qs = queryParams.toString();
       const response = await apiClient.get<{ appointments: Appointment[] }>(

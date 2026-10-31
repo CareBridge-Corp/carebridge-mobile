@@ -100,7 +100,7 @@ export default function BookingConfirmationScreen() {
 
     try {
       setIsSubmitting(true);
-      await createAppointment.mutateAsync({
+      const appointment = await createAppointment.mutateAsync({
         doctorId: doctor.userId,
         payload: {
           schedule_id: slot.scheduleId,
@@ -116,7 +116,12 @@ export default function BookingConfirmationScreen() {
       showModal({
         type: "success",
         title: t("common.success"),
-        message: t("booking.bookingSuccess"),
+        message:
+          meetingType === "online" && appointment.meetingLink
+            ? "Appointment booked. A Google Meet invitation was sent to your email."
+            : meetingType === "online"
+              ? "Appointment booked. The clinician is preparing your Google Meet link."
+              : t("booking.bookingSuccess"),
         primaryLabel: t("common.ok"),
         onPrimary: () => {
           closeModal();

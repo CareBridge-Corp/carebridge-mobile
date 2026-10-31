@@ -31,6 +31,7 @@ import { resolveRoadmapCycleStatus } from "../../shared/utils/roadmapProgress";
 type LifecycleStage =
   | "no_children"
   | "needs_verification"
+  | "verification_pending"
   | "needs_screening"
   | "screening_under_review"
   | "follow_up_due"
@@ -110,6 +111,9 @@ export default function AppHomeScreen() {
   const parentVerified = profile?.status === "VERIFIED";
   const childVerified = activeChild?.status === "VERIFIED";
   const bothVerified = parentVerified && childVerified;
+  const verificationSubmitted =
+    isVerificationSubmitted(profile?.status) &&
+    isVerificationSubmitted(activeChild?.status);
 
   const screenings = screeningsData?.screenings ?? [];
   const latestScreening = screenings[0];
@@ -120,6 +124,7 @@ export default function AppHomeScreen() {
   const stage = computeStage({
     hasChildren,
     bothVerified,
+    verificationSubmitted,
     hasActiveRoadmap,
     profileInProgress,
     hasLatestScreening: !!latestScreening,
@@ -276,6 +281,7 @@ function computeScreeningProgressPercent(
 function computeStage(input: {
   hasChildren: boolean;
   bothVerified: boolean;
+  verificationSubmitted: boolean;
   hasActiveRoadmap: boolean;
   profileInProgress: boolean;
   hasLatestScreening: boolean;
@@ -283,7 +289,11 @@ function computeStage(input: {
   readyForNextScreening: boolean;
 }): LifecycleStage {
   if (!input.hasChildren) return "no_children";
-  if (!input.bothVerified) return "needs_verification";
+  if (!input.bothVerified) {
+    return input.verificationSubmitted
+      ? "verification_pending"
+      : "needs_verification";
+  }
   if (input.roadmapCycleComplete && input.readyForNextScreening) {
     return "ready_for_next_screening";
   }
@@ -294,6 +304,10 @@ function computeStage(input: {
   if (input.profileInProgress) return "screening_under_review";
   if (input.readyForNextScreening) return "ready_for_next_screening";
   return "needs_screening";
+}
+
+function isVerificationSubmitted(status?: string): boolean {
+  return status === "PENDING" || status === "VERIFIED";
 }
 
 function renderHero(
@@ -350,6 +364,20 @@ function renderHero(
         />
       );
     }
+    case "verification_pending":
+      return (
+        <HomeHero
+          eyebrow={ctx.t("home.hero.step2")}
+          title={ctx.t("home.hero.verificationPendingTitle")}
+          description={ctx.t("home.hero.verificationPendingDesc")}
+          illustrationIcon="hourglass-outline"
+          badge={{
+            label: ctx.t("home.hero.verificationPendingBadge"),
+            tone: "info",
+            icon: "time-outline",
+          }}
+        />
+      );
     case "needs_screening":
       return (
         <HomeHero

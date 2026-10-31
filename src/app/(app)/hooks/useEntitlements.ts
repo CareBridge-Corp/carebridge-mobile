@@ -46,7 +46,7 @@ interface InitializePaymentResponse {
 export function getPaymentReturnUrls() {
   const apiBase =
     process.env.EXPO_PUBLIC_API_URL?.replace(/\/api$/, "") ||
-    "http://192.168.64.115:5002";
+    "http://192.168.27.30:5002";
   const deepLink = "carebridgemobile://payment-return";
   const bridgeUrl = `${apiBase}/payment-return?redirect=${encodeURIComponent(deepLink)}`;
   const authReturnUrl = `${apiBase}/payment-return`;

@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Href, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +14,7 @@ import {
 import StatusModal from "../../../shared/components/StatusModal";
 import {
   Avatar,
+  Button,
   IconButton,
   Text,
 } from "../../../shared/components/ui";
@@ -21,7 +24,10 @@ import {
   shadows,
   spacing,
 } from "../../../shared/theme";
-import { useDeleteChild } from "../hooks/useChildren";
+import {
+  useDeleteChild,
+  useUpdateChildBirthDate,
+} from "../hooks/useChildren";
 import { useEntitlements } from "../hooks/useEntitlements";
 import { Child, useChildrenStore } from "../store/childrenStore";
 
@@ -38,12 +44,25 @@ export function ChildSelectorModal({
   const { children, activeChild, setActiveChild } = useChildrenStore();
   const { data: entitlements } = useEntitlements();
   const deleteMutation = useDeleteChild();
+  const updateBirthDateMutation = useUpdateChildBirthDate();
+  const resetBirthDateMutation = updateBirthDateMutation.reset;
 
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [childToDelete, setChildToDelete] = useState<{
     id: string;
     name: string;
   } | null>(null);
+  const [editingChild, setEditingChild] = useState<Child | null>(null);
+  const [draftBirthDate, setDraftBirthDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setEditingChild(null);
+      setShowDatePicker(false);
+      resetBirthDateMutation();
+    }
+  }, [resetBirthDateMutation, visible]);
 
   const handleSelectChild = (child: Child) => {
     setActiveChild(child);
@@ -62,6 +81,39 @@ export function ChildSelectorModal({
   const handleDeleteChild = (childId: string, childName: string) => {
     setChildToDelete({ id: childId, name: childName });
     setDeleteModalVisible(true);
+  };
+
+  const handleEditBirthDate = (child: Child) => {
+    setEditingChild(child);
+    setDraftBirthDate(parseDateOfBirth(child.dob));
+    setShowDatePicker(false);
+    updateBirthDateMutation.reset();
+  };
+
+  const handleDateChange = (event: { type: string }, selectedDate?: Date) => {
+    if (event.type === "set" && selectedDate) {
+      setDraftBirthDate(selectedDate);
+    }
+    if (Platform.OS === "android" || event.type === "dismissed") {
+      setShowDatePicker(false);
+    }
+  };
+
+  const handleSaveBirthDate = () => {
+    if (!editingChild) return;
+
+    updateBirthDateMutation.mutate(
+      {
+        childId: editingChild.childId,
+        dob: formatDate(draftBirthDate),
+      },
+      {
+        onSuccess: () => {
+          setEditingChild(null);
+          setShowDatePicker(false);
+        },
+      },
+    );
   };
 
   const confirmDelete = () => {
@@ -103,61 +155,161 @@ export function ChildSelectorModal({
               const isDeleting =
                 deleteMutation.isPending &&
                 deleteMutation.variables === child.childId;
+              const isEditing = editingChild?.childId === child.childId;
+              const isSaving =
+                updateBirthDateMutation.isPending &&
+                updateBirthDateMutation.variables?.childId === child.childId;
 
               return (
-                <View key={child.childId} style={styles.itemContainer}>
-                  <Pressable
-                    onPress={() => handleSelectChild(child)}
-                    style={({ pressed }) => [
-                      styles.item,
-                      isActive && styles.itemActive,
-                      pressed && styles.itemPressed,
-                    ]}
-                  >
-                    <Avatar
-                      uri={child.profilePictureUrl}
-                      name={child.firstName}
-                      size="md"
-                    />
-                    <View style={styles.itemInfo}>
-                      <Text variant="body" weight="semibold">
-                        {child.firstName}
-                      </Text>
-                      <Text variant="caption" tone="secondary">
-                        {child.gender} · {calculateAge(child.dob)}
-                      </Text>
-                    </View>
-                    {isActive ? (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={22}
-                        color={colors.success}
+                <View key={child.childId} style={styles.childBlock}>
+                  <View style={styles.itemContainer}>
+                    <Pressable
+                      onPress={() => handleSelectChild(child)}
+                      style={({ pressed }) => [
+                        styles.item,
+                        isActive && styles.itemActive,
+                        pressed && styles.itemPressed,
+                      ]}
+                    >
+                      <Avatar
+                        uri={child.profilePictureUrl}
+                        name={child.firstName}
+                        size="md"
                       />
-                    ) : null}
-                  </Pressable>
+                      <View style={styles.itemInfo}>
+                        <Text variant="body" weight="semibold">
+                          {child.firstName}
+                        </Text>
+                        <Text variant="caption" tone="secondary">
+                          {child.gender} · {formatAgeInMonths(child.dob)}
+                        </Text>
+                      </View>
+                      {isActive ? (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={22}
+                          color={colors.success}
+                        />
+                      ) : null}
+                    </Pressable>
 
-                  <Pressable
-                    onPress={() =>
-                      handleDeleteChild(child.childId, child.firstName)
-                    }
-                    disabled={isDeleting}
-                    style={({ pressed }) => [
-                      styles.deleteBtn,
-                      pressed && styles.itemPressed,
-                    ]}
-                    hitSlop={6}
-                    accessibilityLabel={`Delete ${child.firstName}`}
-                  >
-                    {isDeleting ? (
-                      <ActivityIndicator size="small" color={colors.error} />
-                    ) : (
+                    <Pressable
+                      onPress={() => handleEditBirthDate(child)}
+                      disabled={isSaving}
+                      style={({ pressed }) => [
+                        styles.actionBtn,
+                        isEditing && styles.editBtnActive,
+                        pressed && styles.itemPressed,
+                      ]}
+                      hitSlop={6}
+                      accessibilityLabel={`Edit ${child.firstName}'s date of birth`}
+                    >
                       <Ionicons
-                        name="trash-outline"
+                        name="calendar-outline"
                         size={18}
-                        color={colors.error}
+                        color={isEditing ? colors.primary : colors.iconMuted}
                       />
-                    )}
-                  </Pressable>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() =>
+                        handleDeleteChild(child.childId, child.firstName)
+                      }
+                      disabled={isDeleting}
+                      style={({ pressed }) => [
+                        styles.actionBtn,
+                        pressed && styles.itemPressed,
+                      ]}
+                      hitSlop={6}
+                      accessibilityLabel={`Delete ${child.firstName}`}
+                    >
+                      {isDeleting ? (
+                        <ActivityIndicator size="small" color={colors.error} />
+                      ) : (
+                        <Ionicons
+                          name="trash-outline"
+                          size={18}
+                          color={colors.error}
+                        />
+                      )}
+                    </Pressable>
+                  </View>
+
+                  {isEditing ? (
+                    <View style={styles.editor}>
+                      <View style={styles.editorHeading}>
+                        <View>
+                          <Text variant="body" weight="semibold">
+                            Edit date of birth
+                          </Text>
+                          <Text variant="caption" tone="secondary">
+                            {formatAgeInMonths(formatDate(draftBirthDate))}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name="calendar"
+                          size={20}
+                          color={colors.primary}
+                        />
+                      </View>
+
+                      <Pressable
+                        onPress={() => setShowDatePicker(true)}
+                        style={({ pressed }) => [
+                          styles.dateField,
+                          pressed && styles.itemPressed,
+                        ]}
+                      >
+                        <Text variant="caption" tone="secondary">
+                          Birth date
+                        </Text>
+                        <Text variant="body" weight="semibold">
+                          {formatDate(draftBirthDate)}
+                        </Text>
+                      </Pressable>
+
+                      {showDatePicker ? (
+                        <DateTimePicker
+                          value={draftBirthDate}
+                          mode="date"
+                          display={Platform.OS === "ios" ? "spinner" : "default"}
+                          maximumDate={new Date()}
+                          onChange={handleDateChange}
+                        />
+                      ) : null}
+
+                      {updateBirthDateMutation.error ? (
+                        <Text variant="caption" style={styles.errorText}>
+                          {updateBirthDateMutation.error instanceof Error
+                            ? updateBirthDateMutation.error.message
+                            : "Could not update the date of birth"}
+                        </Text>
+                      ) : null}
+
+                      <View style={styles.editorActions}>
+                        <Button
+                          label="Cancel"
+                          variant="secondary"
+                          size="sm"
+                          fullWidth={false}
+                          disabled={isSaving}
+                          style={styles.editorButton}
+                          onPress={() => {
+                            setEditingChild(null);
+                            setShowDatePicker(false);
+                          }}
+                        />
+                        <Button
+                          label="Save birth date"
+                          size="sm"
+                          fullWidth={false}
+                          loading={isSaving}
+                          style={styles.editorButton}
+                          onPress={handleSaveBirthDate}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
               );
             })}
@@ -199,15 +351,29 @@ export function ChildSelectorModal({
   );
 }
 
-function calculateAge(dob: string): string {
-  const birthDate = new Date(dob);
+function parseDateOfBirth(dob: string): Date {
+  const [year, month, day] = dob.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function formatDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function calculateAgeInMonths(dob: string): number {
+  const birthDate = parseDateOfBirth(dob);
   const today = new Date();
-  const months =
+  let months =
     (today.getFullYear() - birthDate.getFullYear()) * 12 +
     (today.getMonth() - birthDate.getMonth());
-  if (months < 12) return `${months} mo`;
-  const years = Math.floor(months / 12);
-  return `${years} year${years > 1 ? "s" : ""}`;
+  if (today.getDate() < birthDate.getDate()) months -= 1;
+  return Math.max(0, months);
+}
+
+function formatAgeInMonths(dob: string): string {
+  const months = calculateAgeInMonths(dob);
+  return `${months} month${months === 1 ? "" : "s"} old`;
 }
 
 const styles = StyleSheet.create({
@@ -247,6 +413,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  childBlock: {
+    marginBottom: spacing[1],
+  },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -265,12 +434,49 @@ const styles = StyleSheet.create({
   itemInfo: {
     flex: 1,
   },
-  deleteBtn: {
+  actionBtn: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 20,
+  },
+  editBtnActive: {
+    backgroundColor: colors.primaryMuted,
+  },
+  editor: {
+    marginHorizontal: spacing[3],
+    marginBottom: spacing[3],
+    padding: spacing[4],
+    gap: spacing[3],
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+  },
+  editorHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateField: {
+    gap: spacing[1],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  editorActions: {
+    flexDirection: "row",
+    gap: spacing[2],
+  },
+  editorButton: {
+    flex: 1,
+  },
+  errorText: {
+    color: colors.error,
   },
   addRow: {
     flexDirection: "row",
