@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from "react-native";
 import {
   Avatar,
@@ -23,16 +23,28 @@ import { useClinicianStore } from "../store/clinicianStore";
 import { useChatStore } from "../store/chatStore";
 import { useChildrenStore } from "../store/childrenStore";
 import { toLocalIsoDate, useDoctorAppointments } from "../hooks/useAppointments";
+import {
+  getAppointmentTimeLeftLabel,
+  isAppointmentUpcomingOrActive,
+} from "../utils/appointmentTime";
+
+function paramValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
 
 export default function DoctorDetailsScreen() {
   const router = useRouter();
-  const { childId: childIdParam, doctorId } = useLocalSearchParams<{
-    childId?: string;
-    doctorId?: string;
+  const params = useLocalSearchParams<{
+    childId?: string | string[];
+    doctorId?: string | string[];
   }>();
+  const childIdParam = paramValue(params.childId);
+  const doctorIdParam = paramValue(params.doctorId);
   const { activeChild } = useChildrenStore();
   const { setActiveConversation } = useChatStore();
   const childId = childIdParam || activeChild?.childId;
+  const [now, setNow] = useState(() => new Date());
   const [statusModal, setStatusModal] = useState<{
     visible: boolean;
     type: "success" | "error" | "info";
@@ -40,18 +52,34 @@ export default function DoctorDetailsScreen() {
     message: string;
   }>({ visible: false, type: "info", title: "", message: "" });
 
-  // Prefer the assigned clinician kept in the store when arriving from "your
-  // care team" via childId. Otherwise fetch by doctorId.
+  // Never reuse the assigned-clinician cache for a different doctorId.
   const cachedClinician = useClinicianStore((state) =>
     childIdParam ? state.cliniciansByChild[childIdParam] : null,
   );
+  const cachedMatchesDoctor =
+    !!doctorIdParam && cachedClinician?.userId === doctorIdParam;
 
   const { data: fetchedClinician, isLoading } = useClinicianById(
-    !cachedClinician ? doctorId : undefined,
+    doctorIdParam
+      ? cachedMatchesDoctor
+        ? undefined
+        : doctorIdParam
+      : cachedClinician
+        ? undefined
+        : doctorIdParam,
   );
 
-  const clinician = cachedClinician || fetchedClinician;
-  const clinicianId = clinician?.userId;
+  const clinician = doctorIdParam
+    ? cachedMatchesDoctor
+      ? cachedClinician
+      : fetchedClinician
+    : cachedClinician || fetchedClinician;
+
+  // Hard guard: if a doctorId was requested, never show a mismatched profile.
+  const profileMatches =
+    !doctorIdParam || clinician?.userId === doctorIdParam;
+  const clinicianId = profileMatches ? clinician?.userId : undefined;
+
   const { data: requestStatus, isLoading: requestStatusLoading } =
     useChatRequestStatus(childId, clinicianId);
   const requestChatMutation = useRequestClinicianChat();
@@ -59,8 +87,27 @@ export default function DoctorDetailsScreen() {
     useDoctorAppointments(clinicianId, {
       status: "confirmed",
       from: toLocalIsoDate(new Date()),
+      childId: childId || undefined,
     });
-  const nextAppointment = upcomingAppointments[0];
+
+  const nextAppointment = useMemo(() => {
+    if (!clinicianId) return undefined;
+    return upcomingAppointments.find(
+      (appointment) =>
+        appointment.doctorId === clinicianId &&
+        isAppointmentUpcomingOrActive(appointment, now),
+    );
+  }, [upcomingAppointments, clinicianId, now]);
+
+  useEffect(() => {
+    if (!nextAppointment?.meetingLink) return;
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, [nextAppointment?.meetingLink, nextAppointment?.id, nextAppointment?.appointmentId]);
+
+  const meetTimeLeft = nextAppointment
+    ? getAppointmentTimeLeftLabel(nextAppointment, now)
+    : null;
 
   const openAssignedOrPeerChat = async () => {
     if (!childId || !clinician) return;
@@ -135,7 +182,7 @@ export default function DoctorDetailsScreen() {
         ? "Request pending"
         : "Request chat";
 
-  if (isLoading) {
+  if (isLoading || (doctorIdParam && !profileMatches && !fetchedClinician)) {
     return (
       <Screen background={colors.surfaceMuted}>
         <View style={styles.center}>
@@ -145,7 +192,7 @@ export default function DoctorDetailsScreen() {
     );
   }
 
-  if (!clinician) {
+  if (!clinician || !profileMatches) {
     return (
       <Screen background={colors.surfaceMuted}>
         <View style={styles.center}>
@@ -217,7 +264,10 @@ export default function DoctorDetailsScreen() {
             onPress={() =>
               router.push({
                 pathname: "/(app)/(doctor)/doctor-consultation",
-                params: { childId },
+                params: {
+                  childId,
+                  doctorId: clinician.userId,
+                },
               } as any)
             }
             style={styles.actionBtn}
@@ -264,11 +314,25 @@ export default function DoctorDetailsScreen() {
             </View>
 
             {nextAppointment.meetingType === "online" && nextAppointment.meetingLink ? (
-              <Button
-                label="Join Google Meet"
-                leadingIcon="videocam"
-                onPress={() => void Linking.openURL(nextAppointment.meetingLink as string)}
-              />
+              <View style={styles.meetJoinBlock}>
+                <Button
+                  label="Join Google Meet"
+                  leadingIcon="videocam"
+                  onPress={() =>
+                    void Linking.openURL(nextAppointment.meetingLink as string)
+                  }
+                />
+                {meetTimeLeft ? (
+                  <Text
+                    variant="bodySmall"
+                    tone="secondary"
+                    align="center"
+                    style={styles.meetTimeLeft}
+                  >
+                    {meetTimeLeft}
+                  </Text>
+                ) : null}
+              </View>
             ) : nextAppointment.meetingType === "online" ? (
               <View style={styles.meetPending}>
                 <Ionicons name="time-outline" size={17} color={colors.info} />
@@ -408,5 +472,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing[3],
+  },
+  meetJoinBlock: {
+    gap: spacing[2],
+  },
+  meetTimeLeft: {
+    marginTop: spacing[1],
   },
 });

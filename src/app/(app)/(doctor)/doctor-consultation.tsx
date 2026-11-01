@@ -32,10 +32,20 @@ import {
   useDoctorAppointments,
   toLocalIsoDate,
 } from "../hooks/useAppointments";
+import { useClinicianById } from "../hooks/useClinician";
 import { useProfile } from "../hooks/useProfile";
 import { useProfileStore } from "../store/profileStore";
 import { useClinicianStore } from "../store/clinicianStore";
 import { isPaymentRequiredError } from "../../../shared/api/client";
+import {
+  getAppointmentTimeLeftLabel,
+  isAppointmentUpcomingOrActive,
+} from "../utils/appointmentTime";
+
+function paramValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
 
 const RANGE_DAYS = 30;
 
@@ -69,17 +79,33 @@ export default function DoctorConsultationScreen() {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
   const dateLocale = getDateLocale(language);
-  const { childId } = useLocalSearchParams<{ childId: string }>();
+  const params = useLocalSearchParams<{
+    childId?: string | string[];
+    doctorId?: string | string[];
+  }>();
+  const childId = paramValue(params.childId);
+  const doctorIdParam = paramValue(params.doctorId);
 
-  const clinician = useClinicianStore((state) =>
+  const cachedClinician = useClinicianStore((state) =>
     childId ? state.cliniciansByChild[childId] : null,
   );
+  const cachedMatchesDoctor =
+    !!doctorIdParam && cachedClinician?.userId === doctorIdParam;
+  const { data: fetchedClinician } = useClinicianById(
+    doctorIdParam && !cachedMatchesDoctor ? doctorIdParam : undefined,
+  );
+  const clinician = doctorIdParam
+    ? cachedMatchesDoctor
+      ? cachedClinician
+      : fetchedClinician
+    : cachedClinician;
 
   const { data: profile } = useProfile();
   const authUser = useAuthStore((state) => state.user);
   const storedProfile = useProfileStore((state) => state.profile);
   const createAppointment = useCreateAppointment();
   const [modal, setModal] = useState<ModalState>(MODAL_HIDDEN);
+  const [now, setNow] = useState(() => new Date());
 
   const parentId = useMemo(
     () => profile?.userId ?? authUser?.userId ?? storedProfile?.userId,
@@ -114,8 +140,25 @@ export default function DoctorConsultationScreen() {
       childId: resolvedChildId,
     });
   const activeOnlineAppointment = upcomingAppointments.find(
-    (appointment) => appointment.meetingType === "online",
+    (appointment) =>
+      appointment.meetingType === "online" &&
+      appointment.doctorId === clinician?.userId &&
+      isAppointmentUpcomingOrActive(appointment, now),
   );
+
+  useEffect(() => {
+    if (!activeOnlineAppointment?.meetingLink) return;
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, [
+    activeOnlineAppointment?.meetingLink,
+    activeOnlineAppointment?.id,
+    activeOnlineAppointment?.appointmentId,
+  ]);
+
+  const meetTimeLeft = activeOnlineAppointment
+    ? getAppointmentTimeLeftLabel(activeOnlineAppointment, now)
+    : null;
 
   const { data: availableDays = [], isLoading: daysLoading } = useAvailableDays({
     childId: resolvedChildId,
@@ -305,15 +348,27 @@ export default function DoctorConsultationScreen() {
               </View>
 
               {activeOnlineAppointment.meetingLink ? (
-                <Button
-                  label="Join Google Meet"
-                  leadingIcon="videocam"
-                  onPress={() =>
-                    void Linking.openURL(
-                      activeOnlineAppointment.meetingLink as string,
-                    )
-                  }
-                />
+                <View style={styles.meetJoinBlock}>
+                  <Button
+                    label="Join Google Meet"
+                    leadingIcon="videocam"
+                    onPress={() =>
+                      void Linking.openURL(
+                        activeOnlineAppointment.meetingLink as string,
+                      )
+                    }
+                  />
+                  {meetTimeLeft ? (
+                    <Text
+                      variant="bodySmall"
+                      tone="secondary"
+                      align="center"
+                      style={styles.meetTimeLeft}
+                    >
+                      {meetTimeLeft}
+                    </Text>
+                  ) : null}
+                </View>
               ) : (
                 <View style={styles.meetingPending}>
                   <Ionicons name="time-outline" size={17} color={colors.info} />
@@ -553,6 +608,12 @@ const styles = StyleSheet.create({
     padding: spacing[3],
     borderRadius: borderRadius.md,
     backgroundColor: colors.surface,
+  },
+  meetJoinBlock: {
+    gap: spacing[2],
+  },
+  meetTimeLeft: {
+    marginTop: spacing[1],
   },
   statusBadge: {
     marginTop: spacing[2],

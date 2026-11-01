@@ -35,19 +35,21 @@ export function useAvailableSlots(
     queryFn: async () => {
       if (!date) return [] as AvailableSlot[];
 
-      if (childId) {
+      // Prefer explicit doctorId so another clinician's profile never shows
+      // the assigned doctor's slots.
+      if (doctorId) {
         const response = await apiClient.get<{
           date: string;
           meeting_type: string;
           appointment_duration_min: number;
           slots: AvailableSlot[];
         }>(
-          `/users/children/${childId}/assigned-clinician/available-slots?date=${date}&meeting_type=${meetingType}`,
+          `/doctors/${doctorId}/available-slots?date=${date}&meeting_type=${meetingType}`,
         );
         return (response.slots ?? []).filter((slot) => slot.is_available);
       }
 
-      if (!doctorId) return [] as AvailableSlot[];
+      if (!childId) return [] as AvailableSlot[];
 
       const response = await apiClient.get<{
         date: string;
@@ -55,9 +57,8 @@ export function useAvailableSlots(
         appointment_duration_min: number;
         slots: AvailableSlot[];
       }>(
-        `/doctors/${doctorId}/available-slots?date=${date}&meeting_type=${meetingType}`,
+        `/users/children/${childId}/assigned-clinician/available-slots?date=${date}&meeting_type=${meetingType}`,
       );
-
       return (response.slots ?? []).filter((slot) => slot.is_available);
     },
     enabled: !!date && (!!childId || !!doctorId),
@@ -96,32 +97,31 @@ export function useAvailableDays(
     queryFn: async () => {
       if (!from || !to) return [] as AvailableDay[];
 
-      if (childId) {
+      if (doctorId) {
         const response = await apiClient.get<{
-          child_id: string;
           doctor_id: string;
           from: string;
           to: string;
           meeting_type: string;
           days: AvailableDay[];
         }>(
-          `/users/children/${childId}/assigned-clinician/available-days?from=${from}&to=${to}&meeting_type=${meetingType}`,
+          `/doctors/${doctorId}/available-days?from=${from}&to=${to}&meeting_type=${meetingType}`,
         );
         return response.days ?? [];
       }
 
-      if (!doctorId) return [] as AvailableDay[];
+      if (!childId) return [] as AvailableDay[];
 
       const response = await apiClient.get<{
+        child_id: string;
         doctor_id: string;
         from: string;
         to: string;
         meeting_type: string;
         days: AvailableDay[];
       }>(
-        `/doctors/${doctorId}/available-days?from=${from}&to=${to}&meeting_type=${meetingType}`,
+        `/users/children/${childId}/assigned-clinician/available-days?from=${from}&to=${to}&meeting_type=${meetingType}`,
       );
-
       return response.days ?? [];
     },
     enabled: !!from && !!to && (!!childId || !!doctorId),
