@@ -12,15 +12,21 @@ import { socketService } from "../../shared/api/socket";
 import {
   Avatar,
   Badge,
+  Button,
   EmptyState,
   Screen,
   Text,
   TextField,
 } from "../../shared/components/ui";
 import { colors, layout, shadows, spacing } from "../../shared/theme";
+import { useAuthStore } from "../(auth)/store/authStore";
 import { ChildSelectorModal } from "./components/ChildSelectorModal";
-import { useConversations } from "./hooks/useChat";
-import { ChatConversation, useChatStore } from "./store/chatStore";
+import {
+  useChatRequests,
+  useConversations,
+  useRespondToChatRequest,
+} from "./hooks/useChat";
+import { ChatConversation, ChatDmRequest, useChatStore } from "./store/chatStore";
 import { useChildrenStore } from "./store/childrenStore";
 
 function formatTimestamp(dateString: string): string {
@@ -39,14 +45,50 @@ function formatTimestamp(dateString: string): string {
   return date.toLocaleDateString();
 }
 
+function getConversationTitle(
+  conversation: ChatConversation,
+  viewerRole?: string,
+): string {
+  if (conversation.channelType === "CLINICIANS_GROUP") {
+    return conversation.title || "Care team";
+  }
+
+  if (conversation.channelType === "PEER_DM" && viewerRole === "CLINICIAN") {
+    const parent = conversation.parent;
+    if (parent?.firstName || parent?.lastName) {
+      return `${parent.firstName || ""} ${parent.lastName || ""}`.trim();
+    }
+  }
+
+  const clinician = conversation.clinician;
+  if (!clinician) return "Assigned clinician";
+  return clinician.surname
+    ? `${clinician.surname} ${clinician.firstName} ${clinician.lastName}`
+    : `Dr. ${clinician.firstName} ${clinician.lastName}`;
+}
+
+function requestParentName(request: ChatDmRequest): string {
+  const parent = request.parent;
+  if (!parent) return "Parent";
+  return `${parent.firstName} ${parent.lastName}`.trim() || "Parent";
+}
+
 export default function ChatScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const [showChildSelector, setShowChildSelector] = useState(false);
+  const { user } = useAuthStore();
   const { activeChild, children } = useChildrenStore();
   const { setActiveConversation } = useChatStore();
+  const isClinician = user?.role === "CLINICIAN";
+
+  const { data: pendingRequests = [] } = useChatRequests(
+    "PENDING",
+    isClinician,
+  );
+  const respondMutation = useRespondToChatRequest();
 
   useEffect(() => {
     socketService.connect();
@@ -57,6 +99,7 @@ export default function ChatScreen() {
   useEffect(() => {
     if (activeChild?.childId) {
       socketService.joinChildRoom(activeChild.childId);
+      socketService.joinCliniciansGroupRoom(activeChild.childId);
     }
   }, [activeChild?.childId]);
 
@@ -69,29 +112,115 @@ export default function ChatScreen() {
     router.push("/(app)/(doctor)/doctor-chat" as Href);
   };
 
+  const openAcceptedRequest = (request: ChatDmRequest) => {
+    if (!request.child) return;
+    setActiveConversation({
+      channelType: "PEER_DM",
+      conversationId: `peer:${request.childId}:${request.clinicianId}`,
+      child: {
+        childId: request.childId,
+        firstName: request.child.firstName,
+        parentId: request.parentId,
+        assignedClinicianId: null,
+      },
+      parent: {
+        userId: request.parentId,
+        firstName: request.parent?.firstName || "",
+        lastName: request.parent?.lastName || "",
+        surname: request.parent?.surname,
+      },
+      clinician: request.clinician
+        ? {
+            userId: request.clinician.userId,
+            firstName: request.clinician.firstName,
+            lastName: request.clinician.lastName,
+            surname: request.clinician.surname,
+          }
+        : {
+            userId: request.clinicianId,
+            firstName: "",
+            lastName: "",
+          },
+      lastMessage: null,
+    });
+    router.push("/(app)/(doctor)/doctor-chat" as Href);
+  };
+
   const filteredConversations = conversations?.filter((conv) => {
-    const clinicianName =
-      `${conv.clinician.firstName} ${conv.clinician.lastName}`.toLowerCase();
-    return clinicianName.includes(searchQuery.toLowerCase());
+    const title = getConversationTitle(conv, user?.role).toLowerCase();
+    return title.includes(searchQuery.toLowerCase());
   });
 
+  const clinicianPending = isClinician
+    ? pendingRequests.filter((request) => request.status === "PENDING")
+    : [];
+
+  const renderRequest = ({ item }: { item: ChatDmRequest }) => {
+    const title = requestParentName(item);
+    const childName = item.child?.firstName || "Child";
+
+    return (
+      <View style={styles.requestRow}>
+        <Avatar name={title} size="md" />
+        <View style={styles.rowText}>
+          <Text variant="body" weight="semibold" numberOfLines={1}>
+            {title}
+          </Text>
+          <Text variant="bodySmall" tone="secondary" numberOfLines={2}>
+            {item.message?.trim() ||
+              `Wants to chat about ${childName}`}
+          </Text>
+          <View style={styles.requestActions}>
+            <Button
+              label="Decline"
+              variant="secondary"
+              fullWidth={false}
+              style={styles.requestBtn}
+              loading={respondMutation.isPending}
+              onPress={() =>
+                respondMutation.mutate({
+                  requestId: item.requestId,
+                  status: "DECLINED",
+                })
+              }
+            />
+            <Button
+              label="Accept"
+              fullWidth={false}
+              style={styles.requestBtn}
+              loading={respondMutation.isPending}
+              onPress={() =>
+                respondMutation.mutate(
+                  {
+                    requestId: item.requestId,
+                    status: "ACCEPTED",
+                  },
+                  {
+                    onSuccess: (accepted) => openAcceptedRequest(accepted),
+                  },
+                )
+              }
+            />
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   const renderConversation = ({ item }: { item: ChatConversation }) => {
+    const isGroup = item.channelType === "CLINICIANS_GROUP";
+    const isPeer = item.channelType === "PEER_DM";
     const isUnread = item.lastMessage && !item.lastMessage.readAt;
     const lastMessage = item.lastMessage?.content || "No messages yet";
     const timestamp = item.lastMessage?.createdAt
       ? formatTimestamp(item.lastMessage.createdAt)
       : "";
-    const displayName = item.clinician.surname
-      ? `${item.clinician.surname} ${item.clinician.firstName} ${item.clinician.lastName}`
-      : `Dr. ${item.clinician.firstName} ${item.clinician.lastName}`;
+    const displayName = getConversationTitle(item, user?.role);
 
     return (
       <Pressable
         onPress={() => handleChatPress(item)}
-        style={({ pressed }) => [
-          styles.row,
-          pressed && styles.rowPressed,
-        ]}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
       >
         <Avatar name={displayName} size="md" />
         <View style={styles.rowText}>
@@ -112,12 +241,14 @@ export default function ChatScreen() {
             >
               {lastMessage}
             </Text>
-            {isUnread ? (
-              <View style={styles.unreadDot} />
-            ) : null}
+            {isUnread ? <View style={styles.unreadDot} /> : null}
           </View>
           <Text variant="caption" tone="tertiary" style={styles.childLine}>
-            {item.child.firstName}
+            {isGroup
+              ? `${item.memberCount || 0} members · ${item.child.firstName}`
+              : isPeer
+                ? `Individual · ${item.child.firstName}`
+                : item.child.firstName}
           </Text>
         </View>
       </Pressable>
@@ -161,13 +292,17 @@ export default function ChatScreen() {
         {!socketConnected || isLoading ? (
           <View style={styles.loading}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text variant="bodySmall" tone="secondary" style={styles.loadingText}>
+            <Text
+              variant="bodySmall"
+              tone="secondary"
+              style={styles.loadingText}
+            >
               {!socketConnected
                 ? "Connecting to messaging..."
                 : "Loading conversations..."}
             </Text>
           </View>
-        ) : !activeChild ? (
+        ) : !activeChild && !isClinician ? (
           <EmptyState
             icon="person-outline"
             title={t("chat.noChildTitle", "No child selected")}
@@ -180,24 +315,45 @@ export default function ChatScreen() {
               onPress: () => setShowChildSelector(true),
             }}
           />
-        ) : filteredConversations && filteredConversations.length > 0 ? (
+        ) : (
           <FlatList
-            data={filteredConversations}
+            data={filteredConversations || []}
             renderItem={renderConversation}
             keyExtractor={(item) =>
-              item.conversationId || item.child.childId
+              item.conversationId ||
+              `${item.channelType || "ASSIGNED_DM"}:${item.child.childId}`
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.flatListContent}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
-          />
-        ) : (
-          <EmptyState
-            icon="chatbubbles-outline"
-            title="No conversations yet"
-            description={`Your assigned clinician will message you here once they've reviewed ${
-              activeChild.firstName
-            }'s screening.`}
+            ListHeaderComponent={
+              clinicianPending.length > 0 ? (
+                <View style={styles.requestsSection}>
+                  <Text variant="title3" style={styles.requestsHeading}>
+                    Chat requests
+                  </Text>
+                  {clinicianPending.map((request) => (
+                    <View key={request.requestId}>
+                      {renderRequest({ item: request })}
+                    </View>
+                  ))}
+                  <View style={styles.requestsDivider} />
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              clinicianPending.length === 0 ? (
+                <EmptyState
+                  icon="chatbubbles-outline"
+                  title="No conversations yet"
+                  description={
+                    isClinician
+                      ? "When a parent requests an individual chat and you accept, it will appear here."
+                      : `Message your assigned clinician or the full care team about ${activeChild?.firstName || "your child"}.`
+                  }
+                />
+              ) : null
+            }
           />
         )}
       </View>
@@ -243,6 +399,34 @@ const styles = StyleSheet.create({
   flatListContent: {
     paddingHorizontal: spacing[3],
     paddingBottom: layout.tabBarHeight + spacing[8],
+    flexGrow: 1,
+  },
+  requestsSection: {
+    marginBottom: spacing[2],
+  },
+  requestsHeading: {
+    marginBottom: spacing[2],
+    paddingHorizontal: spacing[2],
+  },
+  requestsDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderSubtle,
+    marginVertical: spacing[3],
+  },
+  requestRow: {
+    flexDirection: "row",
+    gap: spacing[3],
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[2],
+    alignItems: "flex-start",
+  },
+  requestActions: {
+    flexDirection: "row",
+    gap: spacing[2],
+    marginTop: spacing[2],
+  },
+  requestBtn: {
+    flex: 1,
   },
   row: {
     flexDirection: "row",
