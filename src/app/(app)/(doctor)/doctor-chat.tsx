@@ -2,12 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Image,
   Keyboard,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -26,7 +27,12 @@ import {
   Text,
 } from "../../../shared/components/ui";
 import { borderRadius, colors, shadows, spacing } from "../../../shared/theme";
-import { useChatMessages, useSendMessage } from "../hooks/useChat";
+import { useAuthStore } from "../../(auth)/store/authStore";
+import {
+  useChatMessages,
+  useCliniciansGroupMembers,
+  useSendMessage,
+} from "../hooks/useChat";
 import { useChatStore } from "../store/chatStore";
 
 function formatTimestamp(dateString: string): string {
@@ -47,6 +53,20 @@ function formatDate(dateString: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function memberDisplayName(member: {
+  firstName: string;
+  lastName: string;
+  surname?: string | null;
+  role: "PARENT" | "CLINICIAN";
+}) {
+  if (member.role === "PARENT") {
+    return `${member.firstName} ${member.lastName}`;
+  }
+  return member.surname
+    ? `${member.surname} ${member.firstName} ${member.lastName}`
+    : `Dr. ${member.firstName} ${member.lastName}`;
+}
+
 export default function DoctorChatScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -54,19 +74,39 @@ export default function DoctorChatScreen() {
   const [message, setMessage] = useState("");
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [membersOpen, setMembersOpen] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const textInputRef = useRef<TextInput>(null);
 
+  const { user } = useAuthStore();
   const { activeConversation } = useChatStore();
   const childId = activeConversation?.child.childId || "";
-  const conversationId = activeConversation?.conversationId || childId;
+  const channelType =
+    activeConversation?.channelType === "CLINICIANS_GROUP"
+      ? "CLINICIANS_GROUP"
+      : activeConversation?.channelType === "PEER_DM"
+        ? "PEER_DM"
+        : "ASSIGNED_DM";
+  const isGroup = channelType === "CLINICIANS_GROUP";
+  const peerClinicianId = activeConversation?.clinician?.userId;
 
   const { data: messagesData, isLoading } = useChatMessages(
     childId,
-    conversationId,
+    channelType,
+    peerClinicianId,
   );
+  const { data: members = [], isLoading: membersLoading } =
+    useCliniciansGroupMembers(childId, isGroup);
   const sendMessageMutation = useSendMessage();
   const messages = messagesData || [];
+
+  const memberNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const member of members) {
+      map.set(member.userId, memberDisplayName(member));
+    }
+    return map;
+  }, [members]);
 
   useEffect(() => {
     socketService.connect();
@@ -74,11 +114,27 @@ export default function DoctorChatScreen() {
   }, [queryClient]);
 
   useEffect(() => {
-    if (childId) socketService.joinChildRoom(childId);
+    if (!childId) return;
+
+    if (isGroup) {
+      socketService.joinCliniciansGroupRoom(childId);
+      return () => {
+        socketService.leaveCliniciansGroupRoom(childId);
+      };
+    }
+
+    if (channelType === "PEER_DM" && peerClinicianId) {
+      socketService.joinPeerDmRoom(childId, peerClinicianId);
+      return () => {
+        socketService.leavePeerDmRoom(childId, peerClinicianId);
+      };
+    }
+
+    socketService.joinChildRoom(childId);
     return () => {
-      if (childId) socketService.leaveChildRoom(childId);
+      socketService.leaveChildRoom(childId);
     };
-  }, [childId]);
+  }, [childId, isGroup, channelType, peerClinicianId]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -110,7 +166,12 @@ export default function DoctorChatScreen() {
     if (selectedImages.length > 0) return handleSendWithImages();
     if (message.trim() && childId) {
       sendMessageMutation.mutate(
-        { childId, conversationId, content: message.trim() },
+        {
+          childId,
+          content: message.trim(),
+          channelType,
+          clinicianId: peerClinicianId,
+        },
         { onSuccess: () => setMessage("") },
       );
     }
@@ -144,7 +205,12 @@ export default function DoctorChatScreen() {
         message.trim() ||
         `📷 ${imageCount} ${imageCount === 1 ? "image" : "images"}`;
       sendMessageMutation.mutate(
-        { childId, conversationId, content },
+        {
+          childId,
+          content,
+          channelType,
+          clinicianId: peerClinicianId,
+        },
         {
           onSuccess: () => {
             setMessage("");
@@ -197,14 +263,34 @@ export default function DoctorChatScreen() {
     );
   }
 
-  const clinicianDisplayName = activeConversation.clinician.surname
+  const isPeer = channelType === "PEER_DM";
+  const parentName =
+    `${activeConversation.parent.firstName || ""} ${activeConversation.parent.lastName || ""}`.trim() ||
+    "Parent";
+  const clinicianName = activeConversation.clinician?.surname
     ? `${activeConversation.clinician.surname} ${activeConversation.clinician.firstName} ${activeConversation.clinician.lastName}`
-    : `Dr. ${activeConversation.clinician.firstName} ${activeConversation.clinician.lastName}`;
+    : `Dr. ${activeConversation.clinician?.firstName || ""} ${activeConversation.clinician?.lastName || ""}`.trim();
+
+  const headerTitle = isGroup
+    ? activeConversation.title || "Care team"
+    : isPeer && user?.role === "CLINICIAN"
+      ? parentName
+      : clinicianName;
+
+  const headerSubtitle = isGroup
+    ? `${activeConversation.memberCount || 0} members · ${activeConversation.child.firstName}`
+    : isPeer
+      ? `Individual chat · ${activeConversation.child.firstName}`
+      : `Caring for ${activeConversation.child.firstName}`;
 
   const renderMessage = ({ item, index }: { item: any; index: number }) => {
     const prev = index > 0 ? messages[index - 1] : null;
     const showDate = shouldShowDate(item, prev);
     const isFromParent = item.senderId === activeConversation.parent.userId;
+    const senderLabel =
+      isGroup && !isFromParent
+        ? memberNameById.get(item.senderId) || "Clinician"
+        : null;
 
     return (
       <View>
@@ -227,6 +313,15 @@ export default function DoctorChatScreen() {
               isFromParent ? styles.bubbleSelf : styles.bubbleOther,
             ]}
           >
+            {senderLabel ? (
+              <Text
+                variant="caption"
+                weight="semibold"
+                style={styles.senderLabel}
+              >
+                {senderLabel}
+              </Text>
+            ) : null}
             <Text
               variant="body"
               style={
@@ -265,18 +360,30 @@ export default function DoctorChatScreen() {
             accessibilityLabel="Back"
             onPress={() => router.back()}
           />
-          <View style={styles.headerInfo}>
-            <Avatar name={clinicianDisplayName} size="sm" />
+          <Pressable
+            style={styles.headerInfo}
+            onPress={isGroup ? () => setMembersOpen(true) : undefined}
+            disabled={!isGroup}
+          >
+            <Avatar name={headerTitle} size="sm" />
             <View style={styles.headerText}>
               <Text variant="body" weight="semibold" numberOfLines={1}>
-                {clinicianDisplayName}
+                {headerTitle}
               </Text>
               <Text variant="caption" tone="secondary" numberOfLines={1}>
-                Caring for {activeConversation.child.firstName}
+                {headerSubtitle}
               </Text>
             </View>
-          </View>
-          <View style={{ width: 40 }} />
+          </Pressable>
+          {isGroup ? (
+            <IconButton
+              icon="people-outline"
+              accessibilityLabel="View members"
+              onPress={() => setMembersOpen(true)}
+            />
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
         </View>
 
         {isLoading ? (
@@ -352,7 +459,9 @@ export default function DoctorChatScreen() {
             <TextInput
               ref={textInputRef}
               style={styles.input}
-              placeholder="Type a message"
+              placeholder={
+                isGroup ? "Ask the care team" : "Type a message"
+              }
               placeholderTextColor={colors.textTertiary}
               value={message}
               onChangeText={setMessage}
@@ -389,6 +498,55 @@ export default function DoctorChatScreen() {
           </View>
         </View>
       </View>
+
+      <Modal
+        visible={membersOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setMembersOpen(false)}
+      >
+        <Pressable
+          style={styles.membersBackdrop}
+          onPress={() => setMembersOpen(false)}
+        >
+          <Pressable style={styles.membersSheet} onPress={() => {}}>
+            <View style={styles.membersHandle} />
+            <Text variant="title3" style={styles.membersTitle}>
+              Care team members
+            </Text>
+            <Text variant="bodySmall" tone="secondary" style={styles.membersSubtitle}>
+              Everyone here can see messages about{" "}
+              {activeConversation.child.firstName}.
+            </Text>
+            {membersLoading ? (
+              <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+            ) : (
+              <FlatList
+                data={members}
+                keyExtractor={(item) => item.userId}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+                renderItem={({ item }) => (
+                  <View style={styles.memberRow}>
+                    <Avatar name={memberDisplayName(item)} size="sm" />
+                    <View style={styles.memberText}>
+                      <Text variant="body" weight="semibold">
+                        {memberDisplayName(item)}
+                      </Text>
+                      <Text variant="caption" tone="secondary">
+                        {item.role === "PARENT"
+                          ? "Parent"
+                          : item.isAssignedClinician
+                            ? "Assigned clinician"
+                            : "Clinician"}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -470,6 +628,10 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 6,
     ...shadows.xs,
   },
+  senderLabel: {
+    marginBottom: spacing[1],
+    color: colors.primary,
+  },
   bubbleTime: {
     marginTop: spacing[1],
     alignSelf: "flex-end",
@@ -540,5 +702,43 @@ const styles = StyleSheet.create({
   },
   sendDisabled: {
     backgroundColor: colors.borderStrong,
+  },
+  membersBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+  },
+  membersSheet: {
+    maxHeight: "70%",
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: spacing[5],
+    paddingTop: spacing[3],
+  },
+  membersHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.borderStrong,
+    marginBottom: spacing[4],
+  },
+  membersTitle: {
+    marginBottom: spacing[1],
+  },
+  membersSubtitle: {
+    marginBottom: spacing[4],
+  },
+  memberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[3],
+    paddingVertical: spacing[3],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+  },
+  memberText: {
+    flex: 1,
   },
 });
