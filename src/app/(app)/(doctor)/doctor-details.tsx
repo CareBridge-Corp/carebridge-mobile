@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from "react-native";
 import {
   Avatar,
@@ -11,22 +12,38 @@ import {
   SectionHeader,
   Text,
 } from "../../../shared/components/ui";
+import StatusModal from "../../../shared/components/StatusModal";
 import { colors, layout, spacing } from "../../../shared/theme";
+import {
+  useChatRequestStatus,
+  useRequestClinicianChat,
+} from "../hooks/useChat";
 import { useClinicianById } from "../hooks/useClinician";
 import { useClinicianStore } from "../store/clinicianStore";
+import { useChatStore } from "../store/chatStore";
+import { useChildrenStore } from "../store/childrenStore";
 import { toLocalIsoDate, useDoctorAppointments } from "../hooks/useAppointments";
 
 export default function DoctorDetailsScreen() {
   const router = useRouter();
-  const { childId, doctorId } = useLocalSearchParams<{
+  const { childId: childIdParam, doctorId } = useLocalSearchParams<{
     childId?: string;
     doctorId?: string;
   }>();
+  const { activeChild } = useChildrenStore();
+  const { setActiveConversation } = useChatStore();
+  const childId = childIdParam || activeChild?.childId;
+  const [statusModal, setStatusModal] = useState<{
+    visible: boolean;
+    type: "success" | "error" | "info";
+    title: string;
+    message: string;
+  }>({ visible: false, type: "info", title: "", message: "" });
 
   // Prefer the assigned clinician kept in the store when arriving from "your
   // care team" via childId. Otherwise fetch by doctorId.
   const cachedClinician = useClinicianStore((state) =>
-    childId ? state.cliniciansByChild[childId] : null,
+    childIdParam ? state.cliniciansByChild[childIdParam] : null,
   );
 
   const { data: fetchedClinician, isLoading } = useClinicianById(
@@ -35,12 +52,88 @@ export default function DoctorDetailsScreen() {
 
   const clinician = cachedClinician || fetchedClinician;
   const clinicianId = clinician?.userId;
+  const { data: requestStatus, isLoading: requestStatusLoading } =
+    useChatRequestStatus(childId, clinicianId);
+  const requestChatMutation = useRequestClinicianChat();
   const { data: upcomingAppointments = [], isLoading: appointmentsLoading } =
     useDoctorAppointments(clinicianId, {
       status: "confirmed",
       from: toLocalIsoDate(new Date()),
     });
   const nextAppointment = upcomingAppointments[0];
+
+  const openAssignedOrPeerChat = async () => {
+    if (!childId || !clinician) return;
+
+    if (requestStatus?.status === "ASSIGNED" || requestStatus?.canMessage) {
+      const isAssigned = requestStatus?.status === "ASSIGNED";
+      setActiveConversation({
+        channelType: isAssigned ? "ASSIGNED_DM" : "PEER_DM",
+        conversationId: isAssigned
+          ? `dm:${childId}`
+          : `peer:${childId}:${clinician.userId}`,
+        child: {
+          childId,
+          firstName: activeChild?.firstName || "Child",
+          parentId: activeChild?.parentId || "",
+          assignedClinicianId: activeChild?.assignedClinicianId || null,
+        },
+        parent: {
+          userId: activeChild?.parentId || "",
+          firstName: "",
+          lastName: "",
+        },
+        clinician: {
+          userId: clinician.userId,
+          firstName: clinician.firstName,
+          lastName: clinician.lastName,
+          surname: clinician.surname,
+          profilePictureUrl: clinician.profilePictureUrl,
+        },
+        lastMessage: null,
+      });
+      router.push("/(app)/(doctor)/doctor-chat" as Href);
+      return;
+    }
+
+    if (!childId) {
+      setStatusModal({
+        visible: true,
+        type: "info",
+        title: "Select a child",
+        message: "Choose a child first so we can request a chat for them.",
+      });
+      return;
+    }
+
+    try {
+      await requestChatMutation.mutateAsync({
+        childId,
+        clinicianId: clinician.userId,
+      });
+      setStatusModal({
+        visible: true,
+        type: "success",
+        title: "Request sent",
+        message:
+          "Your chat request was sent. You can message this clinician after they accept.",
+      });
+    } catch (error: any) {
+      setStatusModal({
+        visible: true,
+        type: "error",
+        title: "Could not send request",
+        message: error?.message || "Please try again.",
+      });
+    }
+  };
+
+  const messageLabel =
+    requestStatus?.status === "ASSIGNED" || requestStatus?.canMessage
+      ? "Message"
+      : requestStatus?.status === "PENDING"
+        ? "Request pending"
+        : "Request chat";
 
   if (isLoading) {
     return (
@@ -104,11 +197,17 @@ export default function DoctorDetailsScreen() {
 
         <View style={styles.actions}>
           <Button
-            label="Message"
-            onPress={() => router.push("/(app)/chat" as Href)}
+            label={messageLabel}
+            onPress={() => void openAssignedOrPeerChat()}
             leadingIcon="chatbubble-ellipses"
             fullWidth={false}
             style={styles.actionBtn}
+            loading={requestStatusLoading || requestChatMutation.isPending}
+            disabled={
+              requestStatus?.status === "PENDING" ||
+              requestStatusLoading ||
+              requestChatMutation.isPending
+            }
           />
           <Button
             label="Consult"
@@ -124,6 +223,16 @@ export default function DoctorDetailsScreen() {
             style={styles.actionBtn}
           />
         </View>
+        {requestStatus?.status === "PENDING" ? (
+          <Text
+            variant="bodySmall"
+            tone="secondary"
+            align="center"
+            style={{ marginBottom: spacing[4] }}
+          >
+            Waiting for this clinician to accept your chat request.
+          </Text>
+        ) : null}
 
         <SectionHeader title="Upcoming consultation" />
         {appointmentsLoading ? (
@@ -213,6 +322,16 @@ export default function DoctorDetailsScreen() {
           </View>
         </Card>
       </ScrollView>
+
+      <StatusModal
+        visible={statusModal.visible}
+        type={statusModal.type}
+        title={statusModal.title}
+        message={statusModal.message}
+        onPrimaryPress={() =>
+          setStatusModal((prev) => ({ ...prev, visible: false }))
+        }
+      />
     </Screen>
   );
 }
