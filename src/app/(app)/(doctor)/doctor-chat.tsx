@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -362,8 +362,24 @@ export default function DoctorChatScreen() {
           />
           <Pressable
             style={styles.headerInfo}
-            onPress={isGroup ? () => setMembersOpen(true) : undefined}
-            disabled={!isGroup}
+            onPress={() => {
+              if (isGroup) {
+                setMembersOpen(true);
+                return;
+              }
+              if (user?.role !== "PARENT") return;
+              const doctorId = activeConversation.clinician?.userId;
+              if (!doctorId || !childId) return;
+              router.push({
+                pathname: "/(app)/(doctor)/doctor-details",
+                params: { childId, doctorId },
+              } as Href);
+            }}
+            disabled={
+              isGroup
+                ? false
+                : user?.role !== "PARENT" || !activeConversation.clinician?.userId
+            }
           >
             <Avatar name={headerTitle} size="sm" />
             <View style={styles.headerText}>
@@ -380,6 +396,20 @@ export default function DoctorChatScreen() {
               icon="people-outline"
               accessibilityLabel="View members"
               onPress={() => setMembersOpen(true)}
+            />
+          ) : user?.role === "PARENT" && activeConversation.clinician?.userId ? (
+            <IconButton
+              icon="person-outline"
+              accessibilityLabel="View doctor profile"
+              onPress={() =>
+                router.push({
+                  pathname: "/(app)/(doctor)/doctor-details",
+                  params: {
+                    childId,
+                    doctorId: activeConversation.clinician!.userId,
+                  },
+                } as Href)
+              }
             />
           ) : (
             <View style={{ width: 40 }} />
@@ -517,6 +547,9 @@ export default function DoctorChatScreen() {
             <Text variant="bodySmall" tone="secondary" style={styles.membersSubtitle}>
               Everyone here can see messages about{" "}
               {activeConversation.child.firstName}.
+              {user?.role === "PARENT"
+                ? " Tap a clinician to view their profile and request an individual chat."
+                : ""}
             </Text>
             {membersLoading ? (
               <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
@@ -525,23 +558,56 @@ export default function DoctorChatScreen() {
                 data={members}
                 keyExtractor={(item) => item.userId}
                 contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-                renderItem={({ item }) => (
-                  <View style={styles.memberRow}>
-                    <Avatar name={memberDisplayName(item)} size="sm" />
-                    <View style={styles.memberText}>
-                      <Text variant="body" weight="semibold">
-                        {memberDisplayName(item)}
-                      </Text>
-                      <Text variant="caption" tone="secondary">
-                        {item.role === "PARENT"
-                          ? "Parent"
-                          : item.isAssignedClinician
-                            ? "Assigned clinician"
-                            : "Clinician"}
-                      </Text>
-                    </View>
-                  </View>
-                )}
+                renderItem={({ item }) => {
+                  const canOpenClinicianProfile =
+                    user?.role === "PARENT" && item.role === "CLINICIAN";
+                  const roleLabel =
+                    item.role === "PARENT"
+                      ? "Parent"
+                      : item.isAssignedClinician
+                        ? "Assigned clinician"
+                        : "Clinician";
+
+                  return (
+                    <Pressable
+                      disabled={!canOpenClinicianProfile}
+                      onPress={() => {
+                        if (!canOpenClinicianProfile || !childId) return;
+                        setMembersOpen(false);
+                        router.push({
+                          pathname: "/(app)/(doctor)/doctor-details",
+                          params: {
+                            childId,
+                            doctorId: item.userId,
+                          },
+                        } as Href);
+                      }}
+                      style={({ pressed }) => [
+                        styles.memberRow,
+                        canOpenClinicianProfile && pressed && { opacity: 0.7 },
+                      ]}
+                    >
+                      <Avatar name={memberDisplayName(item)} size="sm" />
+                      <View style={styles.memberText}>
+                        <Text variant="body" weight="semibold">
+                          {memberDisplayName(item)}
+                        </Text>
+                        <Text variant="caption" tone="secondary">
+                          {canOpenClinicianProfile
+                            ? `${roleLabel} · View profile / request chat`
+                            : roleLabel}
+                        </Text>
+                      </View>
+                      {canOpenClinicianProfile ? (
+                        <Ionicons
+                          name="chevron-forward"
+                          size={18}
+                          color={colors.textTertiary}
+                        />
+                      ) : null}
+                    </Pressable>
+                  );
+                }}
               />
             )}
           </Pressable>
