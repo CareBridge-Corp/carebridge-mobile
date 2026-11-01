@@ -1,15 +1,18 @@
 import { create } from "zustand";
 
+export type ChatChannelType = "ASSIGNED_DM" | "CLINICIANS_GROUP" | "PEER_DM";
+
 export interface ChatMessage {
   messageId: string;
   childId: string;
   parentId: string;
-  clinicianId: string;
+  clinicianId?: string;
   senderId: string;
   content: string;
   readAt: string | null;
   createdAt: string;
   updatedAt: string;
+  channelType?: ChatChannelType;
 }
 
 export interface ChatConversation {
@@ -17,7 +20,7 @@ export interface ChatConversation {
     childId: string;
     firstName: string;
     parentId: string;
-    assignedClinicianId: string;
+    assignedClinicianId: string | null;
   };
   parent: {
     userId: string;
@@ -26,21 +29,63 @@ export interface ChatConversation {
     name?: string;
     surname?: string;
   };
-  clinician: {
+  clinician?: {
     userId: string;
     firstName: string;
     lastName: string;
     name?: string;
     surname?: string;
-  };
+    profilePictureUrl?: string | null;
+  } | null;
   lastMessage: ChatMessage | null;
-  conversationId?: string; // Optional for backward compatibility
+  conversationId?: string;
+  channelType?: ChatChannelType;
+  title?: string;
+  memberCount?: number;
+}
+
+export interface ChatGroupMember {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  surname?: string | null;
+  role: "PARENT" | "CLINICIAN";
+  isAssignedClinician: boolean;
+}
+
+export interface ChatDmRequest {
+  requestId: string;
+  childId: string;
+  parentId: string;
+  clinicianId: string;
+  status: "PENDING" | "ACCEPTED" | "DECLINED" | "CANCELLED";
+  message?: string | null;
+  respondedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  child?: {
+    childId: string;
+    firstName: string;
+    lastName?: string;
+  };
+  parent?: {
+    userId: string;
+    firstName: string;
+    lastName: string;
+    surname?: string;
+  };
+  clinician?: {
+    userId: string;
+    firstName: string;
+    lastName: string;
+    surname?: string;
+  };
 }
 
 interface ChatState {
   conversations: ChatConversation[];
   activeConversation: ChatConversation | null;
-  messages: Record<string, ChatMessage[]>; // childId -> messages
+  messages: Record<string, ChatMessage[]>;
 }
 
 interface ChatActions {
@@ -71,7 +116,6 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
   addMessage: (childId, message) =>
     set((state) => {
       const existing = state.messages[childId] || [];
-      // avoid duplicates
       if (existing.some((m) => m.messageId === message.messageId)) return state;
       return {
         messages: {
@@ -84,7 +128,9 @@ export const useChatStore = create<ChatState & ChatActions>((set) => ({
   updateLastMessage: (childId, message) =>
     set((state) => ({
       conversations: state.conversations.map((conv) =>
-        conv.child.childId === childId
+        conv.child.childId === childId &&
+        (conv.channelType || "ASSIGNED_DM") ===
+          (message.channelType || "ASSIGNED_DM")
           ? { ...conv, lastMessage: message }
           : conv,
       ),

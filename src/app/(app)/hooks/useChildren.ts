@@ -88,20 +88,20 @@ export function useCreateChild() {
           data.birthCertificate.split("/").pop() || "certificate.jpg";
         const match = /\.(\w+)$/.exec(filename);
         const type = match ? `image/${match[1]}` : "image/jpeg";
-        formData.append("file", {
+        formData.append("image", {
           uri: data.birthCertificate,
           name: filename,
           type,
         } as any);
 
-        // Assuming similar endpoint for birth certificate
         try {
           await multipartApiClient.post(
-            `/users/children/${childId}/birth-certificate`,
+            `/users/children/${childId}/verify/birth`,
             formData,
           );
         } catch (err) {
           console.log("Birth certificate upload failed", err);
+          throw err;
         }
       }
 
